@@ -527,7 +527,13 @@ per i mint futuri, come richiesto.
 
 - [ ] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` (allineare al resto dei repo ChainIntegrate).
-- [ ] Confermare `_LSP4_TOKEN_TYPE_NFT` — nome costante corretto.
+- [x] `_LSP4_TOKEN_TYPE_NFT` — **era sbagliata**, non esiste come costante
+      esportata (confermato da un vero errore di compilazione `HH600`).
+      Corretto: è semplicemente il valore numerico `1`, non un identificatore
+      con nome — coerente con `lsp4-metadata-notes.md`.
+- [ ] `_LSP8_TOKENID_FORMAT_HASH` — non ancora confermata da una
+      compilazione riuscita (la compilazione si è fermata al primo errore).
+      Verificare al prossimo tentativo.
 - [ ] Confermare che `tierOf()` su Membership Corporate ritorni `0` anche per
       un'azienda sospesa (altrimenti serve un controllo `isSuspended()`
       separato nel Factory e nei modifier di `TraceabilityRegistry`).

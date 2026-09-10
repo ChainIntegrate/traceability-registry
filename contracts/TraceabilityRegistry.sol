@@ -118,7 +118,9 @@ contract TraceabilityRegistry is LSP8IdentifiableDigitalAsset {
             name_,
             symbol_,
             chainIntegrateOwner_,
-            _LSP4_TOKEN_TYPE_NFT, // TODO: confermare costante corretta per NFT (=1)
+            1, // LSP4TokenType.NFT — non è una costante con nome esportata dalla libreria
+               // (era un'ipotesi sbagliata, confermato dall'errore di compilazione),
+               // è semplicemente il valore numerico, come da lsp4-metadata-notes.md
             _LSP8_TOKENID_FORMAT_HASH // tokenId = bytes32 (hash), disciplina GS1
         )
     {
