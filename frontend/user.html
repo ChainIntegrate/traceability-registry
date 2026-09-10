@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TraceabilityRegistry — Pannello Azienda</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<script src="./traceability-json-validators.js"></script>
+<script src="./traceability-tokenid.js"></script>
+<script src="./traceability-metadata.js"></script>
+<script src="./traceability-mint-compose.js"></script>
+<script src="./traceability-photo-library.js"></script>
+<script src="./traceability-decode.js"></script>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
+  header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 12px; margin-bottom: 20px; }
+  nav { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  nav button { padding: 8px 14px; border: 1px solid #999; background: #f4f4f4; cursor: pointer; border-radius: 6px; }
+  nav button.active { background: #222; color: #fff; }
+  section.tab { display: none; }
+  section.tab.active { display: block; }
+  .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+  .row { margin-bottom: 10px; }
+  label { display: block; font-weight: 600; margin-bottom: 4px; }
+  input[type=text], input[type=file], select, textarea { width: 100%; padding: 6px; box-sizing: border-box; }
+  button.primary { background: #0a6; color: #fff; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; }
+  button.danger { background: #c33; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; font-size: 0.9rem; }
+  .warn { color: #a60; }
+  .ok { color: #0a6; }
+  .err { color: #c33; }
+  .muted { color: #777; font-size: 0.85rem; }
+  #log { white-space: pre-wrap; background: #111; color: #0f0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; max-height: 200px; overflow-y: auto; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>TraceabilityRegistry</h1>
+  <div>
+    <span id="connectedAddress" class="muted"></span>
+    <button id="connectBtn" class="primary">Connetti Universal Profile</button>
+  </div>
+</header>
+
+<section id="registrySetup" style="display:none;">
+  <div class="card">
+    <h2>I tuoi registri</h2>
+    <div id="registryList"></div>
+    <div id="deployRegistryForm" style="margin-top:14px;">
+      <div class="row"><label>Nome registro</label><input type="text" id="newRegistryName" placeholder="es. Birra20Venti Traceability"></div>
+      <div class="row"><label>Simbolo</label><input type="text" id="newRegistrySymbol" placeholder="es. B20VTR"></div>
+      <button class="primary" id="deployRegistryBtn">Crea il mio registro</button>
+      <p class="muted" id="deployLimitNote"></p>
+    </div>
+  </div>
+</section>
+
+<section id="app" style="display:none;">
+  <p class="muted">Registro attivo: <span id="activeRegistryAddress"></span> — <a href="#" id="changeRegistryLink">cambia registro</a></p>
+
+  <nav>
+    <button data-tab="info" class="active">Info registro</button>
+    <button data-tab="materie-prime">Materie prime</button>
+    <button data-tab="batch">Batch produzione</button>
+    <button data-tab="foto">Libreria foto</button>
+    <button data-tab="deleghe">Deleghe</button>
+  </nav>
+
+  <section class="tab active" id="tab-info">
+    <div class="card">
+      <h2>Metadata della collezione</h2>
+      <p class="muted">Nome/descrizione/immagini visibili come "collezione" su universaleverything.io. Solo il registryAdmin può modificarli.</p>
+      <div class="row"><label>Nome</label><input type="text" id="collectionName"></div>
+      <div class="row"><label>Descrizione</label><textarea id="collectionDescription" rows="2"></textarea></div>
+      <div class="row"><label>Immagine square (dalla libreria foto)</label><select id="collectionSquarePhoto"></select></div>
+      <div class="row"><label>Banner (dalla libreria foto, opzionale)</label><select id="collectionBannerPhoto"><option value="">— nessuno —</option></select></div>
+      <button class="primary" id="saveCollectionMetadataBtn">Salva metadata collezione</button>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-materie-prime">
+    <div class="card">
+      <h2>Carica acquisto materie prime</h2>
+      <input type="file" id="rawMaterialJsonInput" accept="application/json">
+      <div id="rawMaterialPreview"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-batch">
+    <div class="card">
+      <h2>Carica batch di produzione</h2>
+      <input type="file" id="batchJsonInput" accept="application/json">
+      <div id="batchPreview"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-foto">
+    <div class="card">
+      <h2>Libreria foto</h2>
+      <div class="row"><label>Etichetta</label><input type="text" id="photoLabel" placeholder="es. Venti24, o Fornitore"></div>
+      <div class="row"><label>File</label><input type="file" id="photoFileInput" accept="image/png,image/jpeg,image/webp"></div>
+      <button class="primary" id="uploadPhotoBtn">Carica</button>
+      <div id="photoLibraryList" style="margin-top:14px;"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-deleghe">
+    <div class="card">
+      <h2>Deleghe</h2>
+      <p class="muted">Richiede tier Silver o superiore sulla Membership Corporate. Nessun elenco delle deleghe esistenti (non enumerabile on-chain) — solo aggiunta/rimozione per indirizzo. <span id="tierNote"></span></p>
+      <div class="row"><label>Indirizzo UP</label><input type="text" id="delegateAddressInput" placeholder="0x..."></div>
+      <button class="primary" id="addDelegateBtn">Aggiungi delega</button>
+      <button class="danger" id="removeDelegateBtn">Rimuovi delega</button>
+    </div>
+  </section>
+</section>
+
+<pre id="log"></pre>
+
+<script>
+// -----------------------------------------------------------------------
+// Configurazione — TODO: aggiornare per mainnet
+// -----------------------------------------------------------------------
+const CONFIG = {
+  FACTORY_ADDRESS: "0xA57527bE3AaDF4F1A60AF9829BaCA0949DAce315",
+  BACKEND_BASE_URL: "https://traceability.chainintegrate.it", // TODO: URL reale del backend traceability
+};
+
+const FACTORY_ABI = [
+  "function deployRegistry(string name_, string symbol_) external returns (address)",
+  "function getRegistries(address company) view returns (address[])",
+  "function registryCountOf(address company) view returns (uint256)",
+  "function membershipCorporate() view returns (address)",
+  "function maxRegistriesForTier(uint256 tier) pure returns (uint256)",
+];
+
+const REGISTRY_ABI = [
+  "function owner() view returns (address)",
+  "function registryAdmin() view returns (address)",
+  "function membershipCorporate() view returns (address)",
+  "function delegates(address) view returns (bool)",
+  "function isAuthorized(address) view returns (bool)",
+  "function setRegistryMetadata(bytes lsp4MetadataValue) external",
+  "function addDelegate(address delegate) external",
+  "function removeDelegate(address delegate) external",
+  "function mintRawMaterialLotBatch(bytes32[] tokenIds, bytes[] lsp4MetadataValues, uint256[] indexDates) external",
+  "function mintProductionBatch(bytes32 tokenId, bytes lsp4MetadataValue, bytes32[] usedLotTokenIds, uint256 indexDate) external",
+];
+
+const MEMBERSHIP_ABI = ["function tierOf(address account) view returns (uint256)"];
+
+let provider, signer, myAddress, factory, activeRegistryAddress, activeRegistry;
+
+function log(msg) {
+  const el = document.getElementById("log");
+  el.textContent += msg + "\n";
+  el.scrollTop = el.scrollHeight;
+  console.log(msg);
+}
+
+// -----------------------------------------------------------------------
+// Connessione UP
+// -----------------------------------------------------------------------
+document.getElementById("connectBtn").addEventListener("click", async () => {
+  const injected = window.lukso || window.ethereum;
+  if (!injected) {
+    alert("Nessuna Universal Profile extension rilevata.");
+    return;
+  }
+  provider = new ethers.providers.Web3Provider(injected);
+  await provider.send("eth_requestAccounts", []);
+  signer = provider.getSigner();
+  myAddress = await signer.getAddress();
+  document.getElementById("connectedAddress").textContent = myAddress;
+  document.getElementById("connectBtn").textContent = "Connesso";
+  factory = new ethers.Contract(CONFIG.FACTORY_ADDRESS, FACTORY_ABI, signer);
+  document.getElementById("registrySetup").style.display = "block";
+  await loadMyRegistries();
+});
+
+async function loadMyRegistries() {
+  const registries = await factory.getRegistries(myAddress);
+  const listEl = document.getElementById("registryList");
+  listEl.innerHTML = "";
+  if (registries.length === 0) {
+    listEl.innerHTML = "<p class='muted'>Nessun registro ancora. Creane uno sotto.</p>";
+  } else {
+    registries.forEach((addr) => {
+      const btn = document.createElement("button");
+      btn.textContent = addr;
+      btn.style.display = "block";
+      btn.style.marginBottom = "6px";
+      btn.addEventListener("click", () => selectRegistry(addr));
+      listEl.appendChild(btn);
+    });
+  }
+
+  try {
+    const membershipAddr = await factory.membershipCorporate();
+    const membership = new ethers.Contract(membershipAddr, MEMBERSHIP_ABI, provider);
+    const tier = await membership.tierOf(myAddress);
+    const limit = await factory.maxRegistriesForTier(tier);
+    document.getElementById("deployLimitNote").textContent =
+      "Registri usati: " + registries.length + " / " + limit.toString() + " (tier attuale: " + tier.toString() + ")";
+    document.getElementById("deployRegistryBtn").disabled = registries.length >= limit.toNumber();
+  } catch (err) {
+    log("Impossibile leggere il tier: " + err.message);
+  }
+}
+
+document.getElementById("deployRegistryBtn").addEventListener("click", async () => {
+  const name = document.getElementById("newRegistryName").value.trim();
+  const symbol = document.getElementById("newRegistrySymbol").value.trim();
+  if (!name || !symbol) { alert("Nome e simbolo obbligatori."); return; }
+  try {
+    log("Deploy registro in corso...");
+    const tx = await factory.deployRegistry(name, symbol);
+    const receipt = await tx.wait();
+    log("Registro creato. Tx: " + receipt.transactionHash);
+    await loadMyRegistries();
+  } catch (err) {
+    log("Errore deploy registro: " + err.message);
+  }
+});
+
+async function selectRegistry(address) {
+  activeRegistryAddress = address;
+  activeRegistry = new ethers.Contract(address, REGISTRY_ABI, signer);
+  document.getElementById("activeRegistryAddress").textContent = address;
+  document.getElementById("registrySetup").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  await refreshPhotoLibrarySelects();
+  await refreshPhotoLibraryList();
+  await refreshTierNote();
+}
+
+document.getElementById("changeRegistryLink").addEventListener("click", (e) => {
+  e.preventDefault();
+  document.getElementById("app").style.display = "none";
+  document.getElementById("registrySetup").style.display = "block";
+});
+
+// -----------------------------------------------------------------------
+// Tab switching
+// -----------------------------------------------------------------------
+document.querySelectorAll("nav button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("nav button").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll("section.tab").forEach((s) => s.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+// -----------------------------------------------------------------------
+// Metadata collezione (square + banner)
+// -----------------------------------------------------------------------
+async function refreshPhotoLibrarySelects() {
+  try {
+    const photos = await TraceabilityPhotoLibrary.listPhotos({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
+    });
+    const squareSel = document.getElementById("collectionSquarePhoto");
+    const bannerSel = document.getElementById("collectionBannerPhoto");
+    squareSel.innerHTML = "";
+    bannerSel.innerHTML = "<option value=''>— nessuno —</option>";
+    photos.forEach((p) => {
+      const opt1 = document.createElement("option");
+      opt1.value = JSON.stringify(p); opt1.textContent = p.label + " (" + p.cid.slice(0, 10) + "...)";
+      squareSel.appendChild(opt1);
+      const opt2 = opt1.cloneNode(true);
+      bannerSel.appendChild(opt2);
+    });
+  } catch (err) {
+    log("Impossibile caricare la libreria foto: " + err.message);
+  }
+}
+
+document.getElementById("saveCollectionMetadataBtn").addEventListener("click", async () => {
+  try {
+    const name = document.getElementById("collectionName").value.trim();
+    const description = document.getElementById("collectionDescription").value.trim();
+    const squareVal = document.getElementById("collectionSquarePhoto").value;
+    const bannerVal = document.getElementById("collectionBannerPhoto").value;
+    const square = squareVal ? toLibraryEntry(JSON.parse(squareVal)) : null;
+    const banner = bannerVal ? toLibraryEntry(JSON.parse(bannerVal)) : null;
+
+    const metadataObject = TraceabilityMetadata.buildRegistryCollectionMetadata(name, description, square, banner);
+    const metadataJsonString = JSON.stringify(metadataObject);
+
+    log("Pin metadata collezione su IPFS...");
+    const cid = await TraceabilityMintCompose.pinMetadataToIpfs({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer, metadataJsonString,
+    });
+    const encodedValue = await TraceabilityMintCompose.encodeLsp4MetadataValue(metadataObject, cid);
+
+    log("Scrittura on-chain...");
+    const tx = await activeRegistry.setRegistryMetadata(encodedValue);
+    const receipt = await tx.wait();
+    log("Metadata collezione aggiornata. Tx: " + receipt.transactionHash);
+  } catch (err) {
+    log("Errore metadata collezione: " + err.message);
+  }
+});
+
+function toLibraryEntry(photoRow) {
+  return { cid: photoRow.cid, keccak256Hash: photoRow.keccak256_hash, width: photoRow.width, height: photoRow.height };
+}
+
+// -----------------------------------------------------------------------
+// Libreria foto
+// -----------------------------------------------------------------------
+async function refreshPhotoLibraryList() {
+  try {
+    const photos = await TraceabilityPhotoLibrary.listPhotos({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
+    });
+    const el = document.getElementById("photoLibraryList");
+    if (photos.length === 0) { el.innerHTML = "<p class='muted'>Nessuna foto ancora.</p>"; return; }
+    let html = "<table><tr><th>Etichetta</th><th>CID</th><th>Dimensioni</th><th></th></tr>";
+    photos.forEach((p) => {
+      html += "<tr><td>" + p.label + "</td><td>" + p.cid + "</td><td>" + (p.width || "?") + "x" + (p.height || "?") + "</td>" +
+        "<td><button class='danger' onclick='hidePhotoRow(" + p.id + ")'>Nascondi</button></td></tr>";
+    });
+    html += "</table>";
+    el.innerHTML = html;
+  } catch (err) {
+    log("Impossibile caricare la libreria foto: " + err.message);
+  }
+}
+
+async function hidePhotoRow(photoId) {
+  try {
+    await TraceabilityPhotoLibrary.hidePhoto({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer, photoId,
+    });
+    await refreshPhotoLibraryList();
+    await refreshPhotoLibrarySelects();
+  } catch (err) {
+    log("Errore nascondi foto: " + err.message);
+  }
+}
+
+document.getElementById("uploadPhotoBtn").addEventListener("click", async () => {
+  try {
+    const label = document.getElementById("photoLabel").value.trim();
+    const fileInput = document.getElementById("photoFileInput");
+    if (!label || !fileInput.files[0]) { alert("Etichetta e file obbligatori."); return; }
+    log("Upload foto in corso...");
+    await TraceabilityPhotoLibrary.uploadPhoto({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
+      label, fileBlob: fileInput.files[0], fileName: fileInput.files[0].name,
+    });
+    log("Foto caricata.");
+    await refreshPhotoLibraryList();
+    await refreshPhotoLibrarySelects();
+  } catch (err) {
+    log("Errore upload foto: " + err.message);
+  }
+});
+
+// -----------------------------------------------------------------------
+// Deleghe
+// -----------------------------------------------------------------------
+async function refreshTierNote() {
+  try {
+    const membershipAddr = await activeRegistry.membershipCorporate();
+    const membership = new ethers.Contract(membershipAddr, MEMBERSHIP_ABI, provider);
+    const registryAdmin = await activeRegistry.registryAdmin();
+    const tier = await membership.tierOf(registryAdmin);
+    document.getElementById("tierNote").textContent = "Tier registryAdmin: " + tier.toString() +
+      (tier.toNumber() >= 2 ? " (deleghe abilitate)" : " (serve Silver o superiore)");
+  } catch (err) {
+    log("Impossibile leggere il tier per le deleghe: " + err.message);
+  }
+}
+
+document.getElementById("addDelegateBtn").addEventListener("click", async () => {
+  const addr = document.getElementById("delegateAddressInput").value.trim();
+  if (!ethers.utils.isAddress(addr)) { alert("Indirizzo non valido."); return; }
+  try {
+    const tx = await activeRegistry.addDelegate(addr);
+    const receipt = await tx.wait();
+    log("Delega aggiunta. Tx: " + receipt.transactionHash);
+  } catch (err) {
+    log("Errore aggiunta delega: " + err.message);
+  }
+});
+
+document.getElementById("removeDelegateBtn").addEventListener("click", async () => {
+  const addr = document.getElementById("delegateAddressInput").value.trim();
+  if (!ethers.utils.isAddress(addr)) { alert("Indirizzo non valido."); return; }
+  try {
+    const tx = await activeRegistry.removeDelegate(addr);
+    const receipt = await tx.wait();
+    log("Delega rimossa. Tx: " + receipt.transactionHash);
+  } catch (err) {
+    log("Errore rimozione delega: " + err.message);
+  }
+});
+
+// -----------------------------------------------------------------------
+// Mint materie prime
+// -----------------------------------------------------------------------
+document.getElementById("rawMaterialJsonInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const previewEl = document.getElementById("rawMaterialPreview");
+  try {
+    const text = await file.text();
+    const json = JSON.parse(text);
+    const validation = TraceabilityValidators.validateRawMaterialPurchaseJson(json);
+    if (!validation.valid) {
+      previewEl.innerHTML = "<p class='err'>Errori: " + validation.errors.join("; ") + "</p>";
+      return;
+    }
+    const extracted = TraceabilityValidators.extractRawMaterialPurchaseData(json);
+    const indexDate = TraceabilityTokenId.parseItalianDateToUnixSeconds(extracted.dataAcquistoRaw);
+
+    let html = "<p>Fornitore: <b>" + extracted.fornitore + "</b> — Data: " + extracted.dataAcquistoRaw + "</p>";
+    html += "<table><tr><th>Nome</th><th>Lotto</th><th>Quantità</th></tr>";
+    extracted.lots.forEach((l) => { html += "<tr><td>" + l.nome + "</td><td>" + l.lotto + "</td><td>" + l.quantità + "</td></tr>"; });
+    html += "</table>";
+    html += "<div class='row'><label>Foto (libreria, per fornitore)</label><select id='rmPhotoSelect'></select></div>";
+    html += "<button class='primary' id='confirmMintRawMaterialBtn'>Conferma e minta (" + extracted.lots.length + " lotti, una firma)</button>";
+    previewEl.innerHTML = html;
+
+    const photos = await TraceabilityPhotoLibrary.listPhotos({ backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer });
+    const sel = document.getElementById("rmPhotoSelect");
+    sel.innerHTML = "<option value=''>— nessuna —</option>";
+    photos.forEach((p) => { const o = document.createElement("option"); o.value = JSON.stringify(p); o.textContent = p.label; sel.appendChild(o); });
+
+    document.getElementById("confirmMintRawMaterialBtn").addEventListener("click", async () => {
+      try {
+        const photoVal = sel.value;
+        const resolvePhoto = () => (photoVal ? toLibraryEntry(JSON.parse(photoVal)) : null);
+        log("Composizione mint in corso (pin + encode per " + extracted.lots.length + " lotti)...");
+        const args = await TraceabilityMintCompose.composeRawMaterialLotBatchMintArgs({
+          registryAddress: activeRegistryAddress, acquistoJson: json, resolvePhoto, signer, indexDate,
+          backendBaseUrl: CONFIG.BACKEND_BASE_URL,
+        });
+        log("Firma e invio transazione...");
+        const tx = await activeRegistry.mintRawMaterialLotBatch(args.tokenIds, args.lsp4MetadataValues, args.indexDates);
+        const receipt = await tx.wait();
+        log("Mint completato. Tx: " + receipt.transactionHash);
+        previewEl.innerHTML += "<p class='ok'>Fatto — " + args.tokenIds.length + " lotti mintati.</p>";
+      } catch (err) {
+        log("Errore mint materie prime: " + err.message);
+      }
+    });
+  } catch (err) {
+    previewEl.innerHTML = "<p class='err'>Errore lettura file: " + err.message + "</p>";
+  }
+});
+
+// -----------------------------------------------------------------------
+// Mint batch di produzione
+// -----------------------------------------------------------------------
+document.getElementById("batchJsonInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const previewEl = document.getElementById("batchPreview");
+  try {
+    const text = await file.text();
+    const json = JSON.parse(text);
+    const validation = TraceabilityValidators.validateProductionBatchJson(json);
+    if (!validation.valid) {
+      previewEl.innerHTML = "<p class='err'>Errori: " + validation.errors.join("; ") + "</p>";
+      return;
+    }
+    const extracted = TraceabilityValidators.extractProductionBatchData(json);
+
+    let html = "<p>Ricetta: <b>" + extracted.ricetta + "</b></p>";
+
+    let dateHtml = "";
+    if (extracted.requiresDateSelection) {
+      dateHtml = "<div class='row'><label>Quale data usare per l'ordinamento?</label>";
+      extracted.dateCandidates.forEach((d, i) => {
+        dateHtml += "<label><input type='radio' name='dateChoice' value='" + i + "'" + (i === 0 ? " checked" : "") + "> " + d.trait_type + ": " + d.value + "</label><br>";
+      });
+      dateHtml += "</div>";
+    }
+    html += dateHtml;
+
+    html += "<p>Matching lotti in corso...</p>";
+    previewEl.innerHTML = html;
+
+    const { entries } = await TraceabilityDecode.fetchRegistryEntries(CONFIG.BACKEND_BASE_URL, activeRegistryAddress);
+    const lotEntries = entries.filter((en) => en.entryType === 0 && en.status === 0);
+
+    const decodedLots = [];
+    for (const en of lotEntries) {
+      try {
+        const { json: lotJson } = await TraceabilityDecode.decodeMetadataValue(en.metadataValue);
+        const lottoAttr = (lotJson.LSP4Metadata.attributes || []).find((a) => a.key === "Lotto");
+        decodedLots.push({ tokenId: en.tokenId, lotto: lottoAttr ? lottoAttr.value : null });
+      } catch (err) {
+        log("Impossibile decodificare lotto " + en.tokenId + ": " + err.message);
+      }
+    }
+
+    const matched = [];
+    const unmatched = [];
+    extracted.lotReferences.forEach((ref) => {
+      const found = decodedLots.find((dl) => dl.lotto === ref.lotto);
+      if (found) matched.push({ ref, tokenId: found.tokenId });
+      else unmatched.push(ref);
+    });
+
+    let matchHtml = "<h3>Matching lotti</h3><table><tr><th>Ingrediente</th><th>Lotto</th><th>Esito</th></tr>";
+    matched.forEach((m) => { matchHtml += "<tr><td>" + m.ref.ingredienteNome + "</td><td>" + m.ref.lotto + "</td><td class='ok'>trovato</td></tr>"; });
+    unmatched.forEach((u) => { matchHtml += "<tr><td>" + u.ingredienteNome + "</td><td>" + u.lotto + "</td><td class='warn'>NON trovato — resterà solo testo</td></tr>"; });
+    matchHtml += "</table>";
+    matchHtml += "<div class='row'><label>Foto (libreria, per ricetta)</label><select id='batchPhotoSelect'></select></div>";
+    matchHtml += "<button class='primary' id='confirmMintBatchBtn'>Conferma e minta</button>";
+    previewEl.innerHTML = html + matchHtml;
+
+    const photos = await TraceabilityPhotoLibrary.listPhotos({ backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer });
+    const sel = document.getElementById("batchPhotoSelect");
+    sel.innerHTML = "<option value=''>— nessuna —</option>";
+    photos.forEach((p) => { const o = document.createElement("option"); o.value = JSON.stringify(p); o.textContent = p.label; sel.appendChild(o); });
+
+    document.getElementById("confirmMintBatchBtn").addEventListener("click", async () => {
+      try {
+        let chosenDateStr = extracted.dateCandidates[0].value;
+        if (extracted.requiresDateSelection) {
+          const checked = document.querySelector("input[name=dateChoice]:checked");
+          chosenDateStr = extracted.dateCandidates[parseInt(checked.value, 10)].value;
+        }
+        const indexDate = TraceabilityTokenId.parseItalianDateToUnixSeconds(chosenDateStr);
+        const usedLotTokenIds = matched.map((m) => m.tokenId);
+        const photoVal = sel.value;
+        const resolvePhoto = () => (photoVal ? toLibraryEntry(JSON.parse(photoVal)) : null);
+
+        log("Composizione mint batch in corso...");
+        const args = await TraceabilityMintCompose.composeProductionBatchMintArgs({
+          registryAddress: activeRegistryAddress, batchJson: json, usedLotTokenIds, resolvePhoto, signer, indexDate,
+          backendBaseUrl: CONFIG.BACKEND_BASE_URL,
+        });
+        log("Firma e invio transazione...");
+        const tx = await activeRegistry.mintProductionBatch(args.tokenId, args.lsp4MetadataValue, args.usedLotTokenIds, args.indexDate);
+        const receipt = await tx.wait();
+        log("Mint batch completato. Tx: " + receipt.transactionHash);
+        previewEl.innerHTML += "<p class='ok'>Fatto.</p>";
+      } catch (err) {
+        log("Errore mint batch: " + err.message);
+      }
+    });
+  } catch (err) {
+    previewEl.innerHTML = "<p class='err'>Errore lettura file: " + err.message + "</p>";
+  }
+});
+</script>
+</body>
+</html>
