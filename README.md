@@ -7,7 +7,12 @@ proprio spazio isolato. Caso pilota: Birra20Venti (sostituisce l'attuale
 sistema ERC-721 di `Materie_Prime.html`/`Batch.html`), pensato fin dall'inizio
 per essere offerto anche ad altre aziende.
 
-Stato: **contratti in bozza, non deployati**. Repo:
+Stato: **Factory deployata e verificata su testnet**
+([`0xA57527bE3AaDF4F1A60AF9829BaCA0949DAce315`](https://explorer.execution.testnet.lukso.network/address/0xA57527bE3AaDF4F1A60AF9829BaCA0949DAce315) —
+sorgente pubblicata su Blockscout, verificabile da chiunque). Non ancora
+deployata su mainnet, non ancora deployato nessun `TraceabilityRegistry` di
+singola azienda (serve una UP con Membership Corporate almeno Bronze che
+chiami `Factory.deployRegistry()`). Repo:
 [github.com/ChainIntegrate/traceability-registry](https://github.com/ChainIntegrate/traceability-registry)
 (pubblico, licenza All Rights Reserved — codice visibile per trasparenza,
 nessun permesso di riuso). Questo documento è il riferimento per riprendere
@@ -531,9 +536,8 @@ per i mint futuri, come richiesto.
       esportata (confermato da un vero errore di compilazione `HH600`).
       Corretto: è semplicemente il valore numerico `1`, non un identificatore
       con nome — coerente con `lsp4-metadata-notes.md`.
-- [ ] `_LSP8_TOKENID_FORMAT_HASH` — non ancora confermata da una
-      compilazione riuscita (la compilazione si è fermata al primo errore).
-      Verificare al prossimo tentativo.
+- [x] `_LSP8_TOKENID_FORMAT_HASH` — **confermata corretta**: compilazione
+      completa riuscita (28 file Solidity) dopo la correzione sopra.
 - [ ] Confermare che `tierOf()` su Membership Corporate ritorni `0` anche per
       un'azienda sospesa (altrimenti serve un controllo `isSuspended()`
       separato nel Factory e nei modifier di `TraceabilityRegistry`).

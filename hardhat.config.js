@@ -32,4 +32,32 @@ module.exports = {
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
     },
   },
+  // Verifica via Blockscout — nessuna API key richiesta per LUKSO (fonte:
+  // github.com/lukso-network/lsp-smart-contracts/blob/develop/DEPLOYMENT.md),
+  // ma il campo apiKey va comunque presente (anche solo come stringa
+  // segnaposto) perché il plugin hardhat-verify lo richiede strutturalmente.
+  etherscan: {
+    apiKey: {
+      luksoTestnet: "no-api-key-needed",
+      luksoMainnet: "no-api-key-needed",
+    },
+    customChains: [
+      {
+        network: "luksoTestnet",
+        chainId: 4201,
+        urls: {
+          apiURL: "https://explorer.execution.testnet.lukso.network/api",
+          browserURL: "https://explorer.execution.testnet.lukso.network",
+        },
+      },
+      {
+        network: "luksoMainnet",
+        chainId: 42,
+        urls: {
+          apiURL: "https://explorer.execution.mainnet.lukso.network/api",
+          browserURL: "https://explorer.execution.mainnet.lukso.network",
+        },
+      },
+    ],
+  },
 };
