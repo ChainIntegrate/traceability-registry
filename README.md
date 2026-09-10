@@ -7,8 +7,11 @@ proprio spazio isolato. Caso pilota: Birra20Venti (sostituisce l'attuale
 sistema ERC-721 di `Materie_Prime.html`/`Batch.html`), pensato fin dall'inizio
 per essere offerto anche ad altre aziende.
 
-Stato: **contratti in bozza, non deployati**. Questo documento è il riferimento
-per riprendere il lavoro senza dover rileggere tutta la chat.
+Stato: **contratti in bozza, non deployati**. Repo:
+[github.com/ChainIntegrate/traceability-registry](https://github.com/ChainIntegrate/traceability-registry)
+(pubblico, licenza All Rights Reserved — codice visibile per trasparenza,
+nessun permesso di riuso). Questo documento è il riferimento per riprendere
+il lavoro senza dover rileggere tutta la chat.
 
 ---
 
@@ -457,7 +460,10 @@ nodo RPC/UP reali, testate.
   `POST /photos/:id/hide` (firmata), simmetrico a `invalidateEntry`
   on-chain. **Testato**: nascosta esclusa dalla lista normale, visibile con
   `includeHidden`, record non cancellato.
-- `.gitignore` per il backend (`.env`, `*.db`, `node_modules/`).
+- `.gitignore` per il backend (`.env`, `*.db`, `node_modules/`) — poi
+  consolidato in un unico `.gitignore` alla radice del repo (copre anche
+  `contracts/`/Hardhat quando arriverà), il file dentro `backend/` è
+  ridondante ma innocuo se resta.
 - **Regola d'oro sulla chiave RPC**: annotata in `.env.example` — una API
   key dedicata a questo servizio, mai riusata da MatchPredictor o altri
   backend, per isolare monitoraggio e impatto di eventuali problemi.
@@ -542,8 +548,8 @@ per i mint futuri, come richiesto.
       uso altrove: EN prima, IT seconda) o restare solo IT come i JSON
       sorgente attuali — per ora `traceability-metadata.js` riproduce solo IT,
       fedele allo schema originale, nessuna traduzione applicata.
-- [ ] Aggiungere GitHub repo `ChainIntegrate/traceability-registry` — **con
-      LICENSE al primo commit**.
+- [x] Aggiungere GitHub repo `ChainIntegrate/traceability-registry` — **fatto**,
+      pubblico, con LICENSE (All Rights Reserved) al primo commit.
 - [x] **Correzione architetturale** (§12): endpoint di lettura backend
       costruito e testato (logica pura `mergeEntries`) — resta da scrivere
       solo il widget stesso (decodifica client-side + rendering).
