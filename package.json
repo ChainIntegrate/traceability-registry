@@ -1,0 +1,19 @@
+{
+  "name": "traceability-registry-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy:testnet": "hardhat run scripts/deploy.js --network luksoTestnet",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network luksoMainnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.0"
+  },
+  "dependencies": {
+    "@lukso/lsp4-contracts": "^0.15.0",
+    "@lukso/lsp8-contracts": "^0.15.0"
+  }
+}
