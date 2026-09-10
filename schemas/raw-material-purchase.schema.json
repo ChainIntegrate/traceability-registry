@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://chainintegrate.it/schemas/traceability/raw-material-purchase.schema.json",
+  "title": "TraceabilityRegistry - Acquisto Materie Prime",
+  "type": "object",
+  "required": ["name", "description", "attributes", "materie_prime"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "image": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Opzionale: se assente, la UI usa l'immagine di default della libreria."
+    },
+    "attributes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["trait_type", "value"],
+        "properties": {
+          "trait_type": { "type": "string", "minLength": 1 },
+          "value": { "type": ["string", "number"] }
+        },
+        "additionalProperties": false
+      },
+      "description": "Deve contenere almeno 'Fornitore' e 'Data Acquisto' (verificato dal validatore JS, non esprimibile pulitamente in puro JSON Schema)."
+    },
+    "materie_prime": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["nome", "quantità", "lotto"],
+        "properties": {
+          "nome": { "type": "string", "minLength": 1 },
+          "quantità": { "type": "string", "minLength": 1 },
+          "data_scadenza": {
+            "type": "string",
+            "description": "Opzionale, può essere stringa vuota."
+          },
+          "lotto": {
+            "type": "string",
+            "minLength": 1,
+            "description": "OBBLIGATORIO e non vuoto — è il campo su cui il matching con i batch deve essere rigoroso."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

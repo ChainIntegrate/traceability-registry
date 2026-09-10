@@ -1,0 +1,25 @@
+# Dipendenze
+node_modules/
+
+# Variabili d'ambiente — mai committare segreti/chiavi
+.env
+.env.local
+*.env
+
+# Database locali
+*.db
+*.sqlite
+
+# Hardhat (quando il progetto contratti verrà aggiunto)
+artifacts/
+cache/
+typechain/
+typechain-types/
+
+# Log
+*.log
+npm-debug.log*
+
+# OS/editor
+.DS_Store
+.vscode/
