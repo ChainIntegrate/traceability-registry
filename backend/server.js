@@ -64,6 +64,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Errore interno." });
 });
 
-app.listen(PORT, () => {
-  console.log("traceability-backend in ascolto sulla porta " + PORT);
+app.listen(PORT, "127.0.0.1", () => {
+  console.log("traceability-backend in ascolto sulla porta " + PORT + " (solo localhost, coerente con gli altri backend)");
 });

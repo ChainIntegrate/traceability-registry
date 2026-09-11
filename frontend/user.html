@@ -109,7 +109,8 @@
   <section class="tab" id="tab-deleghe">
     <div class="card">
       <h2>Deleghe</h2>
-      <p class="muted">Richiede tier Silver o superiore sulla Membership Corporate. Nessun elenco delle deleghe esistenti (non enumerabile on-chain) — solo aggiunta/rimozione per indirizzo. <span id="tierNote"></span></p>
+      <p class="muted">Richiede tier Silver o superiore sulla Membership Corporate. <span id="tierNote"></span></p>
+      <div id="delegatesList"></div>
       <div class="row"><label>Indirizzo UP</label><input type="text" id="delegateAddressInput" placeholder="0x..."></div>
       <button class="primary" id="addDelegateBtn">Aggiungi delega</button>
       <button class="danger" id="removeDelegateBtn">Rimuovi delega</button>
@@ -234,6 +235,7 @@ async function selectRegistry(address) {
   await refreshPhotoLibrarySelects();
   await refreshPhotoLibraryList();
   await refreshTierNote();
+  await refreshDelegatesList();
 }
 
 document.getElementById("changeRegistryLink").addEventListener("click", (e) => {
@@ -377,6 +379,26 @@ async function refreshTierNote() {
   }
 }
 
+async function refreshDelegatesList() {
+  const el = document.getElementById("delegatesList");
+  el.innerHTML = "<p class='muted'>Caricamento...</p>";
+  try {
+    const res = await fetch(CONFIG.BACKEND_BASE_URL.replace(/\/$/, "") + "/api/traceability/registry/" + activeRegistryAddress + "/delegates");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "errore sconosciuto");
+    if (data.delegates.length === 0) {
+      el.innerHTML = "<p class='muted'>Nessuna delega attiva.</p>";
+    } else {
+      let html = "<table><tr><th>Indirizzo delegato</th></tr>";
+      data.delegates.forEach((d) => { html += "<tr><td>" + d + "</td></tr>"; });
+      html += "</table>";
+      el.innerHTML = html;
+    }
+  } catch (err) {
+    el.innerHTML = "<p class='err'>Impossibile caricare le deleghe: " + err.message + "</p>";
+  }
+}
+
 document.getElementById("addDelegateBtn").addEventListener("click", async () => {
   const addr = document.getElementById("delegateAddressInput").value.trim();
   if (!ethers.utils.isAddress(addr)) { alert("Indirizzo non valido."); return; }
@@ -384,6 +406,7 @@ document.getElementById("addDelegateBtn").addEventListener("click", async () => 
     const tx = await activeRegistry.addDelegate(addr);
     const receipt = await tx.wait();
     log("Delega aggiunta. Tx: " + receipt.transactionHash);
+    await refreshDelegatesList();
   } catch (err) {
     log("Errore aggiunta delega: " + err.message);
   }
@@ -396,6 +419,7 @@ document.getElementById("removeDelegateBtn").addEventListener("click", async () 
     const tx = await activeRegistry.removeDelegate(addr);
     const receipt = await tx.wait();
     log("Delega rimossa. Tx: " + receipt.transactionHash);
+    await refreshDelegatesList();
   } catch (err) {
     log("Errore rimozione delega: " + err.message);
   }

@@ -17,6 +17,8 @@ const TRACEABILITY_REGISTRY_READ_ABI = [
   "event RawMaterialLotMinted(bytes32 indexed tokenId, uint256 indexDate)",
   "event ProductionBatchMinted(bytes32 indexed tokenId, bytes32[] usedLots, uint256 indexDate)",
   "event EntryInvalidated(bytes32 indexed tokenId, address indexed by, string reason)",
+  "event DelegateAdded(address indexed delegate, address indexed grantedBy)",
+  "event DelegateRemoved(address indexed delegate, address indexed revokedBy)",
 ];
 
 const LSP4_METADATA_KEY = "0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e";
