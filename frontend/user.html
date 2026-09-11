@@ -469,7 +469,8 @@ document.getElementById("rawMaterialJsonInput").addEventListener("change", async
         const tx = await activeRegistry.mintRawMaterialLotBatch(args.tokenIds, args.lsp4MetadataValues, args.indexDates);
         const receipt = await tx.wait();
         log("Mint completato. Tx: " + receipt.transactionHash);
-        previewEl.innerHTML += "<p class='ok'>Fatto — " + args.tokenIds.length + " lotti mintati.</p>";
+        previewEl.innerHTML = "<p class='ok'>Fatto — " + args.tokenIds.length + " lotti mintati (tx " + receipt.transactionHash.slice(0, 10) + "...).</p>";
+        document.getElementById("rawMaterialJsonInput").value = ""; // pronto per il prossimo upload, niente dati vecchi in vista
       } catch (err) {
         log("Errore mint materie prime: " + err.message);
       }
@@ -567,7 +568,8 @@ document.getElementById("batchJsonInput").addEventListener("change", async (e) =
         const tx = await activeRegistry.mintProductionBatch(args.tokenId, args.lsp4MetadataValue, args.usedLotTokenIds, args.indexDate);
         const receipt = await tx.wait();
         log("Mint batch completato. Tx: " + receipt.transactionHash);
-        previewEl.innerHTML += "<p class='ok'>Fatto.</p>";
+        previewEl.innerHTML = "<p class='ok'>Fatto — batch mintato (tx " + receipt.transactionHash.slice(0, 10) + "...).</p>";
+        document.getElementById("batchJsonInput").value = ""; // pronto per il prossimo upload, niente dati vecchi in vista
       } catch (err) {
         log("Errore mint batch: " + err.message);
       }

@@ -89,21 +89,47 @@
     return data.photo; // { id, cid, keccak256_hash, width, height, label, ... }
   }
 
-  /** Lista la libreria foto del registro — richiede firma (non è pubblica). */
+  // Cache della firma di lettura per registry+indirizzo — evita di firmare
+  // di nuovo ad ogni singola chiamata (es. lista + menu a tendina dopo un
+  // upload chiamavano entrambe listPhotos, causando 2 firme evitabili in
+  // più oltre a quella dell'upload stesso). Riusata finché resta entro la
+  // stessa finestra di validità già accettata dal backend (5 minuti), con
+  // un margine di sicurezza per non rischiare uno scarto per timestamp
+  // scaduto proprio mentre la richiesta è in volo.
+  const LIST_SIGNATURE_MAX_AGE_SECONDS = 300;
+  const LIST_SIGNATURE_REUSE_MARGIN_SECONDS = 30;
+  const listSignatureCache = {};
+
+  /** Lista la libreria foto del registro — richiede firma (non è pubblica),
+   * ma riusa una firma recente invece di chiederne una nuova ogni volta. */
   async function listPhotos({ backendBaseUrl, registryAddress, signer }) {
     if (!backendBaseUrl) throw new Error("listPhotos: backendBaseUrl mancante.");
     if (!registryAddress) throw new Error("listPhotos: registryAddress mancante.");
     if (!signer) throw new Error("listPhotos: signer mancante (UP non connessa?).");
 
     const signerAddress = await signer.getAddress();
-    const timestamp = Math.floor(Date.now() / 1000);
-    const message = buildPhotoListSignedMessage(registryAddress, timestamp);
-    const signature = await signer.signMessage(message);
+    const cacheKey = registryAddress.toLowerCase() + ":" + signerAddress.toLowerCase();
+    const now = Math.floor(Date.now() / 1000);
+    const cached = listSignatureCache[cacheKey];
+
+    let timestamp, signature;
+    if (cached && now - cached.timestamp < LIST_SIGNATURE_MAX_AGE_SECONDS - LIST_SIGNATURE_REUSE_MARGIN_SECONDS) {
+      timestamp = cached.timestamp;
+      signature = cached.signature;
+    } else {
+      timestamp = now;
+      const message = buildPhotoListSignedMessage(registryAddress, timestamp);
+      signature = await signer.signMessage(message); // apre la UP extension SOLO se serve davvero
+      listSignatureCache[cacheKey] = { timestamp, signature };
+    }
 
     const params = new URLSearchParams({ registryAddress, signerAddress, signature, timestamp: String(timestamp) });
     const res = await fetch(backendBaseUrl.replace(/\/$/, "") + "/api/traceability/photos?" + params.toString());
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
+      // Se il backend rifiuta (es. firma scaduta nonostante il margine),
+      // invalida la cache così il prossimo tentativo ne richiede una nuova.
+      delete listSignatureCache[cacheKey];
       throw new Error("listPhotos: backend ha risposto " + res.status + " — " + (data.error || "errore sconosciuto"));
     }
     return data.photos || [];
