@@ -176,50 +176,19 @@ Prima prova concreta che la tolleranza-solo-sul-nome funziona come deciso.
 - **Piano B se il volume cresce**: indexer/cache dietro la stessa interfaccia
   dati, senza dover riscrivere il widget lato cliente.
 
-## 5. UI — `user.html` (azienda) e `admin.html` (ChainIntegrate)
+## 5. UI di mint — due varianti, stesso dominio (proposta, da confermare)
 
-**Costruite** (`frontend/user.html`, `frontend/admin.html`), non ancora
-testate in un browser reale con una UP vera — riusano tutti i moduli già
-testati singolarmente (validatori, tokenId, metadata, mint-compose, libreria
-foto, decodifica), ma il "collante" (wiring DOM/eventi) è nuovo.
+1. Carica JSON e basta (il caso principale, usato per primo).
+2. Form guidato che compila i campi e genera il JSON internamente.
 
-### `user.html` — un solo file, per l'azienda
-Copre sia la gestione del registro sia l'uso quotidiano (deciso: non
-separarli). Tab: **Info registro** (metadata collezione, square+banner),
-**Materie prime** (upload JSON → validazione → mint batch con una firma),
-**Batch produzione** (upload JSON → matching lotti con conferma → scelta
-data se necessaria → mint), **Libreria foto** (upload/lista/nascondi),
-**Deleghe** (aggiungi/rimuovi per indirizzo — **nessun elenco delle deleghe
-esistenti**, non enumerabile on-chain senza scansionare eventi che oggi non
-sono esposti dal backend).
-
-Solo variante "carica JSON" implementata — il form guidato (compilazione
-manuale campo per campo) resta da fare, è la seconda modalità già prevista
-ma non urgente.
-
-### `admin.html` — solo ChainIntegrate
-Elenco di tutti i registry (`Factory.allRegistries`), aggiornamento
-`Factory.setMembershipCorporate` (nuovi deploy), e per singolo registry:
-`setRegistryAdmin`, `setMembershipCorporate` (riallineamento, va fatto
-manualmente registry per registry — vedi §16), gestione deleghe come
-ChainIntegrate. **Nessun controllo di autorizzazione lato UI** oltre a
-mostrare se l'indirizzo connesso combacia con `chainIntegrateOwner` — la
-sicurezza vera resta nel contratto (`onlyOwner`), che rifiuta la transazione
-se non sei tu.
-
-### Configurazione da aggiornare prima dell'uso
-Entrambe le pagine hanno un blocco `CONFIG` in cima allo script:
-`FACTORY_ADDRESS` (già impostato sul valore testnet reale) e
-`BACKEND_BASE_URL` — impostato su `https://traceability.chainintegrate.it`
-(dominio scelto per questo prodotto, distinto da `app.chainintegrate.it`
-che è già FidelityHub). Backend e frontend condividono lo stesso dominio
-(stesso pattern Nginx di `playmatchpredictor`: root statica + `/api/`
-proxata al backend su porta 3010) — nessun problema di CORS per le route
-firmate una volta configurato `ALLOWED_MINT_UI_ORIGIN` nel `.env` del
-backend con lo stesso valore.
+Entrambe richiedono solo Bronze — nessuna differenziazione per tier proposta,
+dato che il gate è identico. Consigliato: stesso dominio, due punti
+d'ingresso, non due domini separati (meno superficie da mantenere). **Da
+confermare**, decisione a basso rischio, rimandabile.
 
 Prima del mint, in entrambi i casi: **anteprima obbligatoria** di cosa verrà
-scritto in chain, prima di chiedere la firma.
+scritto in chain (stessa funzione di rendering usata poi dal widget pubblico,
+per garantire coerenza tra anteprima e visualizzazione finale).
 
 ## 6. Calcolo tokenId e parsing date (`frontend/traceability-tokenid.js`)
 
@@ -264,7 +233,7 @@ ancora" (icon/images vuoti, nessun crash).
 ## 8. Backend — `POST /api/traceability/pin-json` (`backend/`)
 
 Nuovo servizio Express (`traceability-backend`), stesso stile degli altri
-backend ChainIntegrate (PM2, `.env`, porta dedicata — proposta `3010`, **da
+backend ChainIntegrate (PM2, `.env`, porta dedicata — proposta `3014` (3010-3013 già occupate da altri servizi), **da
 confermare libera sul VPS Aruba**).
 
 **Perché serve un backend e non solo lettura diretta**: la porta 5001 del
@@ -561,20 +530,6 @@ per i mint futuri, come richiesto.
 
 ## 19. Punti aperti / TODO
 
-- [ ] **Testare `user.html`/`admin.html` in un browser reale** con la UP
-      extension e un registry vero — mai eseguite fuori da qui, solo
-      sintassi verificata.
-- [x] Dominio scelto: `traceability.chainintegrate.it` (backend+frontend
-      insieme). `BACKEND_BASE_URL` già aggiornato in `user.html`/`admin.html`,
-      `ALLOWED_MINT_UI_ORIGIN` da impostare nel `.env` reale del backend.
-- [ ] DNS + Nginx + Let's Encrypt per `traceability.chainintegrate.it` — da
-      fare sul VPS Aruba (stesso pattern di `playmatchpredictor`).
-- [ ] Form guidato (compilazione manuale, seconda modalità di mint) non
-      ancora implementato in `user.html` — solo upload JSON.
-- [ ] Elenco deleghe esistenti non disponibile (solo aggiungi/rimuovi per
-      indirizzo) — richiederebbe scansione eventi `DelegateAdded`/
-      `DelegateRemoved`, non ancora esposta dal backend.
-
 - [ ] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` (allineare al resto dei repo ChainIntegrate).
 - [x] `_LSP4_TOKEN_TYPE_NFT` — **era sbagliata**, non esiste come costante
@@ -597,8 +552,8 @@ per i mint futuri, come richiesto.
       quanto possibile senza un nodo RPC/IPFS live (validazione, messaggio,
       sintassi). Verifica ERC-1271/`isAuthorized` end-to-end da provare su
       testnet.
-- [ ] Confermare porta `3010` libera sul VPS Aruba per `traceability-backend`
-      (PM2), o assegnarne un'altra.
+- [x] Porta confermata: `3014` (verificato con `ss -tlnp` sul VPS reale —
+      3001-3002, 3006-3013, 3020, 3032 risultavano occupate).
 - [ ] Decidere se le metadata devono essere bilingui EN/IT (principio già in
       uso altrove: EN prima, IT seconda) o restare solo IT come i JSON
       sorgente attuali — per ora `traceability-metadata.js` riproduce solo IT,

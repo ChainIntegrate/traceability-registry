@@ -7,7 +7,7 @@ const { buildPhotoRouter } = require("./photoRoutes");
 const { buildChainReadRouter } = require("./chainReadRoutes");
 const { TRACEABILITY_FACTORY_MINIMAL_ABI } = require("./factoryAbi");
 
-const PORT = process.env.PORT || 3010; // TODO: confermare porta libera sul VPS Aruba
+const PORT = process.env.PORT || 3014; // TODO: confermare porta libera sul VPS Aruba
 const RPC_URL = process.env.LUKSO_RPC_URL;
 const FACTORY_ADDRESS = process.env.FACTORY_ADDRESS;
 // Regola d'oro: una API key RPC dedicata per ogni servizio, mai riusata da
