@@ -528,7 +528,33 @@ per i mint futuri, come richiesto.
   come Blob), messaggio firmato nel formato esatto, risposta interpretata
   correttamente.
 
-## 19. Punti aperti / TODO
+## 19. Internazionalizzazione IT/EN e form guidato (`user.html`, `admin.html`)
+
+Richiesti esplicitamente dopo i primi test reali: pulsanti IT/EN sempre
+visibili (non autorilevamento da browser), e una seconda modalità di mint
+oltre al caricamento JSON.
+
+- **i18n**: dizionario `I18N` con chiavi `it`/`en`, funzione `t(key, params)`
+  con sostituzione `{placeholder}`, applicato via `data-i18n`/
+  `data-i18n-placeholder` sull'HTML statico e chiamate `t(...)` nel JS
+  dinamico (log, tabelle, errori). Preferenza salvata in `localStorage`.
+  **Verificato con uno script che estrae ogni chiave usata (HTML+JS) e la
+  confronta con il dizionario**: `user.html` → 118/118 chiavi coperte in
+  entrambe le lingue, zero mancanti, zero chiavi morte; `admin.html` →
+  43/43, stesso esito.
+- **Form guidato**: in "Materie prime" e "Batch produzione", un sotto-tab
+  "Compila manualmente" accanto a "Carica JSON" — righe aggiungibili
+  dinamicamente (materiali per gli acquisti, coppie ingrediente/lotto per i
+  batch). Costruisce **esattamente** lo stesso oggetto JSON che produrrebbe
+  un file caricato, poi lo passa alla stessa pipeline di validazione/
+  anteprima/mint (funzioni condivise `processRawMaterialJson`/
+  `processProductionBatchJson`, non duplicata tra i due percorsi).
+  **Verificato contro i validatori reali**: JSON generato dal form → valido,
+  righe vuote scartate correttamente, doppia data richiede scelta, data
+  singola no, nessuna data correttamente rifiutata — stessi identici
+  risultati che si otterrebbero da un file caricato a mano.
+
+## 20. Punti aperti / TODO
 
 - [ ] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` (allineare al resto dei repo ChainIntegrate).
@@ -563,14 +589,18 @@ per i mint futuri, come richiesto.
 - [x] **Correzione architetturale** (§12): endpoint di lettura backend
       costruito e testato (logica pura `mergeEntries`) — resta da scrivere
       solo il widget stesso (decodifica client-side + rendering).
-- [ ] Costruire il pezzo frontend che chiama `upload-photo`/`photos` (§11).
+- [x] Costruire il pezzo frontend che chiama `upload-photo`/`photos` — **fatto**
+      (`traceability-photo-library.js`), confermato funzionante da mint reali.
 - [ ] Costruire il widget di visualizzazione pubblica (§12) — consuma
       `GET /registry/:address/entries`, decodifica `metadataValue` con
       `erc725.js` (stessa logica di `traceability-mint-compose.js`, verso
       inverso), fetch immagini dal gateway IPFS pubblico.
-- [ ] **PRIMA DI OGNI DEPLOY IN PRODUZIONE**: eseguire
-      `scripts/test-erc1271-live.js` su testnet con una UP reale (§14) —
-      il formato firma non è mai stato verificato contro una UP vera.
+- [x] **Verifica ERC-1271 su UP reale** — confermata empiricamente: mint
+      reali (materie prime e batch) completati con successo su testnet, che
+      richiedono `verifySignedRequest` (ERC-1271 + `isAuthorized`) superato
+      ad ogni chiamata. Il formato `ethers.utils.hashMessage` è quindi
+      corretto. Lo script dedicato (`scripts/test-erc1271-live.js`) resta
+      comunque disponibile per una verifica isolata futura, se mai servisse.
 - [ ] Configurare `.env` di produzione: `FACTORY_ADDRESS` (dopo il deploy
       della Factory), `ALLOWED_MINT_UI_ORIGIN` (dominio della UI di mint),
       una **API key RPC dedicata** a questo servizio (mai riusata da altri

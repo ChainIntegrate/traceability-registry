@@ -7,7 +7,11 @@
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
-  header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 12px; margin-bottom: 20px; }
+  header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .lang-toggle { display: flex; gap: 4px; }
+  .lang-btn { padding: 4px 10px; border: 1px solid #999; background: #f4f4f4; cursor: pointer; border-radius: 4px; font-size: 0.85rem; }
+  .lang-btn.active { background: #222; color: #fff; }
   .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 14px; }
   .row { margin-bottom: 10px; }
   label { display: block; font-weight: 600; margin-bottom: 4px; }
@@ -22,53 +26,135 @@
 <body>
 
 <header>
-  <h1>TraceabilityRegistry — Admin ChainIntegrate</h1>
-  <div>
+  <h1 data-i18n="header.title">TraceabilityRegistry — Admin ChainIntegrate</h1>
+  <div class="header-right">
+    <div class="lang-toggle">
+      <button id="langItBtn" class="lang-btn active">IT</button>
+      <button id="langEnBtn" class="lang-btn">EN</button>
+    </div>
     <span id="connectedAddress" class="muted"></span>
-    <button id="connectBtn" class="primary">Connetti</button>
+    <button id="connectBtn" class="primary" data-i18n="connect.button">Connetti</button>
   </div>
 </header>
 
-<p class="muted">
+<p class="muted" data-i18n="warning.text">
   ATTENZIONE: le funzioni qui sotto richiedono che l'indirizzo connesso sia
-  <code>chainIntegrateOwner</code> (owner) — su un registry o sulla Factory,
+  chainIntegrateOwner (owner) — su un registry o sulla Factory,
   altrimenti le transazioni vengono rifiutate on-chain. Nessun controllo
   lato UI oltre a questo: la sicurezza vera è nel contratto.
 </p>
 
 <div class="card">
-  <h2>Factory — Membership Corporate</h2>
+  <h2 data-i18n="factory.title">Factory — Membership Corporate</h2>
   <div id="factoryInfo" class="muted"></div>
   <div class="row" style="margin-top:10px;">
-    <label>Nuovo indirizzo Membership Corporate</label>
+    <label data-i18n="factory.newMembership">Nuovo indirizzo Membership Corporate</label>
     <input type="text" id="newFactoryMembership" placeholder="0x...">
   </div>
-  <button class="primary" id="setFactoryMembershipBtn">Aggiorna (solo nuovi deploy)</button>
-  <p class="muted">Non tocca i registry già esistenti — vanno riallineati singolarmente sotto.</p>
+  <button class="primary" id="setFactoryMembershipBtn" data-i18n="factory.update">Aggiorna (solo nuovi deploy)</button>
+  <p class="muted" data-i18n="factory.updateNote">Non tocca i registry già esistenti — vanno riallineati singolarmente sotto.</p>
 </div>
 
 <div class="card">
-  <h2>Tutti i registry (<span id="totalRegistries">0</span>)</h2>
-  <button class="primary" id="loadRegistriesBtn">Carica elenco</button>
+  <h2><span data-i18n="registries.allTitle">Tutti i registry</span> (<span id="totalRegistries">0</span>)</h2>
+  <button class="primary" id="loadRegistriesBtn" data-i18n="registries.load">Carica elenco</button>
   <div id="registriesTable"></div>
 </div>
 
 <div class="card">
-  <h2>Azioni su un singolo registry</h2>
-  <div class="row"><label>Indirizzo registry</label><input type="text" id="targetRegistryAddress" placeholder="0x..."></div>
+  <h2 data-i18n="single.title">Azioni su un singolo registry</h2>
+  <div class="row"><label data-i18n="single.address">Indirizzo registry</label><input type="text" id="targetRegistryAddress" placeholder="0x..."></div>
   <div id="targetRegistryInfo" class="muted"></div>
-  <div class="row"><label>Nuovo registryAdmin</label><input type="text" id="newRegistryAdmin" placeholder="0x..."></div>
-  <button class="primary" id="setRegistryAdminBtn">Cambia registryAdmin</button>
-  <div class="row" style="margin-top:14px;"><label>Nuovo Membership Corporate (per QUESTO registry)</label><input type="text" id="newRegistryMembership" placeholder="0x..."></div>
-  <button class="primary" id="setRegistryMembershipBtn">Riallinea Membership Corporate</button>
-  <div class="row" style="margin-top:14px;"><label>Indirizzo delegato (ChainIntegrate può gestire deleghe sempre)</label><input type="text" id="adminDelegateAddress" placeholder="0x..."></div>
-  <button class="primary" id="adminAddDelegateBtn">Aggiungi delega</button>
-  <button class="primary" id="adminRemoveDelegateBtn">Rimuovi delega</button>
+  <div class="row"><label data-i18n="single.newAdmin">Nuovo registryAdmin</label><input type="text" id="newRegistryAdmin" placeholder="0x..."></div>
+  <button class="primary" id="setRegistryAdminBtn" data-i18n="single.changeAdmin">Cambia registryAdmin</button>
+  <div class="row" style="margin-top:14px;"><label data-i18n="single.newMembership">Nuovo Membership Corporate (per QUESTO registry)</label><input type="text" id="newRegistryMembership" placeholder="0x..."></div>
+  <button class="primary" id="setRegistryMembershipBtn" data-i18n="single.realign">Riallinea Membership Corporate</button>
+  <div class="row" style="margin-top:14px;"><label data-i18n="single.delegateAddress">Indirizzo delegato (ChainIntegrate può gestire deleghe sempre)</label><input type="text" id="adminDelegateAddress" placeholder="0x..."></div>
+  <button class="primary" id="adminAddDelegateBtn" data-i18n="single.addDelegate">Aggiungi delega</button>
+  <button class="primary" id="adminRemoveDelegateBtn" data-i18n="single.removeDelegate">Rimuovi delega</button>
 </div>
 
 <pre id="log"></pre>
 
 <script>
+const I18N = {
+  it: {
+    "header.title": "TraceabilityRegistry — Admin ChainIntegrate", "connect.button": "Connetti", "connect.connected": "Connesso",
+    "warning.text": "ATTENZIONE: le funzioni qui sotto richiedono che l'indirizzo connesso sia chainIntegrateOwner (owner) — su un registry o sulla Factory, altrimenti le transazioni vengono rifiutate on-chain. Nessun controllo lato UI oltre a questo: la sicurezza vera è nel contratto.",
+    "factory.title": "Factory — Membership Corporate", "factory.newMembership": "Nuovo indirizzo Membership Corporate",
+    "factory.update": "Aggiorna (solo nuovi deploy)", "factory.updateNote": "Non tocca i registry già esistenti — vanno riallineati singolarmente sotto.",
+    "factory.info": "Membership Corporate attuale: {membership}<br>chainIntegrateOwner: {owner} {ownerNote}<br>Registry totali: {total}",
+    "factory.youAreOwner": "(sei tu)", "factory.notOwner": "(NON sei tu — le scritture falliranno)",
+    "factory.readError": "Errore lettura Factory: {msg}", "factory.updated": "Factory.membershipCorporate aggiornato. Tx: {tx}",
+    "factory.updateError": "Errore aggiornamento Factory: {msg}",
+    "registries.allTitle": "Tutti i registry", "registries.load": "Carica elenco", "registries.none": "Nessun registry ancora.",
+    "registries.colIndex": "#", "registries.colAddress": "Indirizzo", "registries.loadError": "Errore caricamento registry: {msg}",
+    "single.title": "Azioni su un singolo registry", "single.address": "Indirizzo registry",
+    "single.newAdmin": "Nuovo registryAdmin", "single.changeAdmin": "Cambia registryAdmin",
+    "single.newMembership": "Nuovo Membership Corporate (per QUESTO registry)", "single.realign": "Riallinea Membership Corporate",
+    "single.delegateAddress": "Indirizzo delegato (ChainIntegrate può gestire deleghe sempre)",
+    "single.addDelegate": "Aggiungi delega", "single.removeDelegate": "Rimuovi delega",
+    "single.info": "owner: {owner}<br>registryAdmin: {admin}<br>membershipCorporate: {membership}",
+    "single.invalidRegistry": "Indirizzo non valido come TraceabilityRegistry: {msg}",
+    "single.invalidRegistryAddress": "Indirizzo registry non valido.", "single.fillBothCorrectly": "Compila entrambi i campi correttamente.",
+    "single.adminUpdated": "registryAdmin aggiornato. Tx: {tx}", "single.adminUpdateError": "Errore setRegistryAdmin: {msg}",
+    "single.membershipRealigned": "Membership Corporate riallineata per questo registry. Tx: {tx}",
+    "single.membershipRealignError": "Errore setMembershipCorporate: {msg}",
+    "single.delegateAdded": "Delega aggiunta (come ChainIntegrate). Tx: {tx}", "single.delegateAddError": "Errore aggiunta delega: {msg}",
+    "single.delegateRemoved": "Delega rimossa (come ChainIntegrate). Tx: {tx}", "single.delegateRemoveError": "Errore rimozione delega: {msg}",
+    "log.noExtension": "Nessuna Universal Profile extension rilevata.", "log.invalidAddress": "Indirizzo non valido.",
+  },
+  en: {
+    "header.title": "TraceabilityRegistry — ChainIntegrate Admin", "connect.button": "Connect", "connect.connected": "Connected",
+    "warning.text": "WARNING: the functions below require the connected address to be chainIntegrateOwner (owner) — on a registry or on the Factory, otherwise transactions will be rejected on-chain. No UI-side check beyond this: the real security is in the contract.",
+    "factory.title": "Factory — Membership Corporate", "factory.newMembership": "New Membership Corporate address",
+    "factory.update": "Update (new deployments only)", "factory.updateNote": "Does not affect existing registries — those must be realigned individually below.",
+    "factory.info": "Current Membership Corporate: {membership}<br>chainIntegrateOwner: {owner} {ownerNote}<br>Total registries: {total}",
+    "factory.youAreOwner": "(that's you)", "factory.notOwner": "(NOT you — writes will fail)",
+    "factory.readError": "Factory read error: {msg}", "factory.updated": "Factory.membershipCorporate updated. Tx: {tx}",
+    "factory.updateError": "Factory update error: {msg}",
+    "registries.allTitle": "All registries", "registries.load": "Load list", "registries.none": "No registries yet.",
+    "registries.colIndex": "#", "registries.colAddress": "Address", "registries.loadError": "Registry load error: {msg}",
+    "single.title": "Actions on a single registry", "single.address": "Registry address",
+    "single.newAdmin": "New registryAdmin", "single.changeAdmin": "Change registryAdmin",
+    "single.newMembership": "New Membership Corporate (for THIS registry)", "single.realign": "Realign Membership Corporate",
+    "single.delegateAddress": "Delegate address (ChainIntegrate can always manage delegates)",
+    "single.addDelegate": "Add delegate", "single.removeDelegate": "Remove delegate",
+    "single.info": "owner: {owner}<br>registryAdmin: {admin}<br>membershipCorporate: {membership}",
+    "single.invalidRegistry": "Not a valid TraceabilityRegistry address: {msg}",
+    "single.invalidRegistryAddress": "Invalid registry address.", "single.fillBothCorrectly": "Fill in both fields correctly.",
+    "single.adminUpdated": "registryAdmin updated. Tx: {tx}", "single.adminUpdateError": "setRegistryAdmin error: {msg}",
+    "single.membershipRealigned": "Membership Corporate realigned for this registry. Tx: {tx}",
+    "single.membershipRealignError": "setMembershipCorporate error: {msg}",
+    "single.delegateAdded": "Delegate added (as ChainIntegrate). Tx: {tx}", "single.delegateAddError": "Add delegate error: {msg}",
+    "single.delegateRemoved": "Delegate removed (as ChainIntegrate). Tx: {tx}", "single.delegateRemoveError": "Remove delegate error: {msg}",
+    "log.noExtension": "No Universal Profile extension detected.", "log.invalidAddress": "Invalid address.",
+  },
+};
+
+let currentLang = localStorage.getItem("traceabilityLang") || "it";
+
+function t(key, params) {
+  const dict = I18N[currentLang] || I18N.it;
+  let str = dict[key] !== undefined ? dict[key] : (I18N.it[key] !== undefined ? I18N.it[key] : key);
+  if (params) {
+    Object.keys(params).forEach((k) => { str = str.split("{" + k + "}").join(params[k]); });
+  }
+  return str;
+}
+
+let connectBtnConnected = false;
+
+function applyLanguage() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  document.getElementById("langItBtn").classList.toggle("active", currentLang === "it");
+  document.getElementById("langEnBtn").classList.toggle("active", currentLang === "en");
+  if (connectBtnConnected) document.getElementById("connectBtn").textContent = t("connect.connected");
+}
+
+document.getElementById("langItBtn").addEventListener("click", () => { currentLang = "it"; localStorage.setItem("traceabilityLang", "it"); applyLanguage(); });
+document.getElementById("langEnBtn").addEventListener("click", () => { currentLang = "en"; localStorage.setItem("traceabilityLang", "en"); applyLanguage(); });
+
 const CONFIG = {
   FACTORY_ADDRESS: "0xA57527bE3AaDF4F1A60AF9829BaCA0949DAce315", // TODO: mainnet
 };
@@ -102,13 +188,14 @@ function log(msg) {
 
 document.getElementById("connectBtn").addEventListener("click", async () => {
   const injected = window.lukso || window.ethereum;
-  if (!injected) { alert("Nessuna Universal Profile extension rilevata."); return; }
+  if (!injected) { alert(t("log.noExtension")); return; }
   provider = new ethers.providers.Web3Provider(injected);
   await provider.send("eth_requestAccounts", []);
   signer = provider.getSigner();
   myAddress = await signer.getAddress();
   document.getElementById("connectedAddress").textContent = myAddress;
-  document.getElementById("connectBtn").textContent = "Connesso";
+  connectBtnConnected = true;
+  document.getElementById("connectBtn").textContent = t("connect.connected");
   factory = new ethers.Contract(CONFIG.FACTORY_ADDRESS, FACTORY_ABI, signer);
   await refreshFactoryInfo();
 });
@@ -118,26 +205,26 @@ async function refreshFactoryInfo() {
     const membership = await factory.membershipCorporate();
     const owner = await factory.chainIntegrateOwner();
     const total = await factory.totalRegistries();
-    document.getElementById("factoryInfo").innerHTML =
-      "Membership Corporate attuale: " + membership + "<br>" +
-      "chainIntegrateOwner: " + owner + (owner.toLowerCase() === (myAddress || "").toLowerCase() ? " (sei tu)" : " (NON sei tu — le scritture falliranno)") + "<br>" +
-      "Registry totali: " + total.toString();
+    const ownerNote = owner.toLowerCase() === (myAddress || "").toLowerCase() ? t("factory.youAreOwner") : t("factory.notOwner");
+    document.getElementById("factoryInfo").innerHTML = t("factory.info", {
+      membership: membership, owner: owner, ownerNote: ownerNote, total: total.toString(),
+    });
     document.getElementById("totalRegistries").textContent = total.toString();
   } catch (err) {
-    log("Errore lettura Factory: " + err.message);
+    log(t("factory.readError", { msg: err.message }));
   }
 }
 
 document.getElementById("setFactoryMembershipBtn").addEventListener("click", async () => {
   const addr = document.getElementById("newFactoryMembership").value.trim();
-  if (!ethers.utils.isAddress(addr)) { alert("Indirizzo non valido."); return; }
+  if (!ethers.utils.isAddress(addr)) { alert(t("log.invalidAddress")); return; }
   try {
     const tx = await factory.setMembershipCorporate(addr);
     const receipt = await tx.wait();
-    log("Factory.membershipCorporate aggiornato. Tx: " + receipt.transactionHash);
+    log(t("factory.updated", { tx: receipt.transactionHash }));
     await refreshFactoryInfo();
   } catch (err) {
-    log("Errore aggiornamento Factory: " + err.message);
+    log(t("factory.updateError", { msg: err.message }));
   }
 });
 
@@ -145,15 +232,15 @@ document.getElementById("loadRegistriesBtn").addEventListener("click", async () 
   try {
     const total = await factory.totalRegistries();
     const n = total.toNumber();
-    let html = "<table><tr><th>#</th><th>Indirizzo</th></tr>";
+    let html = "<table><tr><th>" + t("registries.colIndex") + "</th><th>" + t("registries.colAddress") + "</th></tr>";
     for (let i = 0; i < n; i++) {
       const addr = await factory.allRegistries(i);
       html += "<tr><td>" + i + "</td><td>" + addr + "</td></tr>";
     }
     html += "</table>";
-    document.getElementById("registriesTable").innerHTML = n === 0 ? "<p class='muted'>Nessun registry ancora.</p>" : html;
+    document.getElementById("registriesTable").innerHTML = n === 0 ? "<p class='muted'>" + t("registries.none") + "</p>" : html;
   } catch (err) {
-    log("Errore caricamento registry: " + err.message);
+    log(t("registries.loadError", { msg: err.message }));
   }
 });
 
@@ -162,7 +249,7 @@ document.getElementById("loadRegistriesBtn").addEventListener("click", async () 
 // -----------------------------------------------------------------------
 function getTargetRegistry() {
   const addr = document.getElementById("targetRegistryAddress").value.trim();
-  if (!ethers.utils.isAddress(addr)) { alert("Indirizzo registry non valido."); return null; }
+  if (!ethers.utils.isAddress(addr)) { alert(t("single.invalidRegistryAddress")); return null; }
   return new ethers.Contract(addr, REGISTRY_ABI, signer);
 }
 
@@ -173,64 +260,65 @@ document.getElementById("targetRegistryAddress").addEventListener("change", asyn
     const owner = await registry.owner();
     const admin = await registry.registryAdmin();
     const membership = await registry.membershipCorporate();
-    document.getElementById("targetRegistryInfo").innerHTML =
-      "owner: " + owner + "<br>registryAdmin: " + admin + "<br>membershipCorporate: " + membership;
+    document.getElementById("targetRegistryInfo").innerHTML = t("single.info", { owner: owner, admin: admin, membership: membership });
   } catch (err) {
-    document.getElementById("targetRegistryInfo").innerHTML = "<span style='color:#c33'>Indirizzo non valido come TraceabilityRegistry: " + err.message + "</span>";
+    document.getElementById("targetRegistryInfo").innerHTML = "<span style='color:#c33'>" + t("single.invalidRegistry", { msg: err.message }) + "</span>";
   }
 });
 
 document.getElementById("setRegistryAdminBtn").addEventListener("click", async () => {
   const registry = getTargetRegistry();
   const newAdmin = document.getElementById("newRegistryAdmin").value.trim();
-  if (!registry || !ethers.utils.isAddress(newAdmin)) { alert("Compila entrambi i campi correttamente."); return; }
+  if (!registry || !ethers.utils.isAddress(newAdmin)) { alert(t("single.fillBothCorrectly")); return; }
   try {
     const tx = await registry.setRegistryAdmin(newAdmin);
     const receipt = await tx.wait();
-    log("registryAdmin aggiornato. Tx: " + receipt.transactionHash);
+    log(t("single.adminUpdated", { tx: receipt.transactionHash }));
   } catch (err) {
-    log("Errore setRegistryAdmin: " + err.message);
+    log(t("single.adminUpdateError", { msg: err.message }));
   }
 });
 
 document.getElementById("setRegistryMembershipBtn").addEventListener("click", async () => {
   const registry = getTargetRegistry();
   const newMembership = document.getElementById("newRegistryMembership").value.trim();
-  if (!registry || !ethers.utils.isAddress(newMembership)) { alert("Compila entrambi i campi correttamente."); return; }
+  if (!registry || !ethers.utils.isAddress(newMembership)) { alert(t("single.fillBothCorrectly")); return; }
   try {
     const tx = await registry.setMembershipCorporate(newMembership);
     const receipt = await tx.wait();
-    log("Membership Corporate riallineata per questo registry. Tx: " + receipt.transactionHash);
+    log(t("single.membershipRealigned", { tx: receipt.transactionHash }));
   } catch (err) {
-    log("Errore setMembershipCorporate: " + err.message);
+    log(t("single.membershipRealignError", { msg: err.message }));
   }
 });
 
 document.getElementById("adminAddDelegateBtn").addEventListener("click", async () => {
   const registry = getTargetRegistry();
   const addr = document.getElementById("adminDelegateAddress").value.trim();
-  if (!registry || !ethers.utils.isAddress(addr)) { alert("Compila entrambi i campi correttamente."); return; }
+  if (!registry || !ethers.utils.isAddress(addr)) { alert(t("single.fillBothCorrectly")); return; }
   try {
     const tx = await registry.addDelegate(addr);
     const receipt = await tx.wait();
-    log("Delega aggiunta (come ChainIntegrate). Tx: " + receipt.transactionHash);
+    log(t("single.delegateAdded", { tx: receipt.transactionHash }));
   } catch (err) {
-    log("Errore aggiunta delega: " + err.message);
+    log(t("single.delegateAddError", { msg: err.message }));
   }
 });
 
 document.getElementById("adminRemoveDelegateBtn").addEventListener("click", async () => {
   const registry = getTargetRegistry();
   const addr = document.getElementById("adminDelegateAddress").value.trim();
-  if (!registry || !ethers.utils.isAddress(addr)) { alert("Compila entrambi i campi correttamente."); return; }
+  if (!registry || !ethers.utils.isAddress(addr)) { alert(t("single.fillBothCorrectly")); return; }
   try {
     const tx = await registry.removeDelegate(addr);
     const receipt = await tx.wait();
-    log("Delega rimossa (come ChainIntegrate). Tx: " + receipt.transactionHash);
+    log(t("single.delegateRemoved", { tx: receipt.transactionHash }));
   } catch (err) {
-    log("Errore rimozione delega: " + err.message);
+    log(t("single.delegateRemoveError", { msg: err.message }));
   }
 });
+
+applyLanguage();
 </script>
 </body>
 </html>
