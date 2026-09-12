@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TraceabilityRegistry — Esplora</title>
+<link rel="stylesheet" href="./traceability-explorer-ui.css">
 <script src="./traceability-decode.js"></script>
+<script src="./traceability-explorer-ui.js"></script>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 0 auto; padding: 20px; background: #fafafa; }
   header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
@@ -14,42 +16,7 @@
   .lookup-form { display: flex; gap: 8px; margin-bottom: 20px; }
   .lookup-form input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
   .lookup-form button { padding: 8px 16px; background: #222; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-  .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); cursor: pointer; transition: box-shadow 0.15s; }
-  .card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.12); }
-  .card.invalidated { opacity: 0.55; }
-  .card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #eee; display: block; }
-  .card-body { padding: 12px; }
-  .badge { display: inline-block; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; margin-bottom: 6px; }
-  .badge-lot { background: #e0f2e9; color: #0a6; }
-  .badge-batch { background: #e8e6fb; color: #5b3fd6; }
-  .badge-invalid { background: #fde0e0; color: #c33; margin-left: 6px; }
-  .card h3 { margin: 4px 0 6px; font-size: 1rem; }
-  .card p.desc { font-size: 0.85rem; color: #555; margin: 0 0 8px; }
-  .card .attrs { display: none; margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px; }
-  .card.expanded .attrs { display: block; }
-  .attr-row { display: flex; justify-content: space-between; font-size: 0.8rem; padding: 3px 0; border-bottom: 1px dashed #eee; }
-  .attr-row span:first-child { color: #888; }
-  .used-lots { margin-top: 8px; }
-  .used-lots a { font-size: 0.78rem; color: #5b3fd6; text-decoration: none; display: block; margin-bottom: 3px; }
-  .used-lots a:hover { text-decoration: underline; }
   .muted { color: #777; font-size: 0.85rem; }
-  .err { color: #c33; }
-  .empty { text-align: center; padding: 40px; color: #999; }
-  #collectionHeader { position: relative; border-radius: 14px; overflow: hidden; margin-bottom: 20px; background: #eee; }
-  #collectionHeader .banner { width: 100%; max-height: 220px; object-fit: cover; display: block; }
-  #collectionHeader .collection-body { padding: 16px 20px; background: #fff; display: flex; gap: 14px; align-items: center; }
-  #collectionHeader .collection-icon { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; flex-shrink: 0; background: #eee; }
-  #collectionHeader h2 { margin: 0 0 4px; }
-  #collectionHeader p { margin: 0; color: #555; font-size: 0.9rem; }
-  .filters { margin-bottom: 16px; background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 12px 14px; }
-  .filter-group { margin-bottom: 8px; }
-  .filter-group:last-child { margin-bottom: 0; }
-  .filter-group-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
-  .filter-pills { display: flex; flex-wrap: wrap; gap: 6px; }
-  .pill { padding: 4px 12px; border: 1px solid #ccc; border-radius: 999px; font-size: 0.8rem; background: #f5f5f5; cursor: pointer; }
-  .pill.active { background: #222; color: #fff; border-color: #222; }
-  .filters-clear { font-size: 0.78rem; color: #5b3fd6; cursor: pointer; text-decoration: underline; margin-top: 8px; display: inline-block; }
 </style>
 </head>
 <body>
@@ -67,11 +34,10 @@
   <button id="lookupBtn" data-i18n="lookup.button">Visualizza</button>
 </div>
 
-<div id="collectionHeader" style="display:none;"></div>
-
+<div id="collectionHeader" class="te-collection-header"></div>
 <div id="status" class="muted"></div>
-<div id="filters" class="filters" style="display:none;"></div>
-<div id="grid" class="grid"></div>
+<div id="filters" class="te-filters"></div>
+<div id="grid" class="te-grid"></div>
 
 <script>
 const I18N = {
@@ -80,8 +46,8 @@ const I18N = {
     "status.loading": "Caricamento...", "status.error": "Errore: {msg}",
     "status.empty": "Nessuna registrazione ancora per questo registry.",
     "status.noMatch": "Nessuna scheda corrisponde ai filtri selezionati.",
-    "filters.clear": "Cancella filtri",
     "status.invalidRegistry": "Indirizzo non valido.",
+    "filters.clear": "Cancella filtri",
     "badge.lot": "Materia prima", "badge.batch": "Batch", "badge.invalidated": "Annullato",
     "card.usedLots": "Lotti utilizzati", "card.noImage": "Nessuna immagine",
   },
@@ -90,8 +56,8 @@ const I18N = {
     "status.loading": "Loading...", "status.error": "Error: {msg}",
     "status.empty": "No entries yet for this registry.",
     "status.noMatch": "No cards match the selected filters.",
-    "filters.clear": "Clear filters",
     "status.invalidRegistry": "Invalid address.",
+    "filters.clear": "Clear filters",
     "badge.lot": "Raw material", "badge.batch": "Batch", "badge.invalidated": "Invalidated",
     "card.usedLots": "Lots used", "card.noImage": "No image",
   },
@@ -115,262 +81,26 @@ function applyLanguage() {
 document.getElementById("langItBtn").addEventListener("click", () => { currentLang = "it"; localStorage.setItem("traceabilityLang", "it"); applyLanguage(); });
 document.getElementById("langEnBtn").addEventListener("click", () => { currentLang = "en"; localStorage.setItem("traceabilityLang", "en"); applyLanguage(); });
 
-// -----------------------------------------------------------------------
 const CONFIG = { BACKEND_BASE_URL: "https://traceability.chainintegrate.it" };
 
 function isAddress(addr) {
   return /^0x[0-9a-fA-F]{40}$/.test(addr);
 }
 
-function getRegistryFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("registry") || "";
-}
+const gallery = TraceabilityExplorerUI.createGalleryInstance({
+  headerEl: document.getElementById("collectionHeader"),
+  statusEl: document.getElementById("status"),
+  filtersEl: document.getElementById("filters"),
+  gridEl: document.getElementById("grid"),
+  t: t,
+});
 
-async function loadRegistry(registryAddress) {
-  const statusEl = document.getElementById("status");
-  const gridEl = document.getElementById("grid");
-  gridEl.innerHTML = "";
-
+function loadRegistry(registryAddress) {
   if (!isAddress(registryAddress)) {
-    statusEl.innerHTML = "<p class='err'>" + t("status.invalidRegistry") + "</p>";
+    document.getElementById("status").innerHTML = "<p class='te-err'>" + t("status.invalidRegistry") + "</p>";
     return;
   }
-
-  statusEl.textContent = t("status.loading");
-
-  let data;
-  try {
-    data = await TraceabilityDecode.fetchRegistryEntries(CONFIG.BACKEND_BASE_URL, registryAddress);
-  } catch (err) {
-    statusEl.innerHTML = "<p class='err'>" + t("status.error", { msg: err.message }) + "</p>";
-    return;
-  }
-
-  await renderCollectionHeader(data.collectionMetadataValue);
-
-  if (!data.entries || data.entries.length === 0) {
-    statusEl.innerHTML = "<p class='empty'>" + t("status.empty") + "</p>";
-    document.getElementById("filters").style.display = "none";
-    return;
-  }
-
-  statusEl.textContent = "";
-
-  // Decodifica tutte le entry in parallelo, poi renderizza — un tokenId->cardData
-  // per poter collegare i lotti usati dai batch alle rispettive card.
-  const cardDataById = {};
-  await Promise.all(
-    data.entries.map(async (entry) => {
-      try {
-        const { json } = await TraceabilityDecode.decodeMetadataValue(entry.metadataValue);
-        const meta = json.LSP4Metadata;
-        const imageUrl = (meta.icon && meta.icon[0] && meta.icon[0].url) ||
-          (meta.images && meta.images[0] && meta.images[0][0] && meta.images[0][0].url) || null;
-        cardDataById[entry.tokenId] = {
-          entry: entry,
-          name: meta.name || entry.tokenId,
-          description: meta.description || "",
-          imageUrl: imageUrl ? TraceabilityDecode.ipfsToHttp(imageUrl) : null,
-          attributes: meta.attributes || [],
-        };
-      } catch (err) {
-        cardDataById[entry.tokenId] = { entry: entry, name: entry.tokenId, description: "", imageUrl: null, attributes: [], decodeError: err.message };
-      }
-    })
-  );
-
-  currentCardDataById = cardDataById;
-  activeFilters = {};
-  renderFilters(cardDataById);
-  renderGrid(data.entries, cardDataById);
-}
-
-// -----------------------------------------------------------------------
-// Intestazione collezione (metadata del registro stesso, non dei token)
-// -----------------------------------------------------------------------
-async function renderCollectionHeader(collectionMetadataValue) {
-  const headerEl = document.getElementById("collectionHeader");
-  if (!collectionMetadataValue) { headerEl.style.display = "none"; return; }
-
-  try {
-    const { json } = await TraceabilityDecode.decodeMetadataValue(collectionMetadataValue);
-    const meta = json.LSP4Metadata;
-    const iconUrl = meta.icon && meta.icon[0] && meta.icon[0].url ? TraceabilityDecode.ipfsToHttp(meta.icon[0].url) : null;
-    const bannerUrl = meta.backgroundImage && meta.backgroundImage[0] && meta.backgroundImage[0].url
-      ? TraceabilityDecode.ipfsToHttp(meta.backgroundImage[0].url) : null;
-
-    let html = "";
-    if (bannerUrl) html += "<img class='banner' src='" + bannerUrl + "' alt=''>";
-    html += "<div class='collection-body'>";
-    if (iconUrl) html += "<img class='collection-icon' src='" + iconUrl + "' alt=''>";
-    html += "<div><h2>" + escapeHtml(meta.name || "") + "</h2>";
-    if (meta.description) html += "<p>" + escapeHtml(meta.description) + "</p>";
-    html += "</div></div>";
-
-    headerEl.innerHTML = html;
-    headerEl.style.display = "block";
-  } catch (err) {
-    headerEl.style.display = "none"; // metadata non decodificabile: non blocca il resto della pagina
-  }
-}
-
-// -----------------------------------------------------------------------
-// Filtri a pillole — un gruppo per ogni chiave attributo, valori distinti
-// -----------------------------------------------------------------------
-let currentCardDataById = {};
-let activeFilters = {}; // key -> Set(values) — OR dentro la stessa chiave, AND tra chiavi diverse
-
-function collectFacets(cardDataById) {
-  const facets = {};
-  Object.values(cardDataById).forEach((cd) => {
-    (cd.attributes || []).forEach((a) => {
-      const k = String(a.key);
-      const v = String(a.value);
-      if (!facets[k]) facets[k] = new Set();
-      facets[k].add(v);
-    });
-  });
-  return facets;
-}
-
-function renderFilters(cardDataById) {
-  const filtersEl = document.getElementById("filters");
-  const facets = collectFacets(cardDataById);
-  const keys = Object.keys(facets);
-
-  if (keys.length === 0) { filtersEl.style.display = "none"; return; }
-
-  let html = "";
-  keys.forEach((key) => {
-    html += "<div class='filter-group'><div class='filter-group-label'>" + escapeHtml(key) + "</div><div class='filter-pills'>";
-    Array.from(facets[key]).sort().forEach((value) => {
-      html += "<button class='pill' data-key='" + escapeHtml(key) + "' data-value='" + escapeHtml(value) + "'>" + escapeHtml(value) + "</button>";
-    });
-    html += "</div></div>";
-  });
-  html += "<span class='filters-clear' id='clearFiltersBtn'>" + t("filters.clear") + "</span>";
-
-  filtersEl.innerHTML = html;
-  filtersEl.style.display = "block";
-
-  filtersEl.querySelectorAll(".pill").forEach((pill) => {
-    pill.addEventListener("click", () => togglePill(pill));
-  });
-  document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
-}
-
-function togglePill(pill) {
-  const key = pill.dataset.key;
-  const value = pill.dataset.value;
-  if (!activeFilters[key]) activeFilters[key] = new Set();
-
-  if (activeFilters[key].has(value)) {
-    activeFilters[key].delete(value);
-    if (activeFilters[key].size === 0) delete activeFilters[key];
-    pill.classList.remove("active");
-  } else {
-    activeFilters[key].add(value);
-    pill.classList.add("active");
-  }
-  applyCardFilters();
-}
-
-function clearFilters() {
-  activeFilters = {};
-  document.querySelectorAll(".pill.active").forEach((p) => p.classList.remove("active"));
-  applyCardFilters();
-}
-
-/** Una card resta visibile se, per OGNI chiave attiva, ha almeno un
- * attributo il cui valore è tra quelli selezionati per quella chiave. */
-function cardMatchesFilters(cardData) {
-  const activeKeys = Object.keys(activeFilters);
-  if (activeKeys.length === 0) return true;
-  return activeKeys.every((key) => {
-    const selectedValues = activeFilters[key];
-    return (cardData.attributes || []).some((a) => String(a.key) === key && selectedValues.has(String(a.value)));
-  });
-}
-
-function applyCardFilters() {
-  let visibleCount = 0;
-  Object.keys(currentCardDataById).forEach((tokenId) => {
-    const cardEl = document.getElementById("token-" + tokenId);
-    if (!cardEl) return;
-    const matches = cardMatchesFilters(currentCardDataById[tokenId]);
-    cardEl.style.display = matches ? "" : "none";
-    if (matches) visibleCount++;
-  });
-  const statusEl = document.getElementById("status");
-  statusEl.textContent = visibleCount === 0 ? t("status.noMatch") : "";
-}
-
-function renderGrid(entries, cardDataById) {
-  const gridEl = document.getElementById("grid");
-  gridEl.innerHTML = "";
-
-  entries.forEach((entry) => {
-    const cardData = cardDataById[entry.tokenId];
-    const card = document.createElement("div");
-    card.className = "card" + (entry.status === 1 ? " invalidated" : "");
-    card.id = "token-" + entry.tokenId;
-
-    const badgeClass = entry.entryType === 1 ? "badge-batch" : "badge-lot";
-    const badgeLabel = entry.entryType === 1 ? t("badge.batch") : t("badge.lot");
-
-    let html = "";
-    if (cardData.imageUrl) {
-      html += "<img src='" + cardData.imageUrl + "' alt=''>";
-    } else {
-      html += "<div style='aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;color:#bbb;background:#f0f0f0;'>" + t("card.noImage") + "</div>";
-    }
-
-    html += "<div class='card-body'>";
-    html += "<span class='badge " + badgeClass + "'>" + badgeLabel + "</span>";
-    if (entry.status === 1) html += "<span class='badge badge-invalid'>" + t("badge.invalidated") + "</span>";
-    html += "<h3>" + escapeHtml(cardData.name) + "</h3>";
-    if (cardData.description) html += "<p class='desc'>" + escapeHtml(cardData.description) + "</p>";
-
-    html += "<div class='attrs'>";
-    cardData.attributes.forEach((a) => {
-      html += "<div class='attr-row'><span>" + escapeHtml(String(a.key)) + "</span><span>" + escapeHtml(String(a.value)) + "</span></div>";
-    });
-    if (entry.entryType === 1 && entry.usedLots && entry.usedLots.length > 0) {
-      html += "<div class='used-lots'><strong>" + t("card.usedLots") + "</strong>";
-      entry.usedLots.forEach((lotTokenId) => {
-        const lotData = cardDataById[lotTokenId];
-        const label = lotData ? lotData.name : lotTokenId;
-        html += "<a href='#token-" + lotTokenId + "' onclick='scrollToCard(event, \"" + lotTokenId + "\")'>→ " + escapeHtml(label) + "</a>";
-      });
-      html += "</div>";
-    }
-    html += "</div>"; // .attrs
-    html += "</div>"; // .card-body
-
-    card.innerHTML = html;
-    card.addEventListener("click", (e) => {
-      if (e.target.tagName === "A") return; // non intercettare i link ai lotti
-      card.classList.toggle("expanded");
-    });
-
-    gridEl.appendChild(card);
-  });
-}
-
-function scrollToCard(e, tokenId) {
-  e.stopPropagation();
-  const el = document.getElementById("token-" + tokenId);
-  if (el) {
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-    el.classList.add("expanded");
-  }
-}
-
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
+  gallery.load(CONFIG.BACKEND_BASE_URL, registryAddress);
 }
 
 document.getElementById("lookupBtn").addEventListener("click", () => {
@@ -381,12 +111,10 @@ document.getElementById("lookupBtn").addEventListener("click", () => {
   loadRegistry(addr);
 });
 
-// -----------------------------------------------------------------------
-// Avvio: se ?registry=0x... è già nell'URL, carica subito (utile per embed
-// diretto via iframe su un sito esterno, senza dover compilare il form).
-// -----------------------------------------------------------------------
+// Se ?registry=0x... è già nell'URL, carica subito — utile per embed
+// diretto via iframe su un sito esterno, senza compilare il form.
 applyLanguage();
-const initialRegistry = getRegistryFromUrl();
+const initialRegistry = new URLSearchParams(window.location.search).get("registry") || "";
 if (initialRegistry) {
   document.getElementById("registryInput").value = initialRegistry;
   document.getElementById("lookupForm").style.display = "none";

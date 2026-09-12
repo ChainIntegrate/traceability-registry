@@ -1,0 +1,42 @@
+/* TraceabilityRegistry — stili condivisi della galleria (card + filtri).
+   Prefisso "te-" per non entrare in conflitto con lo stile della pagina
+   che lo include (user.html ha già le sue classi .card/.row/ecc.). */
+
+.te-collection-header { position: relative; border-radius: 14px; overflow: hidden; margin-bottom: 20px; background: #eee; display: none; }
+.te-banner { width: 100%; max-height: 220px; object-fit: cover; display: block; }
+.te-collection-body { padding: 16px 20px; background: #fff; display: flex; gap: 14px; align-items: center; }
+.te-collection-icon { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; flex-shrink: 0; background: #eee; }
+.te-collection-header h2 { margin: 0 0 4px; }
+.te-collection-header p { margin: 0; color: #555; font-size: 0.9rem; }
+
+.te-filters { margin-bottom: 16px; background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 10px 14px; display: none; }
+.te-filter-group { border-bottom: 1px solid #f0f0f0; padding: 6px 0; }
+.te-filter-group:last-of-type { border-bottom: none; }
+.te-filter-group summary { cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #444; padding: 4px 0; }
+.te-filter-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.te-pill { padding: 4px 12px; border: 1px solid #ccc; border-radius: 999px; font-size: 0.8rem; background: #f5f5f5; cursor: pointer; }
+.te-pill.active { background: #222; color: #fff; border-color: #222; }
+.te-filters-clear { font-size: 0.78rem; color: #5b3fd6; cursor: pointer; text-decoration: underline; margin-top: 8px; display: inline-block; }
+
+.te-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.te-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); cursor: pointer; transition: box-shadow 0.15s; }
+.te-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.12); }
+.te-card.te-invalidated { opacity: 0.55; }
+.te-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #eee; display: block; }
+.te-noimage { aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: #bbb; background: #f0f0f0; }
+.te-card-body { padding: 12px; }
+.te-badge { display: inline-block; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; margin-bottom: 6px; }
+.te-badge-lot { background: #e0f2e9; color: #0a6; }
+.te-badge-batch { background: #e8e6fb; color: #5b3fd6; }
+.te-badge-invalid { background: #fde0e0; color: #c33; margin-left: 6px; }
+.te-card h3 { margin: 4px 0 6px; font-size: 1rem; }
+.te-desc { font-size: 0.85rem; color: #555; margin: 0 0 8px; }
+.te-attrs { display: none; margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px; }
+.te-card.te-expanded .te-attrs { display: block; }
+.te-attr-row { display: flex; justify-content: space-between; font-size: 0.8rem; padding: 3px 0; border-bottom: 1px dashed #eee; }
+.te-attr-row span:first-child { color: #888; }
+.te-used-lots { margin-top: 8px; }
+.te-used-lots a { font-size: 0.78rem; color: #5b3fd6; text-decoration: none; display: block; margin-bottom: 3px; }
+.te-used-lots a:hover { text-decoration: underline; }
+.te-err { color: #c33; }
+.te-empty { text-align: center; padding: 40px; color: #999; }

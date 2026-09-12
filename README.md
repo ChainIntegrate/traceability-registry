@@ -598,7 +598,45 @@ universaleverything.io su richiesta esplicita: immagine, badge tipo
 **Non testato**: il rendering visivo reale in un browser con dati veri (la
 logica di fetch/decode/escape sì, il DOM finale visto da un utente no).
 
-## 22. Punti aperti / TODO
+## 22. Refactoring in modulo condiviso + integrazione in `user.html`
+
+Dopo il primo uso reale: troppi gruppi di filtri aperti spingevano le card
+troppo in basso (ogni ingrediente di un batch genera una propria chiave
+"Lotto X", quindi molti gruppi). Estratta tutta la logica di
+`explorer.html` (card, filtri, intestazione collezione) in un modulo
+condiviso — **corretta una volta sola, beneficiano entrambe le pagine**:
+
+- **`frontend/traceability-explorer-ui.js`** + **`traceability-explorer-ui.css`**
+  (classi `te-*` per non entrare in conflitto con lo stile della pagina
+  ospitante). `createGalleryInstance({...})` produce un'istanza indipendente
+  — più istanze possono coesistere sulla stessa pagina.
+- **Fix UX filtri**: gruppi ora dentro `<details>`/`<summary>` (nativi,
+  nessun JS per aprire/chiudere), chiusi di default, con il conteggio dei
+  valori nell'etichetta. **Verificato che la logica di matching produca gli
+  stessi identici risultati di prima dell'estrazione**.
+- **`explorer.html`** riscritta per usare il modulo — molto più corta,
+  stessa funzionalità.
+- **`user.html`**: due aggiunte richieste esplicitamente —
+  1. Tab "Info registro" ora mostra i metadata **attualmente impostati**
+     (nome/descrizione/immagini) sopra il form di modifica, aggiornati sia
+     alla selezione del registro sia subito dopo un salvataggio riuscito —
+     non serve più uscire dal pannello per vedere cosa c'è già.
+  2. Nuovo tab "Esplora registro": stessa galleria pubblica di
+     `explorer.html`, montata dentro il pannello autenticato. Caricata solo
+     al click sul tab (non ad ogni selezione registro), per non appesantire
+     le altre operazioni.
+- **Coerenza i18n finale**: `user.html` + modulo condiviso insieme →
+  139/139 chiavi coperte, zero mancanti, zero morte;
+  `explorer.html` + modulo → 13/13.
+
+**Nota di processo**: questo refactoring è stato costruito la prima volta
+sopra un clone locale non aggiornato (errore mio — non avevo riclonato
+all'inizio del turno). Il confronto riga-per-riga contro il repo reale ha
+mostrato zero divergenze non intenzionali, e il lavoro è stato riapplicato
+pulito sulla base corretta prima di essere presentato — nessun commit
+errato è mai arrivato su GitHub.
+
+## 23. Punti aperti / TODO
 
 - [ ] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` (allineare al resto dei repo ChainIntegrate).

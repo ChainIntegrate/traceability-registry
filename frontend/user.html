@@ -11,6 +11,8 @@
 <script src="./traceability-mint-compose.js"></script>
 <script src="./traceability-photo-library.js"></script>
 <script src="./traceability-decode.js"></script>
+<script src="./traceability-explorer-ui.js"></script>
+<link rel="stylesheet" href="./traceability-explorer-ui.css">
 <style>
   body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
   header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
@@ -90,9 +92,15 @@
     <button data-tab="batch" data-i18n="nav.batch">Batch produzione</button>
     <button data-tab="foto" data-i18n="nav.photos">Libreria foto</button>
     <button data-tab="deleghe" data-i18n="nav.delegates">Deleghe</button>
+    <button data-tab="esplora" data-i18n="nav.explore">Esplora registro</button>
   </nav>
 
   <section class="tab active" id="tab-info">
+    <div class="card">
+      <h2 data-i18n="collection.currentTitle">Metadata attuali</h2>
+      <div id="currentCollectionHeader" class="te-collection-header"></div>
+      <p class="muted" id="currentCollectionEmpty" data-i18n="collection.currentEmpty">Nessun metadata di collezione impostato ancora.</p>
+    </div>
     <div class="card">
       <h2 data-i18n="collection.title">Metadata della collezione</h2>
       <p class="muted" data-i18n="collection.description">Nome/descrizione/immagini visibili come "collezione" su universaleverything.io. Solo il registryAdmin può modificarli.</p>
@@ -172,6 +180,17 @@
       <button class="danger" id="removeDelegateBtn" data-i18n="delegates.remove">Rimuovi delega</button>
     </div>
   </section>
+
+  <section class="tab" id="tab-esplora">
+    <div class="card">
+      <h2 data-i18n="nav.explore">Esplora registro</h2>
+      <p class="muted" data-i18n="explore.hint">Stessa visualizzazione pubblica di explorer.html, qui per un controllo rapido senza uscire dal pannello.</p>
+      <div id="exploreCollectionHeader" class="te-collection-header"></div>
+      <div id="exploreStatus" class="muted"></div>
+      <div id="exploreFilters" class="te-filters"></div>
+      <div id="exploreGrid" class="te-grid"></div>
+    </div>
+  </section>
 </section>
 
 <pre id="log"></pre>
@@ -196,7 +215,16 @@ const I18N = {
     "delegateAccess.invalidRegistry": "Indirizzo non valido come TraceabilityRegistry: {msg}",
     "app.activeRegistry": "Registro attivo:", "app.changeRegistry": "cambia registro",
     "nav.info": "Info registro", "nav.rawMaterial": "Materie prime", "nav.batch": "Batch produzione",
-    "nav.photos": "Libreria foto", "nav.delegates": "Deleghe",
+    "nav.photos": "Libreria foto", "nav.delegates": "Deleghe", "nav.explore": "Esplora registro",
+    "collection.currentTitle": "Metadata attuali", "collection.currentEmpty": "Nessun metadata di collezione impostato ancora.",
+    "collection.currentLoadError": "Impossibile caricare i metadata attuali: {msg}",
+    "explore.hint": "Stessa visualizzazione pubblica di explorer.html, qui per un controllo rapido senza uscire dal pannello.",
+    "status.loading": "Caricamento...", "status.error": "Errore: {msg}",
+    "status.empty": "Nessuna registrazione ancora per questo registry.",
+    "status.noMatch": "Nessuna scheda corrisponde ai filtri selezionati.",
+    "filters.clear": "Cancella filtri",
+    "badge.lot": "Materia prima", "badge.batch": "Batch", "badge.invalidated": "Annullato",
+    "card.usedLots": "Lotti utilizzati", "card.noImage": "Nessuna immagine",
     "collection.title": "Metadata della collezione",
     "collection.description": "Nome/descrizione/immagini visibili come \"collezione\" su universaleverything.io. Solo il registryAdmin può modificarli.",
     "collection.name": "Nome", "collection.desc": "Descrizione",
@@ -263,7 +291,16 @@ const I18N = {
     "delegateAccess.invalidRegistry": "Not a valid TraceabilityRegistry address: {msg}",
     "app.activeRegistry": "Active registry:", "app.changeRegistry": "change registry",
     "nav.info": "Registry info", "nav.rawMaterial": "Raw materials", "nav.batch": "Production batch",
-    "nav.photos": "Photo library", "nav.delegates": "Delegates",
+    "nav.photos": "Photo library", "nav.delegates": "Delegates", "nav.explore": "Explore registry",
+    "collection.currentTitle": "Current metadata", "collection.currentEmpty": "No collection metadata set yet.",
+    "collection.currentLoadError": "Could not load current metadata: {msg}",
+    "explore.hint": "Same public view as explorer.html, here for a quick check without leaving the panel.",
+    "status.loading": "Loading...", "status.error": "Error: {msg}",
+    "status.empty": "No entries yet for this registry.",
+    "status.noMatch": "No cards match the selected filters.",
+    "filters.clear": "Clear filters",
+    "badge.lot": "Raw material", "badge.batch": "Batch", "badge.invalidated": "Invalidated",
+    "card.usedLots": "Lots used", "card.noImage": "No image",
     "collection.title": "Collection metadata",
     "collection.description": "Name/description/images shown as the \"collection\" on universaleverything.io. Only the registryAdmin can edit these.",
     "collection.name": "Name", "collection.desc": "Description",
@@ -457,7 +494,38 @@ async function selectRegistry(address) {
   await refreshPhotoLibraryList();
   await refreshTierNote();
   await refreshDelegatesList();
+  await refreshCurrentCollectionMetadata();
 }
+
+async function refreshCurrentCollectionMetadata() {
+  try {
+    const data = await TraceabilityDecode.fetchRegistryEntries(CONFIG.BACKEND_BASE_URL, activeRegistryAddress);
+    const headerEl = document.getElementById("currentCollectionHeader");
+    const emptyEl = document.getElementById("currentCollectionEmpty");
+    if (data.collectionMetadataValue) {
+      await TraceabilityExplorerUI.renderCollectionHeader(headerEl, data.collectionMetadataValue);
+      emptyEl.style.display = "none";
+    } else {
+      headerEl.style.display = "none";
+      emptyEl.style.display = "block";
+    }
+  } catch (err) {
+    log(t("collection.currentLoadError", { msg: err.message }));
+  }
+}
+
+// -----------------------------------------------------------------------
+// Tab "Esplora registro" — stessa galleria di explorer.html, caricata solo
+// quando il tab viene aperto (non ad ogni selezione di registro, per non
+// appesantire inutilmente le altre operazioni).
+// -----------------------------------------------------------------------
+const exploreGallery = TraceabilityExplorerUI.createGalleryInstance({
+  headerEl: document.getElementById("exploreCollectionHeader"),
+  statusEl: document.getElementById("exploreStatus"),
+  filtersEl: document.getElementById("exploreFilters"),
+  gridEl: document.getElementById("exploreGrid"),
+  t: t,
+});
 
 document.getElementById("changeRegistryLink").addEventListener("click", (e) => {
   e.preventDefault();
@@ -495,6 +563,9 @@ document.querySelectorAll("nav button").forEach((btn) => {
     document.querySelectorAll("section.tab").forEach((s) => s.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+    if (btn.dataset.tab === "esplora" && activeRegistryAddress) {
+      exploreGallery.load(CONFIG.BACKEND_BASE_URL, activeRegistryAddress);
+    }
   });
 });
 
@@ -554,6 +625,7 @@ document.getElementById("saveCollectionMetadataBtn").addEventListener("click", a
     const tx = await activeRegistry.setRegistryMetadata(encodedValue);
     const receipt = await tx.wait();
     log(t("log.collectionUpdated", { tx: receipt.transactionHash }));
+    await refreshCurrentCollectionMetadata();
   } catch (err) {
     log(t("log.collectionError", { msg: err.message }));
   }
