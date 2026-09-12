@@ -579,7 +579,21 @@ universaleverything.io su richiesta esplicita: immagine, badge tipo
   un DOM reale (jsdom)**: un tentativo di injection (`<img onerror=...>`)
   viene neutralizzato correttamente, nessun tag eseguibile nel risultato.
 - i18n: stesso pattern IT/EN a pulsanti di `user.html`/`admin.html`,
-  verificato 11/11 chiavi coperte, zero morte.
+  verificato 13/13 chiavi coperte, zero morte.
+- **Intestazione collezione**: nome/descrizione/banner/icona del registro
+  stesso (`setRegistryMetadata`, non i singoli token) — letti via un nuovo
+  campo `collectionMetadataValue` nella risposta di `/entries` (backend:
+  `registry.getData(LSP4_METADATA_KEY)`, funzione standard ERC725Y già
+  presente sul contratto, nessun redeploy necessario).
+- **Filtri a pillole**: un gruppo per ogni chiave di attributo trovata tra
+  tutte le card, valori distinti come pillole cliccabili. Semantica: **OR**
+  tra valori della stessa chiave, **AND** tra chiavi diverse. **Testato con
+  5 scenari e dati realistici** (stessi lotti/batch usati altrove in questo
+  documento): filtro singolo isola la card giusta, OR su due valori prende
+  entrambe, AND tra due chiavi restringe correttamente, nessun filtro
+  mostra tutto — incluso il caso specifico richiesto (filtrare per numero di
+  lotto isola il materiale, non il batch che lo referenzia con una chiave
+  diversa per ingrediente).
 
 **Non testato**: il rendering visivo reale in un browser con dati veri (la
 logica di fetch/decode/escape sì, il DOM finale visto da un utente no).

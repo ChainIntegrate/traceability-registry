@@ -36,6 +36,20 @@
   .muted { color: #777; font-size: 0.85rem; }
   .err { color: #c33; }
   .empty { text-align: center; padding: 40px; color: #999; }
+  #collectionHeader { position: relative; border-radius: 14px; overflow: hidden; margin-bottom: 20px; background: #eee; }
+  #collectionHeader .banner { width: 100%; max-height: 220px; object-fit: cover; display: block; }
+  #collectionHeader .collection-body { padding: 16px 20px; background: #fff; display: flex; gap: 14px; align-items: center; }
+  #collectionHeader .collection-icon { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; flex-shrink: 0; background: #eee; }
+  #collectionHeader h2 { margin: 0 0 4px; }
+  #collectionHeader p { margin: 0; color: #555; font-size: 0.9rem; }
+  .filters { margin-bottom: 16px; background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 12px 14px; }
+  .filter-group { margin-bottom: 8px; }
+  .filter-group:last-child { margin-bottom: 0; }
+  .filter-group-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
+  .filter-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { padding: 4px 12px; border: 1px solid #ccc; border-radius: 999px; font-size: 0.8rem; background: #f5f5f5; cursor: pointer; }
+  .pill.active { background: #222; color: #fff; border-color: #222; }
+  .filters-clear { font-size: 0.78rem; color: #5b3fd6; cursor: pointer; text-decoration: underline; margin-top: 8px; display: inline-block; }
 </style>
 </head>
 <body>
@@ -53,7 +67,10 @@
   <button id="lookupBtn" data-i18n="lookup.button">Visualizza</button>
 </div>
 
+<div id="collectionHeader" style="display:none;"></div>
+
 <div id="status" class="muted"></div>
+<div id="filters" class="filters" style="display:none;"></div>
 <div id="grid" class="grid"></div>
 
 <script>
@@ -62,6 +79,8 @@ const I18N = {
     "lookup.button": "Visualizza", "lookup.placeholder": "0x... (indirizzo del registry)",
     "status.loading": "Caricamento...", "status.error": "Errore: {msg}",
     "status.empty": "Nessuna registrazione ancora per questo registry.",
+    "status.noMatch": "Nessuna scheda corrisponde ai filtri selezionati.",
+    "filters.clear": "Cancella filtri",
     "status.invalidRegistry": "Indirizzo non valido.",
     "badge.lot": "Materia prima", "badge.batch": "Batch", "badge.invalidated": "Annullato",
     "card.usedLots": "Lotti utilizzati", "card.noImage": "Nessuna immagine",
@@ -70,6 +89,8 @@ const I18N = {
     "lookup.button": "View", "lookup.placeholder": "0x... (registry address)",
     "status.loading": "Loading...", "status.error": "Error: {msg}",
     "status.empty": "No entries yet for this registry.",
+    "status.noMatch": "No cards match the selected filters.",
+    "filters.clear": "Clear filters",
     "status.invalidRegistry": "Invalid address.",
     "badge.lot": "Raw material", "badge.batch": "Batch", "badge.invalidated": "Invalidated",
     "card.usedLots": "Lots used", "card.noImage": "No image",
@@ -126,8 +147,11 @@ async function loadRegistry(registryAddress) {
     return;
   }
 
+  await renderCollectionHeader(data.collectionMetadataValue);
+
   if (!data.entries || data.entries.length === 0) {
     statusEl.innerHTML = "<p class='empty'>" + t("status.empty") + "</p>";
+    document.getElementById("filters").style.display = "none";
     return;
   }
 
@@ -156,7 +180,130 @@ async function loadRegistry(registryAddress) {
     })
   );
 
+  currentCardDataById = cardDataById;
+  activeFilters = {};
+  renderFilters(cardDataById);
   renderGrid(data.entries, cardDataById);
+}
+
+// -----------------------------------------------------------------------
+// Intestazione collezione (metadata del registro stesso, non dei token)
+// -----------------------------------------------------------------------
+async function renderCollectionHeader(collectionMetadataValue) {
+  const headerEl = document.getElementById("collectionHeader");
+  if (!collectionMetadataValue) { headerEl.style.display = "none"; return; }
+
+  try {
+    const { json } = await TraceabilityDecode.decodeMetadataValue(collectionMetadataValue);
+    const meta = json.LSP4Metadata;
+    const iconUrl = meta.icon && meta.icon[0] && meta.icon[0].url ? TraceabilityDecode.ipfsToHttp(meta.icon[0].url) : null;
+    const bannerUrl = meta.backgroundImage && meta.backgroundImage[0] && meta.backgroundImage[0].url
+      ? TraceabilityDecode.ipfsToHttp(meta.backgroundImage[0].url) : null;
+
+    let html = "";
+    if (bannerUrl) html += "<img class='banner' src='" + bannerUrl + "' alt=''>";
+    html += "<div class='collection-body'>";
+    if (iconUrl) html += "<img class='collection-icon' src='" + iconUrl + "' alt=''>";
+    html += "<div><h2>" + escapeHtml(meta.name || "") + "</h2>";
+    if (meta.description) html += "<p>" + escapeHtml(meta.description) + "</p>";
+    html += "</div></div>";
+
+    headerEl.innerHTML = html;
+    headerEl.style.display = "block";
+  } catch (err) {
+    headerEl.style.display = "none"; // metadata non decodificabile: non blocca il resto della pagina
+  }
+}
+
+// -----------------------------------------------------------------------
+// Filtri a pillole — un gruppo per ogni chiave attributo, valori distinti
+// -----------------------------------------------------------------------
+let currentCardDataById = {};
+let activeFilters = {}; // key -> Set(values) — OR dentro la stessa chiave, AND tra chiavi diverse
+
+function collectFacets(cardDataById) {
+  const facets = {};
+  Object.values(cardDataById).forEach((cd) => {
+    (cd.attributes || []).forEach((a) => {
+      const k = String(a.key);
+      const v = String(a.value);
+      if (!facets[k]) facets[k] = new Set();
+      facets[k].add(v);
+    });
+  });
+  return facets;
+}
+
+function renderFilters(cardDataById) {
+  const filtersEl = document.getElementById("filters");
+  const facets = collectFacets(cardDataById);
+  const keys = Object.keys(facets);
+
+  if (keys.length === 0) { filtersEl.style.display = "none"; return; }
+
+  let html = "";
+  keys.forEach((key) => {
+    html += "<div class='filter-group'><div class='filter-group-label'>" + escapeHtml(key) + "</div><div class='filter-pills'>";
+    Array.from(facets[key]).sort().forEach((value) => {
+      html += "<button class='pill' data-key='" + escapeHtml(key) + "' data-value='" + escapeHtml(value) + "'>" + escapeHtml(value) + "</button>";
+    });
+    html += "</div></div>";
+  });
+  html += "<span class='filters-clear' id='clearFiltersBtn'>" + t("filters.clear") + "</span>";
+
+  filtersEl.innerHTML = html;
+  filtersEl.style.display = "block";
+
+  filtersEl.querySelectorAll(".pill").forEach((pill) => {
+    pill.addEventListener("click", () => togglePill(pill));
+  });
+  document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
+}
+
+function togglePill(pill) {
+  const key = pill.dataset.key;
+  const value = pill.dataset.value;
+  if (!activeFilters[key]) activeFilters[key] = new Set();
+
+  if (activeFilters[key].has(value)) {
+    activeFilters[key].delete(value);
+    if (activeFilters[key].size === 0) delete activeFilters[key];
+    pill.classList.remove("active");
+  } else {
+    activeFilters[key].add(value);
+    pill.classList.add("active");
+  }
+  applyCardFilters();
+}
+
+function clearFilters() {
+  activeFilters = {};
+  document.querySelectorAll(".pill.active").forEach((p) => p.classList.remove("active"));
+  applyCardFilters();
+}
+
+/** Una card resta visibile se, per OGNI chiave attiva, ha almeno un
+ * attributo il cui valore è tra quelli selezionati per quella chiave. */
+function cardMatchesFilters(cardData) {
+  const activeKeys = Object.keys(activeFilters);
+  if (activeKeys.length === 0) return true;
+  return activeKeys.every((key) => {
+    const selectedValues = activeFilters[key];
+    return (cardData.attributes || []).some((a) => String(a.key) === key && selectedValues.has(String(a.value)));
+  });
+}
+
+function applyCardFilters() {
+  let visibleCount = 0;
+  Object.keys(currentCardDataById).forEach((tokenId) => {
+    const cardEl = document.getElementById("token-" + tokenId);
+    if (!cardEl) return;
+    const matches = cardMatchesFilters(currentCardDataById[tokenId]);
+    cardEl.style.display = matches ? "" : "none";
+    if (matches) visibleCount++;
+  });
+  const statusEl = document.getElementById("status");
+  statusEl.textContent = visibleCount === 0 ? t("status.noMatch") : "";
 }
 
 function renderGrid(entries, cardDataById) {

@@ -115,7 +115,14 @@ function buildChainReadRouter(provider, factoryContract) {
         })
       );
 
-      const responseBody = { registryAddress, deployedAtBlock: fromBlock, entries: entriesWithMetadata };
+      let collectionMetadataValue = null;
+      try {
+        collectionMetadataValue = await registry.getData(LSP4_METADATA_KEY);
+      } catch (err) {
+        collectionMetadataValue = null; // registry senza metadata di collezione ancora impostata: non blocca la risposta
+      }
+
+      const responseBody = { registryAddress, deployedAtBlock: fromBlock, collectionMetadataValue, entries: entriesWithMetadata };
       cache.set(cacheKey, responseBody, CACHE_TTL_SECONDS);
 
       return res.json(responseBody);
