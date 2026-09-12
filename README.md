@@ -554,7 +554,37 @@ oltre al caricamento JSON.
   singola no, nessuna data correttamente rifiutata — stessi identici
   risultati che si otterrebbero da un file caricato a mano.
 
-## 20. Punti aperti / TODO
+## 21. Widget pubblico di visualizzazione (`frontend/explorer.html`)
+
+Pagina pubblica, **nessuna connessione UP richiesta** — a differenza di
+`user.html`/`admin.html`, chiunque la apre (cliente, ispettore, un sito
+esterno che la embedda). Stile a card ispirato deliberatamente a
+universaleverything.io su richiesta esplicita: immagine, badge tipo
+(materia prima/batch), nome, descrizione, attributi (espandibili al click).
+
+- **Legge solo dal backend pubblico** (`GET /registry/:address/entries`,
+  già pubblico per design) — mai RPC diretto dal browser, coerente con
+  tutto il resto.
+- **Batch collegati ai propri lotti**: i lotti in `usedLots` diventano link
+  cliccabili che scorrono fino alla card del lotto corrispondente — il
+  collegamento strutturato lotto→batch (non solo testo) diventa finalmente
+  visibile anche qui, non solo nella UI di mint.
+- **Entry invalidate**: mostrate comunque (mai nascoste — restano
+  verificabili) ma visivamente attenuate con un badge dedicato.
+- **Embeddabile**: `?registry=0x...` nell'URL carica subito senza dover
+  compilare un form — pensato per un `<iframe>` su un sito esterno.
+- **Sicurezza**: dato che il contenuto (nome, descrizione, attributi) viene
+  da metadata pubblica scrivibile da chi ha autorizzazione di mint,
+  **tutto passa da un escape HTML** prima di finire nel DOM — **testato con
+  un DOM reale (jsdom)**: un tentativo di injection (`<img onerror=...>`)
+  viene neutralizzato correttamente, nessun tag eseguibile nel risultato.
+- i18n: stesso pattern IT/EN a pulsanti di `user.html`/`admin.html`,
+  verificato 11/11 chiavi coperte, zero morte.
+
+**Non testato**: il rendering visivo reale in un browser con dati veri (la
+logica di fetch/decode/escape sì, il DOM finale visto da un utente no).
+
+## 22. Punti aperti / TODO
 
 - [ ] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` (allineare al resto dei repo ChainIntegrate).
@@ -591,10 +621,11 @@ oltre al caricamento JSON.
       solo il widget stesso (decodifica client-side + rendering).
 - [x] Costruire il pezzo frontend che chiama `upload-photo`/`photos` — **fatto**
       (`traceability-photo-library.js`), confermato funzionante da mint reali.
-- [ ] Costruire il widget di visualizzazione pubblica (§12) — consuma
-      `GET /registry/:address/entries`, decodifica `metadataValue` con
-      `erc725.js` (stessa logica di `traceability-mint-compose.js`, verso
-      inverso), fetch immagini dal gateway IPFS pubblico.
+- [x] Costruire il widget di visualizzazione pubblica — **fatto**
+      (`frontend/explorer.html`, §21).
+- [x] Il delegato di un registry non aveva modo di accedervi dalla UI (solo
+      i registri auto-deployati comparivano) — **fatto**, sezione dedicata
+      in `user.html` per connettersi a un registry esistente via indirizzo.
 - [x] **Verifica ERC-1271 su UP reale** — confermata empiricamente: mint
       reali (materie prime e batch) completati con successo su testnet, che
       richiedono `verifySignedRequest` (ERC-1271 + `isAuthorized`) superato

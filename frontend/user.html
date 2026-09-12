@@ -71,6 +71,14 @@
       <p class="muted" id="deployLimitNote"></p>
     </div>
   </div>
+
+  <div class="card">
+    <h2 data-i18n="delegateAccess.title">Sei un delegato su un altro registro?</h2>
+    <p class="muted" data-i18n="delegateAccess.hint">Se un'azienda ti ha delegato, il suo registro non compare sopra (quello mostra solo i registri creati da questo indirizzo) — inserisci qui l'indirizzo che ti è stato comunicato.</p>
+    <div class="row"><label data-i18n="delegateAccess.address">Indirizzo registry</label><input type="text" id="delegateAccessAddressInput" placeholder="0x..."></div>
+    <button class="secondary" id="delegateAccessConnectBtn" data-i18n="delegateAccess.connect">Connetti a questo registry</button>
+    <p class="muted" id="delegateAccessNote"></p>
+  </div>
 </section>
 
 <section id="app" style="display:none;">
@@ -181,6 +189,11 @@ const I18N = {
     "registries.none": "Nessun registro ancora. Creane uno sotto.",
     "registries.usage": "Registri usati: {used} / {limit} (tier attuale: {tier})",
     "registries.needBoth": "Nome e simbolo obbligatori.",
+    "delegateAccess.title": "Sei un delegato su un altro registro?",
+    "delegateAccess.hint": "Se un'azienda ti ha delegato, il suo registro non compare sopra (quello mostra solo i registri creati da questo indirizzo) — inserisci qui l'indirizzo che ti è stato comunicato.",
+    "delegateAccess.address": "Indirizzo registry", "delegateAccess.connect": "Connetti a questo registry",
+    "delegateAccess.notAuthorized": "Attenzione: questo indirizzo non risulta autorizzato (né registryAdmin né delegato) su questo registry — potrai comunque vederlo, ma le operazioni di scrittura falliranno.",
+    "delegateAccess.invalidRegistry": "Indirizzo non valido come TraceabilityRegistry: {msg}",
     "app.activeRegistry": "Registro attivo:", "app.changeRegistry": "cambia registro",
     "nav.info": "Info registro", "nav.rawMaterial": "Materie prime", "nav.batch": "Batch produzione",
     "nav.photos": "Libreria foto", "nav.delegates": "Deleghe",
@@ -243,6 +256,11 @@ const I18N = {
     "registries.none": "No registry yet. Create one below.",
     "registries.usage": "Registries used: {used} / {limit} (current tier: {tier})",
     "registries.needBoth": "Name and symbol are required.",
+    "delegateAccess.title": "Are you a delegate on another registry?",
+    "delegateAccess.hint": "If a company delegated you, their registry won't appear above (that only shows registries created by this address) — enter the address they gave you.",
+    "delegateAccess.address": "Registry address", "delegateAccess.connect": "Connect to this registry",
+    "delegateAccess.notAuthorized": "Warning: this address is not authorized (neither registryAdmin nor delegate) on this registry — you can still view it, but write operations will fail.",
+    "delegateAccess.invalidRegistry": "Not a valid TraceabilityRegistry address: {msg}",
     "app.activeRegistry": "Active registry:", "app.changeRegistry": "change registry",
     "nav.info": "Registry info", "nav.rawMaterial": "Raw materials", "nav.batch": "Production batch",
     "nav.photos": "Photo library", "nav.delegates": "Delegates",
@@ -445,6 +463,27 @@ document.getElementById("changeRegistryLink").addEventListener("click", (e) => {
   e.preventDefault();
   document.getElementById("app").style.display = "none";
   document.getElementById("registrySetup").style.display = "block";
+});
+
+document.getElementById("delegateAccessConnectBtn").addEventListener("click", async () => {
+  const addr = document.getElementById("delegateAccessAddressInput").value.trim();
+  const noteEl = document.getElementById("delegateAccessNote");
+  if (!ethers.utils.isAddress(addr)) { alert(t("delegates.invalidAddress")); return; }
+
+  const candidate = new ethers.Contract(addr, REGISTRY_ABI, provider);
+  try {
+    const authorized = await candidate.isAuthorized(myAddress);
+    if (!authorized) {
+      noteEl.innerHTML = "<span class='warn'>" + t("delegateAccess.notAuthorized") + "</span>";
+    } else {
+      noteEl.textContent = "";
+    }
+  } catch (err) {
+    noteEl.innerHTML = "<span class='err'>" + t("delegateAccess.invalidRegistry", { msg: err.message }) + "</span>";
+    return; // non e' un TraceabilityRegistry valido, non ha senso selezionarlo
+  }
+
+  await selectRegistry(addr);
 });
 
 // -----------------------------------------------------------------------
