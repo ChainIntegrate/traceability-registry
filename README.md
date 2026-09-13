@@ -721,7 +721,31 @@ modifica al contratto.
   il modulo le referenzia comunque nel codice sorgente anche se quel ramo
   non scatta mai senza `onInvalidate`).
 
-## 27. Punti aperti / TODO
+## 27. Ricerca trasversale per numero di lotto
+
+Problema segnalato con dati reali: filtrando per la pillola `Lotto` (chiave
+generica, usata dai `RawMaterialLot`) non emergeva il batch che referenzia
+lo stesso lotto — perché nel batch quel valore vive sotto una chiave
+**diversa per ogni ingrediente** (`"Lotto Ciliegie Fresche"`,
+`"Lotto Pilsen (2-Row)"`, ecc., convenzione voluta fin dall'inizio per il
+matching automatico all'inserimento). Le pillole fanno corrispondenza
+esatta chiave+valore, quindi non collegano mai le due schede.
+
+**Aggiunta una casella di ricerca testuale separata**, non a pillole: cerca
+solo nel **valore** di qualunque attributo la cui chiave sia `"Lotto"`
+oppure inizi per `"Lotto "` (stesso prefisso già usato per il matching
+automatico in `traceability-json-validators.js`), case-insensitive,
+substring — non serve il valore esatto. Si combina in **AND** con le
+pillole eventualmente attive.
+
+**Testato riproducendo esattamente lo scenario segnalato** (lotto ciliegie
+nell'acquisto sotto chiave `"Lotto"`, stesso valore nel batch sotto chiave
+`"Lotto Ciliegie Fresche"`): la ricerca trova entrambe le schede, esclude
+un lotto diverso, funziona anche con corrispondenza parziale, si azzera
+correttamente col campo vuoto. Coerenza i18n: 149/149 su `user.html`,
+19/19 su `explorer.html`.
+
+## 28. Punti aperti / TODO
 
 - [ ] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` (allineare al resto dei repo ChainIntegrate).

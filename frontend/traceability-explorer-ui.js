@@ -107,6 +107,7 @@
   function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate }) {
     let currentCardDataById = {};
     let activeFilters = {};
+    let lotSearchText = "";
     let lastLoadParams = null;
 
     /** Chiude ogni chip aperta di QUESTA istanza — serve a più gallerie
@@ -125,12 +126,22 @@
       const keys = Object.keys(facets);
       if (keys.length === 0) { filtersEl.style.display = "none"; return; }
 
+      // Ricerca testuale trasversale per numero di lotto — separata dalle
+      // pillole perché il lotto materia prima usa la chiave generica
+      // "Lotto", mentre ogni ingrediente di un batch ha la SUA chiave
+      // ("Lotto Ciliegie Fresche", ecc.), quindi le pillole (corrispondenza
+      // esatta chiave+valore) non collegano mai le due cose. Qui invece si
+      // guarda solo il VALORE, su qualunque chiave che sia "Lotto" o inizi
+      // per "Lotto " — trova entrambe le schede con lo stesso numero lotto
+      // indipendentemente da come si chiama l'attributo.
+      let html = "<div class='te-lot-search'><input type='text' class='te-lot-search-input' placeholder='" + t("filters.lotSearchPlaceholder") + "' value='" + escapeHtml(lotSearchText) + "'></div>";
+
       // Chip orizzontali a capo automatico + menu a comparsa (overlay, non
       // spinge il contenuto) — stesso pattern di universaleverything.io.
       // Le tendine <details> impilate verticalmente (versione precedente)
       // con molte chiavi (ogni ingrediente di un batch ne genera una
       // propria) rendevano la pagina troppo lunga anche da chiuse.
-      let html = "<div class='te-filters-row'>";
+      html += "<div class='te-filters-row'>";
       keys.forEach((key) => {
         html += "<div class='te-filter-chip' data-facet-key='" + escapeHtml(key) + "'>";
         html += "<button type='button' class='te-chip-toggle'>" + escapeHtml(key) + " (" + facets[key].size + ")</button>";
@@ -144,6 +155,12 @@
       html += "<span class='te-filters-clear'>" + t("filters.clear") + "</span>";
       filtersEl.innerHTML = html;
       filtersEl.style.display = "block";
+
+      const searchInput = filtersEl.querySelector(".te-lot-search-input");
+      searchInput.addEventListener("input", () => {
+        lotSearchText = searchInput.value;
+        applyCardFilters();
+      });
 
       filtersEl.querySelectorAll(".te-chip-toggle").forEach((btn) => {
         btn.addEventListener("click", (e) => {
@@ -162,7 +179,12 @@
       filtersEl.querySelectorAll(".te-pill").forEach((pill) => {
         pill.addEventListener("click", () => togglePill(pill));
       });
-      filtersEl.querySelector(".te-filters-clear").addEventListener("click", (e) => { e.stopPropagation(); clearFilters(); });
+      filtersEl.querySelector(".te-filters-clear").addEventListener("click", (e) => {
+        e.stopPropagation();
+        lotSearchText = "";
+        searchInput.value = "";
+        clearFilters();
+      });
     }
 
     function togglePill(pill) {
@@ -193,12 +215,27 @@
       applyCardFilters();
     }
 
+    /** Vero se QUALUNQUE attributo con chiave "Lotto" o che inizia per
+     * "Lotto " contiene il testo cercato (case-insensitive) — stesso
+     * prefisso già usato in traceability-json-validators.js per il
+     * matching automatico all'inserimento, qui riusato per la ricerca. */
+    function cardHasMatchingLot(cardData, searchText) {
+      const needle = (searchText || "").trim().toLowerCase();
+      if (!needle) return true;
+      return (cardData.attributes || []).some((a) => {
+        const key = String(a.key);
+        if (key !== "Lotto" && key.indexOf("Lotto ") !== 0) return false;
+        return String(a.value).toLowerCase().indexOf(needle) !== -1;
+      });
+    }
+
     function applyCardFilters() {
       let visibleCount = 0;
       Object.keys(currentCardDataById).forEach((tokenId) => {
         const cardEl = gridEl.querySelector("[data-token-id='" + tokenId + "']");
         if (!cardEl) return;
-        const matches = cardMatchesFilters(currentCardDataById[tokenId], activeFilters);
+        const cardData = currentCardDataById[tokenId];
+        const matches = cardMatchesFilters(cardData, activeFilters) && cardHasMatchingLot(cardData, lotSearchText);
         cardEl.style.display = matches ? "" : "none";
         if (matches) visibleCount++;
       });
@@ -314,6 +351,7 @@
       const cardDataById = await buildCardDataById(data.entries);
       currentCardDataById = cardDataById;
       activeFilters = {};
+      lotSearchText = "";
       renderFilters(cardDataById);
       renderGrid(data.entries, cardDataById);
     }
