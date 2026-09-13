@@ -776,8 +776,10 @@ numero di lotto a memoria ("bisogna prendertelo, copiarlo, reincollarlo").
 
 ## 29. Punti aperti / TODO
 
-- [ ] Confermare import esatti e versione `@lukso/lsp8-contracts` /
-      `@lukso/lsp4-contracts` (allineare al resto dei repo ChainIntegrate).
+- [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
+      `@lukso/lsp4-contracts` — **confermato**: la compilazione Hardhat
+      reale (28 file) e il deploy testnet riuscito provano che le versioni
+      risolte da `^0.15.0` funzionano correttamente.
 - [x] `_LSP4_TOKEN_TYPE_NFT` — **era sbagliata**, non esiste come costante
       esportata (confermato da un vero errore di compilazione `HH600`).
       Corretto: è semplicemente il valore numerico `1`, non un identificatore
@@ -786,9 +788,14 @@ numero di lotto a memoria ("bisogna prendertelo, copiarlo, reincollarlo").
       completa riuscita (28 file Solidity) dopo la correzione sopra.
 - [ ] Confermare che `tierOf()` su Membership Corporate ritorni `0` anche per
       un'azienda sospesa (altrimenti serve un controllo `isSuspended()`
-      separato nel Factory e nei modifier di `TraceabilityRegistry`).
-- [ ] Confermare che `SILVER_TIER = 2` / `GOLD_TIER = 3` combacino
-      esattamente con `setTier()` sul contratto Membership Corporate reale.
+      separato nel Factory e nei modifier di `TraceabilityRegistry`) — **mai
+      testato**, nessuna azienda è mai stata sospesa durante i test finora.
+- [x] `SILVER_TIER = 2` — **confermato indirettamente**: la delega concessa
+      con successo durante i test reali richiede che `tierOf(registryAdmin)`
+      ritorni davvero `>= 2` per l'account usato, altrimenti `addDelegate`
+      sarebbe stato rifiutato on-chain. `GOLD_TIER = 3` resta **non
+      verificato**: la funzionalità Gold (`setDocumentHash`) non è mai stata
+      esercitata nemmeno una volta.
 - [x] ~~Confermare se un'azienda con più stabilimenti deve poter avere più di
       un registry~~ — risolto: limite per tier, Bronze 1 / Silver 2 / Gold 5
       (§2), stesso schema del Supplier Trust Registry.
@@ -822,10 +829,9 @@ numero di lotto a memoria ("bisogna prendertelo, copiarlo, reincollarlo").
       ad ogni chiamata. Il formato `ethers.utils.hashMessage` è quindi
       corretto. Lo script dedicato (`scripts/test-erc1271-live.js`) resta
       comunque disponibile per una verifica isolata futura, se mai servisse.
-- [ ] Configurare `.env` di produzione: `FACTORY_ADDRESS` (dopo il deploy
-      della Factory), `ALLOWED_MINT_UI_ORIGIN` (dominio della UI di mint),
-      una **API key RPC dedicata** a questo servizio (mai riusata da altri
-      backend ChainIntegrate).
+- [x] Configurare `.env` di produzione — **fatto**: `FACTORY_ADDRESS`,
+      `ALLOWED_MINT_UI_ORIGIN`, chiave RPC dedicata, tutto configurato e in
+      esecuzione da settimane di test reali su `traceability.chainintegrate.it`.
 - [x] Data di scadenza opzionale (materie prime) — **già così**, verificato:
       non è nei campi obbligatori né nello schema né nel validatore.
 - [x] Annullamento registrazione — **già implementato** (`invalidateEntry`,
@@ -834,21 +840,63 @@ numero di lotto a memoria ("bisogna prendertelo, copiarlo, reincollarlo").
       che su ogni singolo TraceabilityRegistry.
 - [x] Metadata di collezione con square+banner — **fatto** (§17).
 - [x] Client frontend libreria foto — **fatto** (§18).
-- [ ] **Verificare con un vero compilatore Solidity (`solc`/Hardhat)** le
-      modifiche ai contratti — qui controllato solo il bilanciamento delle
-      parentesi, non una vera compilazione.
+- [x] **Verificare con un vero compilatore Solidity (`solc`/Hardhat)** le
+      modifiche ai contratti — **chiuso, verificato con la cronologia git**:
+      `contracts/TraceabilityRegistry.sol` e `TraceabilityRegistryFactory.sol`
+      non hanno subito **nessuna** modifica dopo il commit `346f31f` (il fix
+      `_LSP4_TOKEN_TYPE_NFT`), che è esattamente il codice compilato con
+      successo e deployato su testnet. Questo include `setMembershipCorporate`
+      su entrambi i contratti — **temevo fosse stato aggiunto dopo il deploy
+      e quindi assente dal bytecode live, ma la cronologia conferma che era
+      già presente prima**: nessun redeploy necessario, la funzione dovrebbe
+      già funzionare sui contratti reali (mai chiamata per davvero, però —
+      la verifica di compilazione è chiusa, quella funzionale sul campo no).
 
-## 10. Prossimi passi (codice non ancora scritto)
+## 10. Prossimi passi (storico — tutto completato)
 
 1. ~~Funzione di calcolo `tokenId`~~ — **fatto** (§7).
 2. ~~Costruttore metadata LSP4~~ — **fatto** (§8), testato su dati reali.
 3. ~~`POST /api/traceability/pin-json` (backend)~~ — **fatto** (§8).
-4. ~~Script di orchestrazione lato client~~ — **fatto** (§9), testato quanto
-   possibile senza un nodo live (messaggio identico backend/frontend,
-   encoding VerifiableURI reale su dati Pinta).
-5. UI di mint (due tab, stesso dominio): upload/compilazione JSON →
-   validazione → matching lotti (con schermata di conferma per i non
-   trovati, tolleranza nome/rigore lotto) → scelta data se
-   `requiresDateSelection` → anteprima → firma UP → mint.
-6. Deploy Hardhat (testnet prima) di Factory + primo Registry (Birra20Venti).
-7. Widget di visualizzazione (eventi + `indexDate`, embeddabile).
+4. ~~Script di orchestrazione lato client~~ — **fatto** (§9).
+5. ~~UI di mint~~ — **fatto**, ampiamente superato: `user.html` copre mint,
+   libreria foto, deleghe, metadata collezione, annullamento, esplorazione.
+6. ~~Deploy Hardhat (testnet) di Factory + primo Registry~~ — **fatto**,
+   Factory verificata su Blockscout, registro Birra20Venti live con dati
+   reali (20+ lotti, batch, annullamenti).
+7. ~~Widget di visualizzazione~~ — **fatto**, ampiamente superato:
+   `explorer.html` con filtri, ricerca trasversale, motivo annullamento.
+
+## 30. Cosa manca davvero prima di mainnet
+
+Bilancio a freddo dopo settimane di test reali su testnet.
+
+**Decisioni da prendere (non blocchi tecnici):**
+- **Convivenza testnet/mainnet**: `traceability.chainintegrate.it` serve
+  oggi solo testnet (`FACTORY_ADDRESS` testnet nel `.env` e cablato nei tre
+  file HTML). Per mainnet serve decidere: nuovo dominio/porta dedicati che
+  convivono col testnet (come `matchpredictor`/`playmatchpredictor`), o si
+  sostituisce la configurazione quando si è pronti a smettere di testare?
+- **Bilinguismo dei metadata on-chain**: i token mintati restano solo in
+  italiano (nome, descrizione, attributi) — diverso dal bilinguismo IT/EN
+  già fatto per l'interfaccia (§19), che traduce solo le etichette della
+  pagina, non il contenuto scritto in chain. Mai deciso se serve.
+
+**Verifiche mai fatte sul campo, a basso rischio ma da chiudere:**
+- `tierOf()` per un'azienda sospesa — mai testato (nessuna sospensione
+  durante i test).
+- Funzionalità Gold (`setDocumentHash`, hash fattura privata) — mai
+  esercitata nemmeno una volta, a differenza di Silver (deleghe, confermate
+  funzionanti sul campo).
+
+**Da fare meccanicamente quando si decide di procedere:**
+- `npm run deploy:mainnet` (già pronto, indirizzi Membership Corporate e
+  ChainIntegrate owner mainnet già cablati in `scripts/deploy.js`).
+- Aggiornare `CONFIG.FACTORY_ADDRESS` in `user.html`/`admin.html`/`explorer.html`
+  e `FACTORY_ADDRESS`/`LUKSO_RPC_URL` nel `.env` del backend con i valori
+  mainnet (chiave RPC dedicata **nuova**, mai quella testnet).
+- Verificare il nuovo contratto su Blockscout mainnet (stesso comando
+  `hardhat verify`, rete `luksoMainnet`).
+
+**Non è emerso nessun altro gap strutturale** dalla revisione — la parte
+più a rischio che temevo (mismatch tra contratto deployato e sorgente nel
+repo) si è rivelata infondata dopo aver controllato la cronologia git.
