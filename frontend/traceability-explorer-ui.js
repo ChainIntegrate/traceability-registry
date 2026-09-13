@@ -104,6 +104,28 @@
    * elementi si distinguono per attributo data-token-id dentro il proprio
    * gridEl, non per id globale.
    */
+  // Solo queste chiavi diventano pillole "normali" (corrispondenza esatta
+  // chiave+valore) — tutto il resto (Nome, Quantità, e soprattutto ogni
+  // "Lotto <ingrediente>" diverso per ogni batch) escluso apposta: con
+  // decine di ingredienti diversi i filtri diventavano troppi da scorrere.
+  const ALLOWED_FACET_KEYS = ["Fornitore", "Data Acquisto", "Data Scadenza", "Ricetta", "Data Produzione", "Data Imbottigliamento"];
+
+  /** Tutti i valori di lotto esistenti, aggregati attraverso qualunque
+   * chiave "Lotto" o "Lotto <ingrediente>" — usati per popolare la pillola
+   * "Lotto" con un elenco selezionabile, invece di dover conoscere a
+   * memoria il numero di lotto e digitarlo/incollarlo (pessima UX con solo
+   * il campo di testo, come notato). */
+  function collectLotValues(cardDataById) {
+    const values = new Set();
+    Object.values(cardDataById).forEach((cd) => {
+      (cd.attributes || []).forEach((a) => {
+        const key = String(a.key);
+        if (key === "Lotto" || key.indexOf("Lotto ") === 0) values.add(String(a.value));
+      });
+    });
+    return values;
+  }
+
   function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate }) {
     let currentCardDataById = {};
     let activeFilters = {};
@@ -123,26 +145,35 @@
     function renderFilters(cardDataById) {
       if (!filtersEl) return;
       const facets = collectFacets(cardDataById);
-      const keys = Object.keys(facets);
-      if (keys.length === 0) { filtersEl.style.display = "none"; return; }
+      const allowedKeys = ALLOWED_FACET_KEYS.filter((k) => facets[k]);
+      const lotValues = collectLotValues(cardDataById);
+      if (allowedKeys.length === 0 && lotValues.size === 0) { filtersEl.style.display = "none"; return; }
 
-      // Ricerca testuale trasversale per numero di lotto — separata dalle
-      // pillole perché il lotto materia prima usa la chiave generica
-      // "Lotto", mentre ogni ingrediente di un batch ha la SUA chiave
-      // ("Lotto Ciliegie Fresche", ecc.), quindi le pillole (corrispondenza
-      // esatta chiave+valore) non collegano mai le due cose. Qui invece si
-      // guarda solo il VALORE, su qualunque chiave che sia "Lotto" o inizi
-      // per "Lotto " — trova entrambe le schede con lo stesso numero lotto
-      // indipendentemente da come si chiama l'attributo.
+      // Ricerca testuale trasversale per numero di lotto — resta anche il
+      // campo libero (utile se il lotto lo si conosce già), in aggiunta
+      // alla pillola "Lotto" sotto (utile se invece non lo si conosce e si
+      // vuole scegliere da un elenco).
       let html = "<div class='te-lot-search'><input type='text' class='te-lot-search-input' placeholder='" + t("filters.lotSearchPlaceholder") + "' value='" + escapeHtml(lotSearchText) + "'></div>";
+
+      html += "<div class='te-filters-row'>";
+
+      // Chip "Lotto": aggregata su tutte le chiavi Lotto*, click = ricerca
+      // trasversale (stessa logica del campo libero), NON corrispondenza
+      // esatta chiave+valore come le altre pillole sotto.
+      if (lotValues.size > 0) {
+        html += "<div class='te-filter-chip te-lot-chip" + (lotSearchText ? " has-active" : "") + "' data-facet-key='Lotto'>";
+        html += "<button type='button' class='te-chip-toggle'>Lotto (" + lotValues.size + ")</button>";
+        html += "<div class='te-filter-dropdown'><div class='te-filter-pills'>";
+        Array.from(lotValues).sort().forEach((value) => {
+          const activeClass = value === lotSearchText ? " active" : "";
+          html += "<button type='button' class='te-pill te-lot-pill" + activeClass + "' data-value='" + escapeHtml(value) + "'>" + escapeHtml(value) + "</button>";
+        });
+        html += "</div></div></div>";
+      }
 
       // Chip orizzontali a capo automatico + menu a comparsa (overlay, non
       // spinge il contenuto) — stesso pattern di universaleverything.io.
-      // Le tendine <details> impilate verticalmente (versione precedente)
-      // con molte chiavi (ogni ingrediente di un batch ne genera una
-      // propria) rendevano la pagina troppo lunga anche da chiuse.
-      html += "<div class='te-filters-row'>";
-      keys.forEach((key) => {
+      allowedKeys.forEach((key) => {
         html += "<div class='te-filter-chip' data-facet-key='" + escapeHtml(key) + "'>";
         html += "<button type='button' class='te-chip-toggle'>" + escapeHtml(key) + " (" + facets[key].size + ")</button>";
         html += "<div class='te-filter-dropdown'><div class='te-filter-pills'>";
@@ -159,7 +190,26 @@
       const searchInput = filtersEl.querySelector(".te-lot-search-input");
       searchInput.addEventListener("input", () => {
         lotSearchText = searchInput.value;
+        // Digitare a mano non corrisponde più necessariamente a un valore
+        // esatto della lista — tolgo l'evidenziazione della pillola.
+        filtersEl.querySelectorAll(".te-lot-pill.active").forEach((p) => p.classList.remove("active"));
+        const lotChip = filtersEl.querySelector(".te-lot-chip");
+        if (lotChip) lotChip.classList.toggle("has-active", !!lotSearchText);
         applyCardFilters();
+      });
+
+      filtersEl.querySelectorAll(".te-lot-pill").forEach((pill) => {
+        pill.addEventListener("click", () => {
+          const value = pill.dataset.value;
+          const wasActive = pill.classList.contains("active");
+          filtersEl.querySelectorAll(".te-lot-pill.active").forEach((p) => p.classList.remove("active"));
+          lotSearchText = wasActive ? "" : value;
+          if (!wasActive) pill.classList.add("active");
+          searchInput.value = lotSearchText;
+          const lotChip = filtersEl.querySelector(".te-lot-chip");
+          if (lotChip) lotChip.classList.toggle("has-active", !!lotSearchText);
+          applyCardFilters();
+        });
       });
 
       filtersEl.querySelectorAll(".te-chip-toggle").forEach((btn) => {
@@ -176,7 +226,7 @@
         dropdown.addEventListener("click", (e) => e.stopPropagation()); // click dentro il menu non lo chiude
       });
 
-      filtersEl.querySelectorAll(".te-pill").forEach((pill) => {
+      filtersEl.querySelectorAll(".te-pill:not(.te-lot-pill)").forEach((pill) => {
         pill.addEventListener("click", () => togglePill(pill));
       });
       filtersEl.querySelector(".te-filters-clear").addEventListener("click", (e) => {

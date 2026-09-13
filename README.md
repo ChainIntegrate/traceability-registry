@@ -745,7 +745,36 @@ un lotto diverso, funziona anche con corrispondenza parziale, si azzera
 correttamente col campo vuoto. Coerenza i18n: 149/149 su `user.html`,
 19/19 su `explorer.html`.
 
-## 28. Punti aperti / TODO
+## 28. Filtri sfrondati + pillola "Lotto" trasversale
+
+Raffinamento richiesto dopo l'uso reale: troppe chiavi diverse (ogni
+ingrediente di un batch genera la sua) rendevano i filtri "normali" ingombra
+nti, e il campo di ricerca da solo era scomodo se non si conosceva già il
+numero di lotto a memoria ("bisogna prendertelo, copiarlo, reincollarlo").
+
+- **Whitelist esplicita** per le pillole a corrispondenza esatta:
+  `Fornitore`, `Data Acquisto`, `Data Scadenza`, `Ricetta`, `Data Produzione`,
+  `Data Imbottigliamento` — tutto il resto (`Nome`, `Quantità`, ogni
+  `"Lotto <ingrediente>"`) escluso.
+- **La pillola "Lotto" diventa un'eccezione governata**: aggregata su
+  *tutti* i valori esistenti sotto qualunque chiave `"Lotto"`/`"Lotto ..."`
+  (stessa unione già usata dalla ricerca libera), ma resta un elenco
+  cliccabile — non serve più conoscere il lotto a memoria, si sceglie dalla
+  lista. Click = stessa ricerca trasversale di prima (non corrispondenza
+  esatta chiave+valore), sincronizzata col campo di testo libero (tenuto,
+  come richiesto, per chi il lotto lo conosce già).
+- **Bug trovato e corretto durante la scrittura, non dopo**: condividere lo
+  stile CSS tra pillole normali e pillole "Lotto" (stessa classe) avrebbe
+  attaccato *anche* il gestore click generico (`togglePill`, che si aspetta
+  `data-key`) alle pillole lotto — corretto escludendole esplicitamente dal
+  selettore (`:not(.te-lot-pill)`).
+- **Testato con dati reali** (stesso scenario ciliegie/batch di prima, con
+  l'aggiunta delle chiavi ora escluse): whitelist rispettata, pillola
+  "Lotto" elenca entrambi i valori, click trova entrambe le schede
+  nonostante le chiavi diverse, doppio click deseleziona senza errori — 11
+  controlli, tutti passati. Nessuna nuova chiave i18n necessaria.
+
+## 29. Punti aperti / TODO
 
 - [ ] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` (allineare al resto dei repo ChainIntegrate).
