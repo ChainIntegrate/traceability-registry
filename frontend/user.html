@@ -270,6 +270,8 @@ const I18N = {
     "delegates.removed": "Delega rimossa. Tx: {tx}", "delegates.addError": "Errore aggiunta delega: {msg}",
     "delegates.removeError": "Errore rimozione delega: {msg}",
     "log.noExtension": "Nessuna Universal Profile extension rilevata.",
+    "log.connectRejected": "Connessione rifiutata o annullata: {msg}",
+    "log.noAccountAuthorized": "Nessun account autorizzato — apri l'estensione della Universal Profile e riprova (controlla che non sia bloccata/minimizzata o che il popup non sia stato chiuso).",
     "log.deploying": "Deploy registro in corso...", "log.deployed": "Registro creato. Tx: {tx}",
     "log.deployError": "Errore deploy registro: {msg}", "log.tierReadError": "Impossibile leggere il tier: {msg}",
     "log.tierDelegatesError": "Impossibile leggere il tier per le deleghe: {msg}",
@@ -346,6 +348,8 @@ const I18N = {
     "delegates.removed": "Delegate removed. Tx: {tx}", "delegates.addError": "Add delegate error: {msg}",
     "delegates.removeError": "Remove delegate error: {msg}",
     "log.noExtension": "No Universal Profile extension detected.",
+    "log.connectRejected": "Connection rejected or cancelled: {msg}",
+    "log.noAccountAuthorized": "No account authorized — open the Universal Profile extension and try again (check it isn't blocked/minimized or that the popup wasn't closed).",
     "log.deploying": "Deploying registry...", "log.deployed": "Registry created. Tx: {tx}",
     "log.deployError": "Registry deploy error: {msg}", "log.tierReadError": "Could not read tier: {msg}",
     "log.tierDelegatesError": "Could not read tier for delegates: {msg}",
@@ -428,9 +432,31 @@ document.getElementById("connectBtn").addEventListener("click", async () => {
     return;
   }
   provider = new ethers.providers.Web3Provider(injected);
-  await provider.send("eth_requestAccounts", []);
+
+  let accounts;
+  try {
+    accounts = await provider.send("eth_requestAccounts", []);
+  } catch (err) {
+    alert(t("log.connectRejected", { msg: err.message }));
+    return;
+  }
+  if (!accounts || accounts.length === 0) {
+    // Capita se l'estensione non mostra il popup di autorizzazione (o viene
+    // ignorato/chiuso) — senza questo controllo esplicito, l'errore emerge
+    // solo dopo, criptico, sparso in più punti del pannello
+    // ("unknown account #0", da ethers, non da un problema nostro).
+    alert(t("log.noAccountAuthorized"));
+    return;
+  }
+
   signer = provider.getSigner();
-  myAddress = await signer.getAddress();
+  try {
+    myAddress = await signer.getAddress();
+  } catch (err) {
+    alert(t("log.noAccountAuthorized"));
+    return;
+  }
+
   document.getElementById("connectedAddress").textContent = myAddress;
   connectBtnConnected = true;
   document.getElementById("connectBtn").textContent = t("connect.connected");

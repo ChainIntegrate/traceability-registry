@@ -103,6 +103,8 @@ const I18N = {
     "single.delegateAdded": "Delega aggiunta (come ChainIntegrate). Tx: {tx}", "single.delegateAddError": "Errore aggiunta delega: {msg}",
     "single.delegateRemoved": "Delega rimossa (come ChainIntegrate). Tx: {tx}", "single.delegateRemoveError": "Errore rimozione delega: {msg}",
     "log.noExtension": "Nessuna Universal Profile extension rilevata.", "log.invalidAddress": "Indirizzo non valido.",
+    "log.connectRejected": "Connessione rifiutata o annullata: {msg}",
+    "log.noAccountAuthorized": "Nessun account autorizzato — apri l'estensione della Universal Profile e riprova.",
   },
   en: {
     "header.title": "TraceabilityRegistry — ChainIntegrate Admin", "connect.button": "Connect", "connect.connected": "Connected",
@@ -129,6 +131,8 @@ const I18N = {
     "single.delegateAdded": "Delegate added (as ChainIntegrate). Tx: {tx}", "single.delegateAddError": "Add delegate error: {msg}",
     "single.delegateRemoved": "Delegate removed (as ChainIntegrate). Tx: {tx}", "single.delegateRemoveError": "Remove delegate error: {msg}",
     "log.noExtension": "No Universal Profile extension detected.", "log.invalidAddress": "Invalid address.",
+    "log.connectRejected": "Connection rejected or cancelled: {msg}",
+    "log.noAccountAuthorized": "No account authorized — open the Universal Profile extension and try again.",
   },
 };
 
@@ -190,9 +194,27 @@ document.getElementById("connectBtn").addEventListener("click", async () => {
   const injected = window.lukso || window.ethereum;
   if (!injected) { alert(t("log.noExtension")); return; }
   provider = new ethers.providers.Web3Provider(injected);
-  await provider.send("eth_requestAccounts", []);
+
+  let accounts;
+  try {
+    accounts = await provider.send("eth_requestAccounts", []);
+  } catch (err) {
+    alert(t("log.connectRejected", { msg: err.message }));
+    return;
+  }
+  if (!accounts || accounts.length === 0) {
+    alert(t("log.noAccountAuthorized"));
+    return;
+  }
+
   signer = provider.getSigner();
-  myAddress = await signer.getAddress();
+  try {
+    myAddress = await signer.getAddress();
+  } catch (err) {
+    alert(t("log.noAccountAuthorized"));
+    return;
+  }
+
   document.getElementById("connectedAddress").textContent = myAddress;
   connectBtnConnected = true;
   document.getElementById("connectBtn").textContent = t("connect.connected");

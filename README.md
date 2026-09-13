@@ -656,7 +656,22 @@ globale di "click fuori" è registrato una sola volta per istanza di galleria
 gallerie multiple che possono coesistere sulla stessa pagina (es. `user.html`
 con la sua Esplora registro).
 
-## 24. Punti aperti / TODO
+## 24. Errore di connessione UP silenzioso e criptico — corretto
+
+Sintomo reale segnalato: se l'estensione UP non mostra/completa il popup di
+autorizzazione (bloccata, minimizzata, chiuso per sbaglio), `signer.getAddress()`
+falliva con un errore ethers criptico (`unknown account #0`) che emergeva
+**dopo**, sparso in punti scollegati del pannello (libreria foto, tier
+deleghe) — mai al momento della connessione stessa, dove la vera causa
+sarebbe stata ovvia.
+
+Aggiunto un controllo esplicito subito dopo `eth_requestAccounts`
+(`user.html` e `admin.html`): se il rifiuto/annullamento viene rilevato
+subito o se non risulta nessun account autorizzato, un messaggio chiaro
+lo dice immediatamente, invece di lasciare che l'errore riemerga più tardi
+in componenti che non c'entrano nulla con la causa reale.
+
+## 25. Punti aperti / TODO
 
 - [ ] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` (allineare al resto dei repo ChainIntegrate).
