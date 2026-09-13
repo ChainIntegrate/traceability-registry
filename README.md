@@ -697,7 +697,31 @@ registry Birra20Venti già live.
   la chiamata sarebbe fallita silenziosamente senza.
 - Coerenza i18n: 147/147, zero mancanti.
 
-## 26. Punti aperti / TODO
+## 26. Motivo dell'annullamento visibile nelle card
+
+Il motivo era già scritto on-chain (nell'evento `EntryInvalidated`, mai in
+uno stato leggibile direttamente) — mancava solo mostrarlo. Nessuna
+modifica al contratto.
+
+- **Backend**: `mergeEntries` ora riceve una mappa tokenId→{reason, by}
+  invece di un semplice insieme di tokenId annullati — costruita dagli
+  stessi eventi già scansionati per il badge "Annullato". Ogni entry
+  annullata porta `invalidationReason`/`invalidatedBy` nella risposta di
+  `/entries`. **Testato**: motivo e firmatario corretti sul token giusto,
+  `null` su quello mai annullato; nessuna regressione sul ramo già testato
+  (registry sconosciuto → 403).
+- **Modulo condiviso**: la card mostra un riquadro rosso col motivo,
+  **solo** se lo status è Invalidated **e** un motivo è presente — mai su
+  un'entry valida. **Testato con jsdom**: compare dove deve, non compare
+  dove non deve.
+- Attiva automaticamente sia su `explorer.html` (pubblica) sia su `user.html`
+  (tab Esplora registro) — stesso modulo, una sola modifica.
+- Coerenza i18n: 148/148 su `user.html`, 18/18 su `explorer.html` (incluse
+  4 chiavi "invalidate" mai attivate lì ma presenti per coerenza, dato che
+  il modulo le referenzia comunque nel codice sorgente anche se quel ramo
+  non scatta mai senza `onInvalidate`).
+
+## 27. Punti aperti / TODO
 
 - [ ] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` (allineare al resto dei repo ChainIntegrate).

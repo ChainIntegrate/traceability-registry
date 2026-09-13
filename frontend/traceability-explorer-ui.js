@@ -224,6 +224,9 @@
         html += "<span class='te-badge " + badgeClass + "'>" + badgeLabel + "</span>";
         if (entry.status === 1) html += "<span class='te-badge te-badge-invalid'>" + t("badge.invalidated") + "</span>";
         html += "<h3>" + escapeHtml(cardData.name) + "</h3>";
+        if (entry.status === 1 && entry.invalidationReason) {
+          html += "<p class='te-invalid-reason'>" + t("card.invalidationReasonLabel") + " " + escapeHtml(entry.invalidationReason) + "</p>";
+        }
         if (cardData.description) html += "<p class='te-desc'>" + escapeHtml(cardData.description) + "</p>";
 
         html += "<div class='te-attrs'>";

@@ -35,6 +35,7 @@
 .te-badge-invalid { background: #fde0e0; color: #c33; margin-left: 6px; }
 .te-card h3 { margin: 4px 0 6px; font-size: 1rem; }
 .te-desc { font-size: 0.85rem; color: #555; margin: 0 0 8px; }
+.te-invalid-reason { font-size: 0.8rem; color: #c33; background: #fde0e0; border-radius: 6px; padding: 6px 8px; margin: 0 0 8px; }
 .te-attrs { display: none; margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px; }
 .te-card.te-expanded .te-attrs { display: block; }
 .te-attr-row { display: flex; justify-content: space-between; font-size: 0.8rem; padding: 3px 0; border-bottom: 1px dashed #eee; }

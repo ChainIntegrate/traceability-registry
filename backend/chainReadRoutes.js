@@ -12,8 +12,12 @@ const CACHE_TTL_SECONDS = parseInt(process.env.CHAIN_READ_CACHE_TTL_SECONDS || "
 /**
  * Logica pura (nessuna chiamata di rete) di combinazione e ordinamento —
  * separata dalla route per essere testabile senza un nodo RPC vero.
+ *
+ * @param {Object} invalidationInfoByTokenId - mappa tokenId -> {reason, by}
+ *        (un token può essere annullato una volta sola, il contratto lo
+ *        impedisce esplicitamente — niente da gestire per riannullamenti).
  */
-function mergeEntries(lotEvents, batchEvents, invalidatedTokenIds) {
+function mergeEntries(lotEvents, batchEvents, invalidationInfoByTokenId) {
   const lots = lotEvents.map((e) => ({
     tokenId: e.args.tokenId,
     entryType: 0, // RawMaterialLot
@@ -28,10 +32,15 @@ function mergeEntries(lotEvents, batchEvents, invalidatedTokenIds) {
     usedLots: e.args.usedLots,
   }));
 
-  const merged = lots.concat(batches).map((entry) => ({
-    ...entry,
-    status: invalidatedTokenIds.has(entry.tokenId) ? 1 : 0, // 1 = Invalidated
-  }));
+  const merged = lots.concat(batches).map((entry) => {
+    const invalidation = invalidationInfoByTokenId[entry.tokenId];
+    return {
+      ...entry,
+      status: invalidation ? 1 : 0, // 1 = Invalidated
+      invalidationReason: invalidation ? invalidation.reason : null,
+      invalidatedBy: invalidation ? invalidation.by : null,
+    };
+  });
 
   merged.sort((a, b) => b.indexDate - a.indexDate);
   return merged;
@@ -97,8 +106,11 @@ function buildChainReadRouter(provider, factoryContract) {
         chunkedQueryFilter(registry, registry.filters.EntryInvalidated(), fromBlock, latestBlock, MAX_BLOCK_RANGE),
       ]);
 
-      const invalidatedTokenIds = new Set(invalidatedEvents.map((e) => e.args.tokenId));
-      const entries = mergeEntries(lotEvents, batchEvents, invalidatedTokenIds);
+      const invalidationInfoByTokenId = {};
+      invalidatedEvents.forEach((e) => {
+        invalidationInfoByTokenId[e.args.tokenId] = { reason: e.args.reason, by: e.args.by };
+      });
+      const entries = mergeEntries(lotEvents, batchEvents, invalidationInfoByTokenId);
 
       // Metadata grezza (bytes VerifiableURI) per ogni entry, in parallelo.
       // La decodifica (CID + hash, poi fetch dal gateway IPFS pubblico) resta
