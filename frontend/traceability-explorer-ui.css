@@ -42,5 +42,8 @@
 .te-used-lots { margin-top: 8px; }
 .te-used-lots a { font-size: 0.78rem; color: #5b3fd6; text-decoration: none; display: block; margin-bottom: 3px; }
 .te-used-lots a:hover { text-decoration: underline; }
+.te-invalidate-btn { margin-top: 10px; background: #fff; color: #c33; border: 1px solid #c33; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; cursor: pointer; }
+.te-invalidate-btn:hover { background: #fde0e0; }
+.te-invalidate-btn:disabled { opacity: 0.6; cursor: default; }
 .te-err { color: #c33; }
 .te-empty { text-align: center; padding: 40px; color: #999; }

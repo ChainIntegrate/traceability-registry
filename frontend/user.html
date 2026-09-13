@@ -225,6 +225,11 @@ const I18N = {
     "filters.clear": "Cancella filtri",
     "badge.lot": "Materia prima", "badge.batch": "Batch", "badge.invalidated": "Annullato",
     "card.usedLots": "Lotti utilizzati", "card.noImage": "Nessuna immagine",
+    "card.invalidateButton": "Annulla", "card.invalidating": "Annullamento in corso...",
+    "card.invalidateReasonPrompt": "Motivo dell'annullamento (visibile pubblicamente on-chain):",
+    "card.invalidateError": "Errore annullamento: {msg}",
+    "log.invalidating": "Annullamento token {tokenId} in corso...",
+    "log.invalidated": "Token annullato. Tx: {tx}",
     "collection.title": "Metadata della collezione",
     "collection.description": "Nome/descrizione/immagini visibili come \"collezione\" su universaleverything.io. Solo il registryAdmin può modificarli.",
     "collection.name": "Nome", "collection.desc": "Descrizione",
@@ -303,6 +308,11 @@ const I18N = {
     "filters.clear": "Clear filters",
     "badge.lot": "Raw material", "badge.batch": "Batch", "badge.invalidated": "Invalidated",
     "card.usedLots": "Lots used", "card.noImage": "No image",
+    "card.invalidateButton": "Invalidate", "card.invalidating": "Invalidating...",
+    "card.invalidateReasonPrompt": "Reason for invalidation (publicly visible on-chain):",
+    "card.invalidateError": "Invalidation error: {msg}",
+    "log.invalidating": "Invalidating token {tokenId}...",
+    "log.invalidated": "Token invalidated. Tx: {tx}",
     "collection.title": "Collection metadata",
     "collection.description": "Name/description/images shown as the \"collection\" on universaleverything.io. Only the registryAdmin can edit these.",
     "collection.name": "Name", "collection.desc": "Description",
@@ -409,6 +419,7 @@ const REGISTRY_ABI = [
   "function removeDelegate(address delegate) external",
   "function mintRawMaterialLotBatch(bytes32[] tokenIds, bytes[] lsp4MetadataValues, uint256[] indexDates) external",
   "function mintProductionBatch(bytes32 tokenId, bytes lsp4MetadataValue, bytes32[] usedLotTokenIds, uint256 indexDate) external",
+  "function invalidateEntry(bytes32 tokenId, string reason) external",
 ];
 
 const MEMBERSHIP_ABI = ["function tierOf(address account) view returns (uint256)"];
@@ -551,6 +562,12 @@ const exploreGallery = TraceabilityExplorerUI.createGalleryInstance({
   filtersEl: document.getElementById("exploreFilters"),
   gridEl: document.getElementById("exploreGrid"),
   t: t,
+  onInvalidate: async (tokenId, reason) => {
+    log(t("log.invalidating", { tokenId: tokenId }));
+    const tx = await activeRegistry.invalidateEntry(tokenId, reason || "");
+    const receipt = await tx.wait();
+    log(t("log.invalidated", { tx: receipt.transactionHash }));
+  },
 });
 
 document.getElementById("changeRegistryLink").addEventListener("click", (e) => {

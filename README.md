@@ -671,7 +671,33 @@ subito o se non risulta nessun account autorizzato, un messaggio chiaro
 lo dice immediatamente, invece di lasciare che l'errore riemerga più tardi
 in componenti che non c'entrano nulla con la causa reale.
 
-## 25. Punti aperti / TODO
+## 25. Bottone di annullamento (`invalidateEntry`) nel tab "Esplora registro"
+
+Il contratto aveva già `invalidateEntry` da tempo — mancava solo la UI per
+chiamarlo. **Nessuna modifica al contratto**, funziona da subito sul
+registry Birra20Venti già live.
+
+- **Deciso**: solo il bottone, niente cambio immagine/attributo "Stato"
+  aggiornabile su universaleverything.io — quella richiederebbe una
+  funzione che il contratto non ha, non retroattiva sul registry esistente
+  (discusso esplicitamente, rimandato).
+- **Modulo condiviso** (`traceability-explorer-ui.js`): `createGalleryInstance`
+  accetta ora un `onInvalidate` opzionale. Se assente (sempre il caso su
+  `explorer.html`, pubblica e senza wallet), **nessun bottone compare mai** —
+  verificato con jsdom, non solo per assunzione. Se presente, il bottone
+  appare solo sulle entry non ancora annullate (mai due volte sullo stesso
+  token), chiede il motivo via prompt, e se l'utente annulla il prompt
+  **nessuna chiamata avviene** — anche questo verificato con un DOM reale,
+  6 scenari in tutto.
+- **`user.html`**: `exploreGallery` passa `onInvalidate` che chiama
+  `activeRegistry.invalidateEntry(tokenId, reason)`, poi la galleria si
+  ricarica da sola per riflettere subito il nuovo stato (badge "Annullato",
+  bottone sparito, card attenuata).
+- Aggiunta `invalidateEntry` alla `REGISTRY_ABI` di `user.html` — mancava,
+  la chiamata sarebbe fallita silenziosamente senza.
+- Coerenza i18n: 147/147, zero mancanti.
+
+## 26. Punti aperti / TODO
 
 - [ ] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` (allineare al resto dei repo ChainIntegrate).

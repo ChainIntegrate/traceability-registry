@@ -104,9 +104,10 @@
    * elementi si distinguono per attributo data-token-id dentro il proprio
    * gridEl, non per id globale.
    */
-  function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t }) {
+  function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate }) {
     let currentCardDataById = {};
     let activeFilters = {};
+    let lastLoadParams = null;
 
     /** Chiude ogni chip aperta di QUESTA istanza — serve a più gallerie
      * indipendenti sulla stessa pagina senza interferire tra loro. */
@@ -238,11 +239,17 @@
           });
           html += "</div>";
         }
+        // Bottone di annullamento — solo se il chiamante l'ha abilitato
+        // (mai su explorer.html, pubblica e senza wallet) e solo su entry
+        // ancora valide (un token già annullato non si annulla di nuovo).
+        if (onInvalidate && entry.status !== 1) {
+          html += "<button type='button' class='te-invalidate-btn' data-invalidate-token='" + entry.tokenId + "'>" + t("card.invalidateButton") + "</button>";
+        }
         html += "</div></div>";
 
         card.innerHTML = html;
         card.addEventListener("click", (e) => {
-          if (e.target.tagName === "A") return;
+          if (e.target.tagName === "A" || e.target.classList.contains("te-invalidate-btn")) return;
           card.classList.toggle("te-expanded");
         });
         gridEl.appendChild(card);
@@ -256,9 +263,31 @@
           if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("te-expanded"); }
         });
       });
+
+      if (onInvalidate) {
+        gridEl.querySelectorAll(".te-invalidate-btn").forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            e.stopPropagation();
+            const tokenId = btn.dataset.invalidateToken;
+            const reason = window.prompt(t("card.invalidateReasonPrompt"));
+            if (reason === null) return; // annullato dall'utente (Cancel sul prompt)
+            btn.disabled = true;
+            btn.textContent = t("card.invalidating");
+            try {
+              await onInvalidate(tokenId, reason);
+              if (lastLoadParams) await load(lastLoadParams.backendBaseUrl, lastLoadParams.registryAddress);
+            } catch (err) {
+              btn.disabled = false;
+              btn.textContent = t("card.invalidateButton");
+              window.alert(t("card.invalidateError", { msg: err.message }));
+            }
+          });
+        });
+      }
     }
 
     async function load(backendBaseUrl, registryAddress) {
+      lastLoadParams = { backendBaseUrl, registryAddress };
       if (statusEl) statusEl.textContent = t("status.loading");
       if (gridEl) gridEl.innerHTML = "";
       if (filtersEl) filtersEl.style.display = "none";
