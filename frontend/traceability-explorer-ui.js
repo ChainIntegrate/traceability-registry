@@ -108,32 +108,60 @@
     let currentCardDataById = {};
     let activeFilters = {};
 
+    /** Chiude ogni chip aperta di QUESTA istanza — serve a più gallerie
+     * indipendenti sulla stessa pagina senza interferire tra loro. */
+    function closeAllDropdowns() {
+      if (filtersEl) filtersEl.querySelectorAll(".te-filter-chip.open").forEach((c) => c.classList.remove("open"));
+    }
+    // Click fuori da un menu chiude quello aperto — un solo listener per
+    // istanza (aggiunto una volta sola qui, non ad ogni renderFilters, per
+    // non accumularne uno ad ogni caricamento).
+    document.addEventListener("click", closeAllDropdowns);
+
     function renderFilters(cardDataById) {
       if (!filtersEl) return;
       const facets = collectFacets(cardDataById);
       const keys = Object.keys(facets);
       if (keys.length === 0) { filtersEl.style.display = "none"; return; }
 
-      // Tendine chiuse di default (<details>): con molte chiavi (ogni
-      // ingrediente di un batch ne genera una propria) i filtri aperti
-      // spingevano le card troppo in basso — feedback diretto dopo il primo
-      // uso reale.
-      let html = "";
+      // Chip orizzontali a capo automatico + menu a comparsa (overlay, non
+      // spinge il contenuto) — stesso pattern di universaleverything.io.
+      // Le tendine <details> impilate verticalmente (versione precedente)
+      // con molte chiavi (ogni ingrediente di un batch ne genera una
+      // propria) rendevano la pagina troppo lunga anche da chiuse.
+      let html = "<div class='te-filters-row'>";
       keys.forEach((key) => {
-        html += "<details class='te-filter-group'><summary>" + escapeHtml(key) + " (" + facets[key].size + ")</summary><div class='te-filter-pills'>";
+        html += "<div class='te-filter-chip' data-facet-key='" + escapeHtml(key) + "'>";
+        html += "<button type='button' class='te-chip-toggle'>" + escapeHtml(key) + " (" + facets[key].size + ")</button>";
+        html += "<div class='te-filter-dropdown'><div class='te-filter-pills'>";
         Array.from(facets[key]).sort().forEach((value) => {
-          html += "<button class='te-pill' data-key='" + escapeHtml(key) + "' data-value='" + escapeHtml(value) + "'>" + escapeHtml(value) + "</button>";
+          html += "<button type='button' class='te-pill' data-key='" + escapeHtml(key) + "' data-value='" + escapeHtml(value) + "'>" + escapeHtml(value) + "</button>";
         });
-        html += "</div></details>";
+        html += "</div></div></div>";
       });
+      html += "</div>";
       html += "<span class='te-filters-clear'>" + t("filters.clear") + "</span>";
       filtersEl.innerHTML = html;
       filtersEl.style.display = "block";
 
+      filtersEl.querySelectorAll(".te-chip-toggle").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation(); // non far scattare subito closeAllDropdowns
+          const chip = btn.closest(".te-filter-chip");
+          const wasOpen = chip.classList.contains("open");
+          closeAllDropdowns(); // un solo menu aperto alla volta
+          if (!wasOpen) chip.classList.add("open");
+        });
+      });
+
+      filtersEl.querySelectorAll(".te-filter-dropdown").forEach((dropdown) => {
+        dropdown.addEventListener("click", (e) => e.stopPropagation()); // click dentro il menu non lo chiude
+      });
+
       filtersEl.querySelectorAll(".te-pill").forEach((pill) => {
         pill.addEventListener("click", () => togglePill(pill));
       });
-      filtersEl.querySelector(".te-filters-clear").addEventListener("click", clearFilters);
+      filtersEl.querySelector(".te-filters-clear").addEventListener("click", (e) => { e.stopPropagation(); clearFilters(); });
     }
 
     function togglePill(pill) {
@@ -149,12 +177,18 @@
         activeFilters[key].add(value);
         pill.classList.add("active");
       }
+
+      const chip = pill.closest(".te-filter-chip");
+      chip.classList.toggle("has-active", !!activeFilters[key] && activeFilters[key].size > 0);
       applyCardFilters();
     }
 
     function clearFilters() {
       activeFilters = {};
-      filtersEl.querySelectorAll(".te-pill.active").forEach((p) => p.classList.remove("active"));
+      if (filtersEl) {
+        filtersEl.querySelectorAll(".te-pill.active").forEach((p) => p.classList.remove("active"));
+        filtersEl.querySelectorAll(".te-filter-chip.has-active").forEach((c) => c.classList.remove("has-active"));
+      }
       applyCardFilters();
     }
 

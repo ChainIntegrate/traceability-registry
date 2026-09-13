@@ -636,7 +636,27 @@ mostrato zero divergenze non intenzionali, e il lavoro è stato riapplicato
 pulito sulla base corretta prima di essere presentato — nessun commit
 errato è mai arrivato su GitHub.
 
-## 23. Punti aperti / TODO
+## 23. Fix UX filtri — da tendine verticali a chip orizzontali con menu a comparsa
+
+Le tendine `<details>` (§22) restavano comunque troppo lunghe con molte
+chiavi diverse (ogni ingrediente di un batch ne genera una propria) — anche
+chiuse, ogni gruppo occupava una riga intera. Feedback diretto dopo il primo
+uso reale con dati veri (22 chiavi distinte). Sostituito con lo stesso
+pattern di universaleverything.io: chip orizzontali a capo automatico,
+click apre un piccolo menu a comparsa (overlay, non spinge il contenuto
+sottostante), un solo menu aperto alla volta, click fuori lo chiude.
+
+**Testato con un DOM reale (jsdom)**, non solo a occhio: apertura/chiusura
+al click sul toggle, click fuori dal menu lo chiude, click **dentro** il
+menu (su una pillola) non lo chiude, la chip si evidenzia (`has-active`)
+quando ha un filtro selezionato, "Cancella filtri" rimuove l'evidenziazione,
+e solo un menu resta aperto quando se ne apre un secondo. Il listener
+globale di "click fuori" è registrato una sola volta per istanza di galleria
+(non ad ogni `renderFilters`), per non accumularne di duplicati sulle
+gallerie multiple che possono coesistere sulla stessa pagina (es. `user.html`
+con la sua Esplora registro).
+
+## 24. Punti aperti / TODO
 
 - [ ] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` (allineare al resto dei repo ChainIntegrate).

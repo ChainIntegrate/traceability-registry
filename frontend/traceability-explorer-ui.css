@@ -9,12 +9,16 @@
 .te-collection-header h2 { margin: 0 0 4px; }
 .te-collection-header p { margin: 0; color: #555; font-size: 0.9rem; }
 
-.te-filters { margin-bottom: 16px; background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 10px 14px; display: none; }
-.te-filter-group { border-bottom: 1px solid #f0f0f0; padding: 6px 0; }
-.te-filter-group:last-of-type { border-bottom: none; }
-.te-filter-group summary { cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #444; padding: 4px 0; }
-.te-filter-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.te-pill { padding: 4px 12px; border: 1px solid #ccc; border-radius: 999px; font-size: 0.8rem; background: #f5f5f5; cursor: pointer; }
+.te-filters { margin-bottom: 16px; display: none; }
+.te-filters-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.te-filter-chip { position: relative; display: inline-block; }
+.te-chip-toggle { padding: 6px 14px; border: 1px solid #ccc; border-radius: 999px; background: #fff; font-size: 0.82rem; cursor: pointer; white-space: nowrap; color: #333; }
+.te-filter-chip.has-active .te-chip-toggle { background: #222; color: #fff; border-color: #222; }
+.te-filter-chip.open .te-chip-toggle { border-color: #5b3fd6; }
+.te-filter-dropdown { display: none; position: absolute; top: calc(100% + 6px); left: 0; background: #fff; border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.14); padding: 10px; z-index: 30; min-width: 200px; max-height: 260px; overflow-y: auto; }
+.te-filter-chip.open .te-filter-dropdown { display: block; }
+.te-filter-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.te-pill { padding: 4px 12px; border: 1px solid #ccc; border-radius: 999px; font-size: 0.8rem; background: #f5f5f5; cursor: pointer; white-space: nowrap; }
 .te-pill.active { background: #222; color: #fff; border-color: #222; }
 .te-filters-clear { font-size: 0.78rem; color: #5b3fd6; cursor: pointer; text-decoration: underline; margin-top: 8px; display: inline-block; }
 
