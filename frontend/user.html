@@ -18,8 +18,8 @@
   body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
   header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
   .header-left { display: flex; align-items: center; gap: 10px; }
-  .site-logo { height: 40px; width: 40px; object-fit: contain; border-radius: 8px; flex-shrink: 0; }
-  .site-banner { width: 100%; max-height: 160px; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 16px; }
+  .site-logo { height: 72px; width: 72px; object-fit: contain; border-radius: 10px; flex-shrink: 0; }
+  .site-banner { width: 100%; aspect-ratio: 1800 / 1004; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 16px; }
   .header-right { display: flex; align-items: center; gap: 10px; }
   .lang-toggle { display: flex; gap: 4px; }
   .lang-btn { padding: 4px 10px; border: 1px solid #999; background: #f4f4f4; cursor: pointer; border-radius: 4px; font-size: 0.85rem; }
@@ -218,6 +218,7 @@ const I18N = {
     "registries.namePlaceholder": "es. Birra20Venti Traceability", "registries.symbol": "Simbolo",
     "registries.symbolPlaceholder": "es. B20VTR", "registries.create": "Crea il mio registro",
     "registries.none": "Nessun registro ancora. Creane uno sotto.",
+    "registries.loadingNames": "Caricamento nomi registri...",
     "registries.usage": "Registri usati: {used} / {limit} (tier attuale: {tier})",
     "registries.needBoth": "Nome e simbolo obbligatori.",
     "delegateAccess.title": "Sei un delegato su un altro registro?",
@@ -305,6 +306,7 @@ const I18N = {
     "registries.namePlaceholder": "e.g. Birra20Venti Traceability", "registries.symbol": "Symbol",
     "registries.symbolPlaceholder": "e.g. B20VTR", "registries.create": "Create my registry",
     "registries.none": "No registry yet. Create one below.",
+    "registries.loadingNames": "Loading registry names...",
     "registries.usage": "Registries used: {used} / {limit} (current tier: {tier})",
     "registries.needBoth": "Name and symbol are required.",
     "delegateAccess.title": "Are you a delegate on another registry?",
@@ -530,11 +532,45 @@ async function loadMyRegistries() {
   if (registries.length === 0) {
     listEl.innerHTML = "<p class='muted'>" + t("registries.none") + "</p>";
   } else {
-    registries.forEach((addr) => {
+    listEl.innerHTML = "<p class='muted'>" + t("registries.loadingNames") + "</p>";
+
+    // Nome dal metadata di collezione al posto del nudo indirizzo — molto
+    // più riconoscibile quando si hanno più registri. Se un registro non ha
+    // ancora metadata (appena creato) si ripiega sull'indirizzo, sempre
+    // mostrato comunque sotto il nome come riferimento tecnico.
+    const withNames = await Promise.all(registries.map(async (addr) => {
+      let name = null;
+      try {
+        const data = await TraceabilityDecode.fetchRegistryEntries(CONFIG.BACKEND_BASE_URL, addr);
+        if (data.collectionMetadataValue) {
+          const { json } = await TraceabilityDecode.decodeMetadataValue(data.collectionMetadataValue);
+          name = (json.LSP4Metadata && json.LSP4Metadata.name) || null;
+        }
+      } catch (err) {
+        name = null; // ripiega silenziosamente sull'indirizzo, non blocca l'elenco
+      }
+      return { addr, name };
+    }));
+
+    listEl.innerHTML = "";
+    withNames.forEach(({ addr, name }) => {
       const btn = document.createElement("button");
-      btn.textContent = addr;
       btn.style.display = "block";
       btn.style.marginBottom = "6px";
+      btn.style.textAlign = "left";
+      if (name) {
+        const strong = document.createElement("strong");
+        strong.textContent = name;
+        const span = document.createElement("span");
+        span.className = "muted";
+        span.style.display = "block";
+        span.style.fontSize = "0.75rem";
+        span.textContent = addr;
+        btn.appendChild(strong);
+        btn.appendChild(span);
+      } else {
+        btn.textContent = addr;
+      }
       btn.addEventListener("click", () => selectRegistry(addr));
       listEl.appendChild(btn);
     });

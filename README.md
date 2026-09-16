@@ -826,7 +826,23 @@ UI.
 I file immagine restano da committare sul repo (erano già sul VPS ma non
 tracciati da git al momento di questa modifica).
 
-## 33. Punti aperti / TODO
+## 34. Logo più grande, banner senza tagli, registri per nome
+
+- **Logo**: 40px → 72px su tutte e tre le pagine.
+- **Banner**: sostituito `max-height: 160px` (fisso, tagliava molto su
+  schermi larghi dato che l'immagine è 1800×1004) con `aspect-ratio: 1800/1004`
+  — lo spazio ora segue sempre la proporzione reale dell'immagine, niente
+  taglio arbitrario indipendente dalla larghezza dello schermo.
+- **Elenco registri per nome**: `loadMyRegistries()` ora legge il metadata
+  di collezione di ciascun registro (`collectionMetadataValue`, stessa
+  fonte già usata dal tab Esplora) e mostra il **nome** al posto del nudo
+  indirizzo — indirizzo comunque visibile sotto, come riferimento tecnico,
+  mai nascosto. Se un registro non ha ancora metadata (appena creato) o la
+  lettura fallisce, ripiega silenziosamente sul solo indirizzo — **testato
+  con jsdom sui tre casi** (nome presente, nessun metadata, errore di rete):
+  mai un'interruzione dell'elenco.
+
+## 35. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` — **confermato**: la compilazione Hardhat
