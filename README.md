@@ -774,7 +774,41 @@ numero di lotto a memoria ("bisogna prendertelo, copiarlo, reincollarlo").
   nonostante le chiavi diverse, doppio click deseleziona senza errori — 11
   controlli, tutti passati. Nessuna nuova chiave i18n necessaria.
 
-## 29. Punti aperti / TODO
+## 30. Cinque aggiustamenti UX su `user.html`
+
+Richiesti dopo l'uso reale prolungato del pannello.
+
+- **Pannello log a tetto fisso**: `log()` tiene solo le ultime 5 righe in un
+  buffer (`LOG_MAX_LINES`), non solo scroll su una lista che cresce
+  all'infinito. `max-height` del pannello ridotta di conseguenza (200px →
+  110px). **Testato**: 8 messaggi in sequenza → restano visibili solo gli
+  ultimi 5.
+- **JSON importato reso modificabile**: ripensato il flusso — caricare un
+  file ora **popola il form manuale** (`populateRawMaterialForm`/
+  `populateBatchForm`) e porta l'utente lì, invece di generare subito
+  un'anteprima non toccabile. Upload e compilazione a mano convergono sullo
+  stesso percorso da questo punto in poi (`switchToSubtab` per il passaggio
+  programmatico tra i due sotto-tab). **Testato con un vero round-trip**: un
+  acquisto di 3 materiali (stessa struttura del caso reale Pinta a 20
+  materiali) estratto, versato nel form, riletto senza modifiche — risultato
+  byte-per-byte identico all'originale, nessuna perdita di dati nel giro.
+- **Pulsante "Torna a modifica"**: accanto a "Conferma e registra" in
+  entrambi i flussi (materie prime, batch) — riporta al sotto-tab manuale
+  (dati già presenti, mai svuotati) senza reinserire nulla da capo.
+- **Pulsante "Disconnetti"**: azzera `provider`/`signer`/`myAddress`/
+  `factory`/`activeRegistryAddress`/`activeRegistry`, nasconde i pannelli,
+  torna al pulsante di connessione. Nessuna vera revoca lato wallet (non
+  esiste un'API universale tra estensioni per farlo) — stesso significato
+  di "disconnetti" in qualunque dApp.
+- **Terminologia ammorbidita**: "minta"/"mint" → "registra"/"registrazione",
+  "Tx:" → "Riferimento:", "Firma e invio transazione" → "Registrazione in
+  corso", "Scrittura on-chain" → "Salvataggio in corso", ecc. — su
+  `user.html` soltanto; `admin.html` resta tecnico, è uno strumento interno
+  ChainIntegrate, non per le aziende clienti.
+
+Coerenza i18n: 151/151 (`user.html` + modulo condiviso), zero mancanti.
+
+## 31. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` — **confermato**: la compilazione Hardhat
