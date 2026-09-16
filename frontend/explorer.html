@@ -4,12 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TraceabilityRegistry — Esplora</title>
+<link rel="icon" type="image/x-icon" href="./favicon.ico">
 <link rel="stylesheet" href="./traceability-explorer-ui.css">
 <script src="./traceability-decode.js"></script>
 <script src="./traceability-explorer-ui.js"></script>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 0 auto; padding: 20px; background: #fafafa; }
   header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .site-logo { height: 40px; width: 40px; object-fit: contain; border-radius: 8px; flex-shrink: 0; }
+  .site-banner { width: 100%; max-height: 160px; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 16px; }
   .lang-toggle { display: flex; gap: 4px; }
   .lang-btn { padding: 4px 10px; border: 1px solid #999; background: #fff; cursor: pointer; border-radius: 4px; font-size: 0.85rem; }
   .lang-btn.active { background: #222; color: #fff; }
@@ -21,8 +25,13 @@
 </head>
 <body>
 
+<img src="./banner._1800x1004.png" alt="" class="site-banner">
+
 <header>
-  <h1 style="margin:0;">TraceabilityRegistry</h1>
+  <div class="header-left">
+    <img src="./logo_700x700.png" alt="TraceabilityRegistry" class="site-logo">
+    <h1 style="margin:0;">TraceabilityRegistry</h1>
+  </div>
   <div class="lang-toggle">
     <button id="langItBtn" class="lang-btn active">IT</button>
     <button id="langEnBtn" class="lang-btn">EN</button>

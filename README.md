@@ -808,7 +808,25 @@ Richiesti dopo l'uso reale prolungato del pannello.
 
 Coerenza i18n: 151/151 (`user.html` + modulo condiviso), zero mancanti.
 
-## 31. Punti aperti / TODO
+## 32. Logo, banner e favicon sulle tre pagine
+
+File caricati direttamente sul VPS (non tramite di me): `logo.png`,
+`logo_700x700.png`, `banner.png`, `banner._1800x1004.png` (nome così com'è,
+non rinominato), `favicon.ico` — pensati anche per i metadata della
+collezione al momento del deploy mainnet, usati fin da subito anche per la
+UI.
+
+- **Favicon**: `<link rel="icon">` su tutte e tre le pagine (`user.html`,
+  `admin.html`, `explorer.html`).
+- **Logo**: `logo_700x700.png` (versione già ridimensionata) accanto al
+  titolo in ogni header.
+- **Banner**: `banner._1800x1004.png` (versione ridimensionata) in cima a
+  ogni pagina, sopra l'header.
+
+I file immagine restano da committare sul repo (erano già sul VPS ma non
+tracciati da git al momento di questa modifica).
+
+## 33. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` — **confermato**: la compilazione Hardhat

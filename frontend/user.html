@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TraceabilityRegistry — Pannello Azienda</title>
+<link rel="icon" type="image/x-icon" href="./favicon.ico">
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script src="./traceability-json-validators.js"></script>
 <script src="./traceability-tokenid.js"></script>
@@ -16,6 +17,9 @@
 <style>
   body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
   header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .site-logo { height: 40px; width: 40px; object-fit: contain; border-radius: 8px; flex-shrink: 0; }
+  .site-banner { width: 100%; max-height: 160px; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 16px; }
   .header-right { display: flex; align-items: center; gap: 10px; }
   .lang-toggle { display: flex; gap: 4px; }
   .lang-btn { padding: 4px 10px; border: 1px solid #999; background: #f4f4f4; cursor: pointer; border-radius: 4px; font-size: 0.85rem; }
@@ -50,8 +54,13 @@
 </head>
 <body>
 
+<img src="./banner._1800x1004.png" alt="" class="site-banner">
+
 <header>
-  <h1>TraceabilityRegistry</h1>
+  <div class="header-left">
+    <img src="./logo_700x700.png" alt="TraceabilityRegistry" class="site-logo">
+    <h1>TraceabilityRegistry</h1>
+  </div>
   <div class="header-right">
     <div class="lang-toggle">
       <button id="langItBtn" class="lang-btn active">IT</button>
