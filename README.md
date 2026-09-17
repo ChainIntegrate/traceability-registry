@@ -862,7 +862,27 @@ tracciati da git al momento di questa modifica).
   così perché fornito verbatim; da agganciare al sistema di traduzione se
   serve che segua la lingua della pagina.
 
-## 37. Punti aperti / TODO
+## 38. Banner corretto per davvero + footer agganciato alla traduzione
+
+- **Banner**: il vero problema non era la dimensione in sé, ma il design
+  dell'immagine (larga e bassa, con testo in alto e icone/lotti
+  incrociati al centro-basso) contro una striscia troppo corta —
+  `object-fit: cover` a 100px tagliava esattamente quella zona centrale.
+  **Soluzione**: niente più `width: 100%` forzato — altezza capata
+  (160px), larghezza libera secondo la proporzione reale dell'immagine,
+  centrata. Immagine sempre intera, mai tagliata, ma comunque compatta.
+- **Footer agganciato al sistema di traduzione**: aggiunti `data-i18n` a
+  tutti e tre gli elementi testuali (diritti, consulenza, Telegram) su
+  `user.html` ed `explorer.html`. **Bug evitato durante la scrittura, non
+  dopo**: `applyLanguage()` usa `textContent`, che NON decodifica le
+  entità HTML — scrivere `&amp;` nel dizionario JS lo avrebbe mostrato
+  letteralmente come testo `&amp;` invece di `&`. Usato un `&` letterale
+  nel dizionario. **Testato con jsdom**: nessun `&amp;` letterale nel
+  risultato, e il cambio lingua aggiorna davvero il footer (verificato
+  IT→EN).
+- Coerenza i18n: 155/155 su `user.html`, 22/22 su `explorer.html`.
+
+## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` — **confermato**: la compilazione Hardhat
