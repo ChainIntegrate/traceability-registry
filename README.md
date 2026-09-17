@@ -842,7 +842,27 @@ tracciati da git al momento di questa modifica).
   con jsdom sui tre casi** (nome presente, nessun metadata, errore di rete):
   mai un'interruzione dell'elenco.
 
-## 35. Punti aperti / TODO
+## 36. Banner ridotto, footer su user/explorer (non admin)
+
+- **Banner ridimensionato di nuovo**: l'`aspect-ratio: 1800/1004` di prima
+  (§34) generava un'altezza reale di oltre 600px su un contenitore largo
+  1100px — "prende quasi tutto lo schermo", segnalato subito. Tornato a
+  un'altezza fissa modesta (100px, `object-fit: cover`) su tutti e tre i
+  file — striscia decorativa, non hero image.
+- **Footer aggiunto** su `user.html` ed `explorer.html` (non `admin.html`,
+  come richiesto) — markup fornito verbatim, inserito prima di `</body>`.
+  Usa tre variabili CSS (`--powder-line`, `--ink-soft`, `--blueprint`) non
+  definite in nessun file di questo repo — probabile provenienza da
+  un'altra pagina ChainIntegrate con la sua palette. Aggiunte con valori
+  ragionevoli in un blocco `:root` (grigio bordo, testo attenuato, blu
+  neutro per l'accento) — **da sostituire con i valori esatti** se esiste
+  già una palette ChainIntegrate definita altrove.
+- **Nota**: il testo del footer è statico in italiano, non passa dal
+  sistema `t()` — resta in italiano anche con la pagina in EN. Lasciato
+  così perché fornito verbatim; da agganciare al sistema di traduzione se
+  serve che segua la lingua della pagina.
+
+## 37. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
       `@lukso/lsp4-contracts` — **confermato**: la compilazione Hardhat
