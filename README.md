@@ -195,14 +195,19 @@ per garantire coerenza tra anteprima e visualizzazione finale).
 Vanilla JS, richiede solo `ethers.js` v5 (stesso CDN già usato in
 `Batch.html`), nessuna altra dipendenza.
 
-- **`computeRawMaterialLotTokenId(registryAddress, fornitore, nomeIngrediente, lotto)`**
-  → `keccak256(abi.encodePacked(registryAddress, "RML", fornitore, nomeIngrediente, lotto))`,
+- **`computeRawMaterialLotTokenId(registryAddress, fornitore, nomeIngrediente, lotto, dataAcquistoRaw)`**
+  → `keccak256(abi.encodePacked(registryAddress, "RML", fornitore, nomeIngrediente, lotto, dataAcquistoRaw))`,
   identico a `solidityKeccak256` lato JS. L'indirizzo del registry è incluso
   come sale (isolamento extra, a costo zero); il prefisso `"RML"` separa lo
   spazio hash da quello dei batch, in aggiunta al controllo che il contratto
   fa già via `ENTRY_TYPE_KEY`. Testato su dati reali: 20/20 tokenId unici
-  sui materiali dell'acquisto Pinta, idempotenza confermata (stesso input →
-  stesso tokenId, il contratto rifiuta il doppio mint).
+  sui materiali dell'acquisto Pinta.
+  **§42**: la data di acquisto è stata aggiunta alla firma della funzione
+  dopo aver trovato un bug — senza data, lo stesso lotto ricevuto in due
+  spedizioni reali diverse nello stesso anno generava lo stesso tokenId,
+  bloccando (o facendo fallire l'intero import batch di) la seconda
+  ricezione. Con la data, l'idempotenza voluta resta solo per il caso
+  giusto: un doppio invio accidentale dello stesso identico acquisto.
 - **`computeProductionBatchTokenId(registryAddress, batchName)`** → stesso
   schema, usa il `name` del batch (es. "Batch #131") come identificativo
   naturale già assegnato dall'azienda.
@@ -967,6 +972,63 @@ tracciati da git al momento di questa modifica).
   espansione indesiderata della card al click. **Non ancora testato
   contro un vero contratto/wallet** — da fare come prossimo passo, con
   un account Gold e uno non-Gold per confermare accettazione/rifiuto.
+
+## 42. TokenId materia prima: bug di collisione trovato testando, corretto
+
+- **Segnalazione**: "una materia prima con lo stesso lotto posso comprarla
+  più volte nell'anno, quindi problema stesso tokenId?"
+- **Confermato leggendo il codice**: `computeRawMaterialLotTokenId` non
+  includeva la data di acquisto —
+  `keccak256(registryAddress, "RML", fornitore, nomeIngrediente, lotto)`.
+  Due spedizioni reali diverse dello stesso lotto (stesso fornitore, stesso
+  ingrediente, stesso numero di lotto, capita quando un fornitore spedisce
+  lo stesso lotto in più consegne) generavano lo stesso tokenId — la
+  seconda falliva con `"tokenId already used"`, e se capitava in mezzo a un
+  JSON con più righe faceva fallire **l'intero import batch**, non solo
+  quella riga.
+- **Fix**: aggiunta la data di acquisto (`dataAcquistoRaw`) alla firma
+  della funzione. L'idempotenza voluta (un doppio invio accidentale dello
+  stesso identico acquisto viene rifiutato) resta intatta — cambia solo
+  che ora serve *anche* la data per considerare due mint "lo stesso
+  acquisto". Solo frontend (`traceability-tokenid.js`,
+  `traceability-mint-compose.js`), nessun contratto toccato, nessun
+  redeploy. Testato con un vero calcolo: stesso lotto+data → stesso
+  tokenId (idempotenza confermata); stesso lotto, data diversa → tokenId
+  diverso (collisione risolta).
+
+## 43. Import materia prima: 20 righe = 20 firme, corretto a 1
+
+- **Segnalazione**: importando un JSON con 20 materie prime, la UP
+  extension ha chiesto 20 firme, una per lotto.
+- **Causa**: `composeRawMaterialLotBatchMintArgs` chiamava
+  `pinMetadataToIpfs` (che firma un messaggio) dentro un `for` per ogni
+  lotto, prima del mint vero e proprio. Il mint (`mintRawMaterialLotBatch`)
+  resta effettivamente "una transazione", ma il pinning IPFS che lo
+  precede era "N firme" — il messaggio firmato lega la firma all'hash di
+  **un solo** contenuto JSON, quindi non copriva 20 contenuti diversi.
+- **Fix**: nuovo endpoint `POST /api/traceability/pin-json-batch` —
+  un'unica firma copre un hash aggregato (`keccak256` della concatenazione
+  ordinata degli hash dei singoli contenuti, ricalcolati server-side dai
+  byte ricevuti, mai da un aggregato dichiarato dal client), pinna ogni
+  elemento separatamente su IPFS (nessun JSON cumulativo: ogni lotto resta
+  un file IPFS indipendente, l'explorer non cambia) e ritorna N CID in
+  ordine. Il frontend ora costruisce tutti i metadata **prima** di firmare
+  qualsiasi cosa, poi fa una singola chiamata batch.
+- **Bug evitato scrivendo il codice, non dopo**: `app.use("/api/.../pin-json", cors)`
+  in `server.js` fa match per SEGMENTO di path, non per prefisso di
+  stringa — non copre `/pin-json-batch` (il carattere dopo "pin-json" non
+  è uno "/"). Verificato empiricamente con un mini server Express di prova
+  prima di fidarmi: serviva una riga CORS a parte, altrimenti la nuova
+  route avrebbe rifiutato ogni richiesta da browser con un errore CORS
+  silenzioso e difficile da diagnosticare.
+- **Testato**: `computeAggregateHash`/`buildBatchSignedMessage` producono
+  byte-per-byte lo stesso output lato backend e lato frontend (requisito
+  per far passare la verifica firma) — verificato con un confronto diretto
+  tra i due file, non per ispezione visiva. Flusso end-to-end verificato
+  con firma/fetch finti: esattamente 1 `signMessage` e 1 chiamata
+  `pin-json-batch` per 3 lotti (non 3), ordine lotti→CID→tokenId
+  preservato. **Non ancora testato contro un vero nodo IPFS/wallet** — da
+  fare al prossimo giro di test reale.
 
 ## 39. Punti aperti / TODO
 

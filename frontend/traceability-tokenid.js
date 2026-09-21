@@ -32,20 +32,31 @@
   // -----------------------------------------------------------------------
 
   /**
-   * tokenId di un RawMaterialLot. Univoco per fornitore+ingrediente+lotto
-   * dentro un dato registry — mintare due volte lo stesso lotto genera lo
-   * stesso tokenId, e il contratto lo rifiuta (idempotenza voluta).
+   * tokenId di un RawMaterialLot. Univoco per fornitore+ingrediente+lotto+
+   * data di acquisto dentro un dato registry.
+   *
+   * La data di acquisto è inclusa DI PROPOSITO, non solo come dettaglio in
+   * più: lo stesso numero di lotto può arrivare in due consegne reali
+   * diverse nello stesso anno (un fornitore può spedire lo stesso lotto in
+   * più spedizioni separate) — senza la data, la seconda consegna
+   * genererebbe lo stesso tokenId della prima e il mint fallirebbe (o,
+   * peggio, farebbe fallire l'intero import batch se capita in mezzo a un
+   * JSON con più righe). Con la data, l'idempotenza voluta resta intatta
+   * solo per il caso che deve davvero essere bloccato: un doppio invio
+   * ACCIDENTALE dello stesso identico acquisto (stesso lotto, stessa data)
+   * genera comunque lo stesso tokenId e viene correttamente rifiutato.
    */
-  function computeRawMaterialLotTokenId(registryAddress, fornitore, nomeIngrediente, lotto) {
+  function computeRawMaterialLotTokenId(registryAddress, fornitore, nomeIngrediente, lotto, dataAcquistoRaw) {
     const e = requireEthers();
     if (!registryAddress) throw new Error("computeRawMaterialLotTokenId: registryAddress mancante.");
     if (!fornitore) throw new Error("computeRawMaterialLotTokenId: fornitore mancante.");
     if (!nomeIngrediente) throw new Error("computeRawMaterialLotTokenId: nomeIngrediente mancante.");
     if (!lotto) throw new Error("computeRawMaterialLotTokenId: lotto mancante.");
+    if (!dataAcquistoRaw) throw new Error("computeRawMaterialLotTokenId: dataAcquistoRaw mancante.");
 
     return e.utils.solidityKeccak256(
-      ["address", "string", "string", "string", "string"],
-      [registryAddress, "RML", fornitore, nomeIngrediente, lotto]
+      ["address", "string", "string", "string", "string", "string"],
+      [registryAddress, "RML", fornitore, nomeIngrediente, lotto, dataAcquistoRaw]
     );
   }
 

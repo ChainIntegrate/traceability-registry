@@ -49,6 +49,70 @@
     return ethers;
   }
 
+  // -----------------------------------------------------------------------
+  // ATTENZIONE — duplicato intenzionale di backend/traceabilityRoutes.js
+  // computeAggregateHash()/buildBatchSignedMessage(). Stesso principio già
+  // segnalato sopra per buildSignedMessage: se uno dei due cambia, aggiornare
+  // anche l'altro, byte per byte, altrimenti la firma non verifica più.
+  // -----------------------------------------------------------------------
+  function computeAggregateHash(contentHashes) {
+    const e = requireEthers();
+    return e.utils.keccak256(e.utils.concat(contentHashes));
+  }
+
+  function buildBatchSignedMessage(registryAddress, aggregateHash, count, timestamp) {
+    return (
+      "ChainIntegrate TraceabilityRegistry - Pin metadata batch\n" +
+      "Registry: " + registryAddress + "\n" +
+      "Count: " + count + "\n" +
+      "Aggregate hash: " + aggregateHash + "\n" +
+      "Timestamp: " + timestamp
+    );
+  }
+
+  /**
+   * Come pinMetadataToIpfs ma per N contenuti con UNA sola firma — vedi
+   * commento su computeAggregateHash lato backend per il perché. Ritorna un
+   * array di CID nello stesso ordine di metadataJsonStrings.
+   */
+  async function pinMetadataBatchToIpfs({ backendBaseUrl, registryAddress, signer, metadataJsonStrings }) {
+    if (!backendBaseUrl) throw new Error("pinMetadataBatchToIpfs: backendBaseUrl mancante.");
+    if (!registryAddress) throw new Error("pinMetadataBatchToIpfs: registryAddress mancante.");
+    if (!signer) throw new Error("pinMetadataBatchToIpfs: signer mancante (UP non connessa?).");
+    if (!Array.isArray(metadataJsonStrings) || metadataJsonStrings.length === 0) {
+      throw new Error("pinMetadataBatchToIpfs: metadataJsonStrings mancante o vuoto.");
+    }
+
+    const e = requireEthers();
+    const signerAddress = await signer.getAddress();
+    const timestamp = Math.floor(Date.now() / 1000);
+    const contentHashes = metadataJsonStrings.map((s) => e.utils.keccak256(e.utils.toUtf8Bytes(s)));
+    const aggregateHash = computeAggregateHash(contentHashes);
+    const message = buildBatchSignedMessage(registryAddress, aggregateHash, metadataJsonStrings.length, timestamp);
+    const signature = await signer.signMessage(message); // apre la UP extension — UNA volta sola
+
+    const res = await fetch(backendBaseUrl.replace(/\/$/, "") + "/api/traceability/pin-json-batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        registryAddress,
+        signerAddress,
+        metadataJsonStrings,
+        signature,
+        timestamp,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error("pinMetadataBatchToIpfs: backend ha risposto " + res.status + " — " + (data.error || "errore sconosciuto"));
+    }
+    if (!Array.isArray(data.cids) || data.cids.length !== metadataJsonStrings.length) {
+      throw new Error("pinMetadataBatchToIpfs: risposta backend senza 'cids' o di lunghezza inattesa.");
+    }
+    return data.cids;
+  }
+
   /**
    * Firma con la UP connessa (personal_sign, gestito dall'extension) e
    * chiama il backend per pinnare la metadata. Ritorna il CID.
@@ -133,26 +197,39 @@
     const extracted = global.TraceabilityValidators.extractRawMaterialPurchaseData(acquistoJson);
     const photoEntry = resolvePhoto ? await Promise.resolve(resolvePhoto(extracted.fornitore)) : null;
 
-    const tokenIds = [];
-    const lsp4MetadataValues = [];
-    const indexDates = [];
-
-    for (const lot of extracted.lots) {
-      const metadataObject = global.TraceabilityMetadata.buildRawMaterialLotMetadata(
+    // Fase 1: costruisco TUTTI i metadata prima di firmare/pinnare niente —
+    // nessuna chiamata di rete qui, solo dati locali. Serve ad avere l'intero
+    // array di metadataJsonString pronto per una singola firma batch (vedi
+    // pinMetadataBatchToIpfs) invece di firmare una volta per lotto.
+    const metadataObjects = extracted.lots.map((lot) =>
+      global.TraceabilityMetadata.buildRawMaterialLotMetadata(
         lot,
         extracted.fornitore,
         extracted.dataAcquistoRaw,
         photoEntry
-      );
-      const metadataJsonString = JSON.stringify(metadataObject);
+      )
+    );
+    const metadataJsonStrings = metadataObjects.map((m) => JSON.stringify(m));
 
-      const cid = await pinMetadataToIpfs({ backendBaseUrl, registryAddress, signer, metadataJsonString });
-      const encodedValue = await encodeLsp4MetadataValue(metadataObject, cid);
+    // Fase 2: una firma sola per l'intero acquisto (N elementi, N CID).
+    const cids = await pinMetadataBatchToIpfs({ backendBaseUrl, registryAddress, signer, metadataJsonStrings });
+
+    // Fase 3: incapsulo ogni CID nel proprio VerifiableURI e calcolo il
+    // tokenId — l'ordine di extracted.lots, metadataObjects e cids è lo
+    // stesso per costruzione (map preserva l'ordine), nessun disallineamento.
+    const tokenIds = [];
+    const lsp4MetadataValues = [];
+    const indexDates = [];
+
+    for (let i = 0; i < extracted.lots.length; i++) {
+      const lot = extracted.lots[i];
+      const encodedValue = await encodeLsp4MetadataValue(metadataObjects[i], cids[i]);
       const tokenId = global.TraceabilityTokenId.computeRawMaterialLotTokenId(
         registryAddress,
         extracted.fornitore,
         lot.nome,
-        lot.lotto
+        lot.lotto,
+        extracted.dataAcquistoRaw
       );
 
       tokenIds.push(tokenId);
@@ -215,7 +292,10 @@
 
   global.TraceabilityMintCompose = {
     buildSignedMessage: buildSignedMessage,
+    buildBatchSignedMessage: buildBatchSignedMessage,
+    computeAggregateHash: computeAggregateHash,
     pinMetadataToIpfs: pinMetadataToIpfs,
+    pinMetadataBatchToIpfs: pinMetadataBatchToIpfs,
     encodeLsp4MetadataValue: encodeLsp4MetadataValue,
     composeRawMaterialLotBatchMintArgs: composeRawMaterialLotBatchMintArgs,
     composeProductionBatchMintArgs: composeProductionBatchMintArgs,

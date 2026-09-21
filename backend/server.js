@@ -51,6 +51,12 @@ const restrictedWriteCors = cors({
 
 app.use("/api/traceability/registry", publicReadCors);
 app.use("/api/traceability/pin-json", restrictedWriteCors);
+// ATTENZIONE: app.use() fa match per SEGMENTO di path, non per prefisso di
+// stringa — "/pin-json" sopra NON copre "/pin-json-batch" (il carattere
+// dopo "pin-json" non è uno "/"), serve una riga a parte. Stesso principio
+// da tenere a mente per qualsiasi futura route con un nome che "contiene"
+// un'altra route già registrata.
+app.use("/api/traceability/pin-json-batch", restrictedWriteCors);
 app.use("/api/traceability/upload-photo", restrictedWriteCors);
 app.use("/api/traceability/photos", restrictedWriteCors);
 
