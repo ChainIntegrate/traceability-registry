@@ -126,7 +126,7 @@
     return values;
   }
 
-  function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate }) {
+  function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate, onSetDocumentHash }) {
     let currentCardDataById = {};
     let activeFilters = {};
     let lotSearchText = "";
@@ -335,11 +335,23 @@
         if (onInvalidate && entry.status !== 1) {
           html += "<button type='button' class='te-invalidate-btn' data-invalidate-token='" + entry.tokenId + "'>" + t("card.invalidateButton") + "</button>";
         }
+        // Attestazione hash documento (Gold-only lato contratto —
+        // onlyGoldFeature — non filtrato qui: il bottone compare per
+        // chiunque abbia accesso a questa gallery col callback abilitato,
+        // il contratto stesso rifiuta la tx se il tier non è Gold).
+        if (onSetDocumentHash) {
+          html += "<div class='te-dochash-row'>" +
+            "<input type='file' class='te-dochash-input' data-dochash-token='" + entry.tokenId + "'>" +
+            "<button type='button' class='te-dochash-btn' data-dochash-token='" + entry.tokenId + "'>" + t("card.setDocumentHashButton") + "</button>" +
+            "</div>";
+        }
         html += "</div></div>";
 
         card.innerHTML = html;
         card.addEventListener("click", (e) => {
-          if (e.target.tagName === "A" || e.target.classList.contains("te-invalidate-btn")) return;
+          if (e.target.tagName === "A" || e.target.tagName === "INPUT" ||
+              e.target.classList.contains("te-invalidate-btn") ||
+              e.target.classList.contains("te-dochash-btn")) return;
           card.classList.toggle("te-expanded");
         });
         gridEl.appendChild(card);
@@ -370,6 +382,30 @@
               btn.disabled = false;
               btn.textContent = t("card.invalidateButton");
               window.alert(t("card.invalidateError", { msg: err.message }));
+            }
+          });
+        });
+      }
+
+      if (onSetDocumentHash) {
+        gridEl.querySelectorAll(".te-dochash-btn").forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            e.stopPropagation();
+            const tokenId = btn.dataset.dochashToken;
+            const input = gridEl.querySelector(".te-dochash-input[data-dochash-token='" + tokenId + "']");
+            const file = input && input.files[0];
+            if (!file) { window.alert(t("card.setDocumentHashNeedFile")); return; }
+            btn.disabled = true;
+            btn.textContent = t("card.settingDocumentHash");
+            try {
+              await onSetDocumentHash(tokenId, file);
+              window.alert(t("card.setDocumentHashSuccess"));
+              if (input) input.value = "";
+            } catch (err) {
+              window.alert(t("card.setDocumentHashError", { msg: err.message }));
+            } finally {
+              btn.disabled = false;
+              btn.textContent = t("card.setDocumentHashButton");
             }
           });
         });

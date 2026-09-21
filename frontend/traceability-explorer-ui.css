@@ -48,5 +48,10 @@
 .te-invalidate-btn { margin-top: 10px; background: #fff; color: #c33; border: 1px solid #c33; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; cursor: pointer; }
 .te-invalidate-btn:hover { background: #fde0e0; }
 .te-invalidate-btn:disabled { opacity: 0.6; cursor: default; }
+.te-dochash-row { margin-top: 10px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.te-dochash-input { font-size: 0.72rem; max-width: 140px; }
+.te-dochash-btn { background: #fff; color: #3454d1; border: 1px solid #3454d1; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; cursor: pointer; }
+.te-dochash-btn:hover { background: #e8ecfc; }
+.te-dochash-btn:disabled { opacity: 0.6; cursor: default; }
 .te-err { color: #c33; }
 .te-empty { text-align: center; padding: 40px; color: #999; }

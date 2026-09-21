@@ -940,6 +940,34 @@ tracciati da git al momento di questa modifica).
   davvero on-chain e non dipende da uno stato letto/cacheato lato UI.
   Chiuso.
 
+## 41. UI per `setDocumentHash` (Gold-only) — mai esposta, ora aggiunta
+
+- **Trovato controllando**: `setDocumentHash(tokenId, documentHash)` esiste
+  nel contratto da tempo (`onlyGoldFeature`, richiede tier Gold), ma
+  **nessuna delle tre pagine frontend la richiamava** — zero riferimenti
+  a `setDocumentHash`/`documentHash` in `user.html`, `admin.html` o
+  `explorer.html`. La funzionalità Gold non è mai stata esercitata,
+  nemmeno una volta (coerente con quanto già annotato al §39).
+- **Aggiunta nel tab "Esplora registro"** di `user.html`, come azione
+  per-card nella galleria condivisa (`traceability-explorer-ui.js`),
+  sullo stesso pattern del bottone di annullamento: selezione file →
+  bottone "Registra hash documento" → hash `keccak256` calcolato
+  client-side sui byte del file (il file stesso non viene mai caricato
+  né su IPFS né altrove, solo l'hash finisce on-chain) → chiamata a
+  `activeRegistry.setDocumentHash(tokenId, hash)`.
+- **Nessun filtro di tier lato UI, di proposito**: il bottone compare
+  sempre (come per "Deleghe", dove pure serve tier Silver+ ma non c'è
+  disabilitazione lato UI) — l'obiettivo è verificare dal vivo che sia
+  il contratto stesso a rifiutare la chiamata se il tier non è Gold,
+  non nasconderlo prima che possa essere testato.
+- **Testato**: sintassi JS/CSS, bilanciamento tag HTML, id non-ASCII,
+  copertura i18n (IT/EN) e un test funzionale jsdom che simula il click
+  con file selezionato — verifica bottone renderizzato, callback
+  invocata con `(tokenId, file)` corretti, messaggio di successo, nessuna
+  espansione indesiderata della card al click. **Non ancora testato
+  contro un vero contratto/wallet** — da fare come prossimo passo, con
+  un account Gold e uno non-Gold per confermare accettazione/rifiuto.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
