@@ -882,6 +882,49 @@ tracciati da git al momento di questa modifica).
   IT→EN).
 - Coerenza i18n: 155/155 su `user.html`, 22/22 su `explorer.html`.
 
+## 40. Mint senza controllo di tier/sospensione — falla trovata e corretta
+
+- **Segnalazione**: test di mint con una Membership Corporate portata a
+  tier sospeso (`0xeE1256Cc436c847D774BB6D686f98f41A2D4CF08`) — il mint è
+  andato a buon fine, quando ci si aspettava un rifiuto.
+- **Diagnosi**: confermato leggendo il contratto reale (non un'ipotesi).
+  `mintRawMaterialLot`, `mintRawMaterialLotBatch` e `mintProductionBatch`
+  usano tutti il modifier `onlyAuthorized`, che controllava **solo**
+  `msg.sender == registryAdmin || delegates[msg.sender]` — mai
+  `tierOf()`. Il tier viene controllato live solo in due punti separati:
+  `onlyDelegationManager` (gestione deleghe, richiede Silver+) e
+  `onlyGoldFeature` (`setDocumentHash`, richiede Gold). Il mint no.
+  Non è quindi un bug di `tierOf()` (che restituisce probabilmente `0`
+  correttamente per un'azienda sospesa) — è che il mint non lo ha mai
+  controllato.
+- **Escluso come causa alternativa**: nessun controllo di tier esiste
+  nemmeno lato UI/backend per il caricamento file durante il mint
+  (`pin-json`, `upload-photo` — solo `isRegistry` + `isAuthorized`, mai
+  `tierOf`). L'unico punto dove il tier blocca davvero qualcosa oggi è
+  la creazione di un nuovo registro (`deployRegistryBtn` disabilitato
+  lato UI + `require(limit > 0)` in `Factory.deployRegistry`).
+- **Fix applicato**: aggiunto a `onlyAuthorized` lo stesso controllo già
+  usato in `Factory.deployRegistry()` — `tierOf(registryAdmin) != 0` —
+  coerente con il commento già presente nel Factory ("tierOf == 0 copre
+  sia mai mintata sia, se sospesa"). Il tier controllato resta sempre
+  quello di `registryAdmin` (l'azienda), non del delegato chiamante:
+  se l'azienda viene sospesa, anche i suoi delegati smettono di poter
+  mintare. `invalidateEntry` resta **volutamente** fuori da questo
+  controllo (usa un check inline separato) — un'azienda sospesa deve
+  poter comunque annullare una voce sbagliata.
+- **Limite strutturale**: `TraceabilityRegistry` non è dietro un proxy
+  (`Factory` fa `new TraceabilityRegistry(...)` diretto), quindi i
+  registri già deployati (inclusi quelli di test) restano sul bytecode
+  vecchio senza questo controllo. La fix vale solo per i registri
+  creati dopo un nuovo deploy della Factory con il bytecode aggiornato.
+  Decisione presa: essendo ancora in fase di test con soli registri di
+  prova, si procede con un nuovo deploy pulito invece di un pattern
+  upgradeable.
+- **Da fare dopo il redeploy**: aggiornare `FACTORY_ADDRESS` nel `.env`
+  del backend, verificare il nuovo contratto sull'explorer, ripetere il
+  test di mint con tier sospeso per confermare il rifiuto (`revert`:
+  "membership non valida o sospesa").
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
@@ -894,10 +937,12 @@ tracciati da git al momento di questa modifica).
       con nome — coerente con `lsp4-metadata-notes.md`.
 - [x] `_LSP8_TOKENID_FORMAT_HASH` — **confermata corretta**: compilazione
       completa riuscita (28 file Solidity) dopo la correzione sopra.
-- [ ] Confermare che `tierOf()` su Membership Corporate ritorni `0` anche per
-      un'azienda sospesa (altrimenti serve un controllo `isSuspended()`
-      separato nel Factory e nei modifier di `TraceabilityRegistry`) — **mai
-      testato**, nessuna azienda è mai stata sospesa durante i test finora.
+- [x] Confermare che `tierOf()` su Membership Corporate ritorni `0` anche per
+      un'azienda sospesa — **risolto** (§40): non era un bug di `tierOf()`,
+      ma un buco nel mint (`onlyAuthorized` non controllava mai il tier).
+      Aggiunto `require(tierOf(registryAdmin) != 0)` a `onlyAuthorized`.
+      Richiede un nuovo deploy della Factory per essere effettivo (i
+      registri già esistenti restano sul bytecode vecchio).
 - [x] `SILVER_TIER = 2` — **confermato indirettamente**: la delega concessa
       con successo durante i test reali richiede che `tierOf(registryAdmin)`
       ritorni davvero `>= 2` per l'account usato, altrimenti `addDelegate`

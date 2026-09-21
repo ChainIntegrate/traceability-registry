@@ -73,6 +73,16 @@ contract TraceabilityRegistry is LSP8IdentifiableDigitalAsset {
             msg.sender == registryAdmin || delegates[msg.sender],
             "TraceabilityRegistry: caller is not authorized"
         );
+        // tierOf(registryAdmin) == 0 copre sia "azienda mai stata membro"
+        // sia "membership sospesa" — stesso significato già usato in
+        // Factory.deployRegistry(). Il tier controllato è sempre quello
+        // dell'azienda (registryAdmin), non del delegato che chiama: se
+        // l'azienda viene sospesa, anche i suoi delegati smettono di poter
+        // mintare, coerentemente con onlyGoldFeature.
+        require(
+            membershipCorporate.tierOf(registryAdmin) != 0,
+            "TraceabilityRegistry: membership non valida o sospesa"
+        );
         _;
     }
 
