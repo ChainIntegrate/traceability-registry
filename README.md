@@ -929,10 +929,16 @@ tracciati da git al momento di questa modifica).
   `_requireAuthorizedAndActiveMembership()`, chiamata (non duplicata) dal
   modifier — stesso comportamento e stessi messaggi di errore, meno
   bytecode.
-- **Da fare dopo il redeploy**: aggiornare `FACTORY_ADDRESS` nel `.env`
-  del backend, verificare il nuovo contratto sull'explorer, ripetere il
-  test di mint con tier sospeso per confermare il rifiuto (`revert`:
-  "membership non valida o sospesa").
+- **Redeploy fatto e verificato**: nuova `TraceabilityRegistryFactory` su
+  testnet `0x216a01A2DD93E613eE9D36b5E0AF50428149B7A1`, verificata
+  sull'explorer. `FACTORY_ADDRESS` aggiornato in `user.html`, `admin.html`
+  e nel `.env` del backend (con `pm2 restart --update-env`, necessario
+  altrimenti il processo tiene in memoria il vecchio indirizzo).
+- **Testato su un registro reale, esito confermato**: mint con tier
+  attivo riuscito; sospesa la membership senza nemmeno ricaricare la
+  pagina, il mint successivo è stato bloccato — conferma che il check è
+  davvero on-chain e non dipende da uno stato letto/cacheato lato UI.
+  Chiuso.
 
 ## 39. Punti aperti / TODO
 
