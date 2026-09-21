@@ -177,6 +177,7 @@
       <div class="row"><label data-i18n="photos.label">Etichetta</label><input type="text" id="photoLabel" data-i18n-placeholder="photos.labelPlaceholder" placeholder="es. Venti24, o Fornitore"></div>
       <div class="row"><label data-i18n="photos.file">File</label><input type="file" id="photoFileInput" accept="image/png,image/jpeg,image/webp"></div>
       <button class="primary" id="uploadPhotoBtn" data-i18n="photos.upload">Carica</button>
+      <p id="photoUploadGateNote" class="muted" style="display:none;" data-i18n="photos.suspendedNote">Membership sospesa: upload disabilitato.</p>
       <div id="photoLibraryList" style="margin-top:14px;"></div>
     </div>
   </section>
@@ -285,6 +286,7 @@ const I18N = {
     "photos.listError": "Impossibile caricare la libreria foto: {msg}", "photos.uploading": "Upload foto in corso...",
     "photos.uploaded": "Foto caricata.", "photos.uploadError": "Errore upload foto: {msg}",
     "photos.needBoth": "Etichetta e file obbligatori.", "photos.hideError": "Errore nascondi foto: {msg}",
+    "photos.suspendedNote": "Membership sospesa: upload disabilitato.",
     "delegates.title": "Deleghe", "delegates.requirement": "Richiede tier Silver o superiore sulla Membership Corporate.",
     "delegates.tierNote": "Tier registryAdmin: {tier} ({status})", "delegates.enabled": "deleghe abilitate",
     "delegates.needSilver": "serve Silver o superiore", "delegates.address": "Indirizzo UP",
@@ -376,6 +378,7 @@ const I18N = {
     "photos.listError": "Could not load photo library: {msg}", "photos.uploading": "Uploading photo...",
     "photos.uploaded": "Photo uploaded.", "photos.uploadError": "Photo upload error: {msg}",
     "photos.needBoth": "Label and file are required.", "photos.hideError": "Hide photo error: {msg}",
+    "photos.suspendedNote": "Membership suspended: upload disabled.",
     "delegates.title": "Delegates", "delegates.requirement": "Requires Silver tier or higher on the Membership Corporate.",
     "delegates.tierNote": "registryAdmin tier: {tier} ({status})", "delegates.enabled": "delegation enabled",
     "delegates.needSilver": "Silver or higher required", "delegates.address": "UP address",
@@ -452,6 +455,7 @@ const REGISTRY_ABI = [
 const MEMBERSHIP_ABI = ["function tierOf(address account) view returns (uint256)"];
 
 let provider, signer, myAddress, factory, activeRegistryAddress, activeRegistry;
+let activeRegistryTier = null;
 
 const LOG_MAX_LINES = 5;
 let logLines = [];
@@ -803,6 +807,7 @@ async function hidePhotoRow(photoId) {
 }
 
 document.getElementById("uploadPhotoBtn").addEventListener("click", async () => {
+  if (activeRegistryTier === 0) { alert(t("photos.suspendedNote")); return; }
   try {
     const label = document.getElementById("photoLabel").value.trim();
     const fileInput = document.getElementById("photoFileInput");
@@ -829,11 +834,25 @@ async function refreshTierNote() {
     const membership = new ethers.Contract(membershipAddr, MEMBERSHIP_ABI, provider);
     const registryAdmin = await activeRegistry.registryAdmin();
     const tier = await membership.tierOf(registryAdmin);
-    const status = tier.toNumber() >= 2 ? t("delegates.enabled") : t("delegates.needSilver");
+    activeRegistryTier = tier.toNumber();
+    const status = activeRegistryTier >= 2 ? t("delegates.enabled") : t("delegates.needSilver");
     document.getElementById("tierNote").textContent = t("delegates.tierNote", { tier: tier.toString(), status: status });
+    applyMembershipGate();
   } catch (err) {
     log(t("log.tierDelegatesError", { msg: err.message }));
   }
+}
+
+// Gate solo lato UI: nessuna garanzia di sicurezza (l'upload foto non ha
+// alcun controllo di tier lato backend/contratto, a differenza del mint),
+// ma evita che un'azienda sospesa carichi comunque foto nella libreria
+// dall'interfaccia normale. Chiamata dopo ogni lettura del tier.
+function applyMembershipGate() {
+  const suspended = activeRegistryTier === 0;
+  const uploadBtn = document.getElementById("uploadPhotoBtn");
+  if (uploadBtn) uploadBtn.disabled = suspended;
+  const note = document.getElementById("photoUploadGateNote");
+  if (note) note.style.display = suspended ? "block" : "none";
 }
 
 async function refreshDelegatesList() {
