@@ -920,6 +920,15 @@ tracciati da git al momento di questa modifica).
   Decisione presa: essendo ancora in fase di test con soli registri di
   prova, si procede con un nuovo deploy pulito invece di un pattern
   upgradeable.
+- **Superato il limite EIP-170 al primo tentativo di deploy**: il modifier
+  `onlyAuthorized` viene duplicato dal compilatore ad ogni sito d'uso (3
+  funzioni di mint) — la stringa di errore in più bastava a far superare
+  a `TraceabilityRegistryFactory` i 24576 byte (include il creation-code
+  di `TraceabilityRegistry`), con conseguente `Cannot estimate gas` al
+  deploy. **Fix**: logica spostata in una funzione interna
+  `_requireAuthorizedAndActiveMembership()`, chiamata (non duplicata) dal
+  modifier — stesso comportamento e stessi messaggi di errore, meno
+  bytecode.
 - **Da fare dopo il redeploy**: aggiornare `FACTORY_ADDRESS` nel `.env`
   del backend, verificare il nuovo contratto sull'explorer, ripetere il
   test di mint con tier sospeso per confermare il rifiuto (`revert`:

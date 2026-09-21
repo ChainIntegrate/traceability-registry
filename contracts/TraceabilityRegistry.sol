@@ -68,7 +68,15 @@ contract TraceabilityRegistry is LSP8IdentifiableDigitalAsset {
     event EntryInvalidated(bytes32 indexed tokenId, address indexed by, string reason);
     event DocumentHashSet(bytes32 indexed tokenId, bytes32 documentHash, address indexed by);
 
-    modifier onlyAuthorized() {
+    /// @dev Estratta dal modifier in una funzione interna: onlyAuthorized è
+    ///      usato su 3 funzioni esterne di mint e, essendo un modifier, il
+    ///      suo corpo viene duplicato ad ogni sito di utilizzo — con la
+    ///      stringa di errore in più questo faceva superare a
+    ///      TraceabilityRegistryFactory il limite EIP-170 di 24576 byte
+    ///      (la Factory include il creation-code di TraceabilityRegistry).
+    ///      Una funzione interna condivisa viene invece chiamata, non
+    ///      duplicata, a parità di comportamento e messaggi di errore.
+    function _requireAuthorizedAndActiveMembership() internal view {
         require(
             msg.sender == registryAdmin || delegates[msg.sender],
             "TraceabilityRegistry: caller is not authorized"
@@ -83,6 +91,10 @@ contract TraceabilityRegistry is LSP8IdentifiableDigitalAsset {
             membershipCorporate.tierOf(registryAdmin) != 0,
             "TraceabilityRegistry: membership non valida o sospesa"
         );
+    }
+
+    modifier onlyAuthorized() {
+        _requireAuthorizedAndActiveMembership();
         _;
     }
 
