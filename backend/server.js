@@ -4,6 +4,7 @@ const cors = require("cors");
 const { ethers } = require("ethers");
 const { buildTraceabilityRouter } = require("./traceabilityRoutes");
 const { buildPhotoRouter } = require("./photoRoutes");
+const { buildDocumentRouter } = require("./documentRoutes");
 const { buildChainReadRouter } = require("./chainReadRoutes");
 const { TRACEABILITY_FACTORY_MINIMAL_ABI } = require("./factoryAbi");
 
@@ -59,9 +60,12 @@ app.use("/api/traceability/pin-json", restrictedWriteCors);
 app.use("/api/traceability/pin-json-batch", restrictedWriteCors);
 app.use("/api/traceability/upload-photo", restrictedWriteCors);
 app.use("/api/traceability/photos", restrictedWriteCors);
+app.use("/api/traceability/upload-document", restrictedWriteCors);
+app.use("/api/traceability/documents", restrictedWriteCors);
 
 app.use("/api/traceability", buildTraceabilityRouter(provider, factoryContract));
 app.use("/api/traceability", buildPhotoRouter(provider, factoryContract));
+app.use("/api/traceability", buildDocumentRouter(provider, factoryContract));
 app.use("/api/traceability", buildChainReadRouter(provider, factoryContract));
 
 // Gestore errori di ultima istanza: mai propagare dettagli interni al client.

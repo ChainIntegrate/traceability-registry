@@ -11,6 +11,7 @@
 <script src="./traceability-metadata.js"></script>
 <script src="./traceability-mint-compose.js"></script>
 <script src="./traceability-photo-library.js"></script>
+<script src="./traceability-document-library.js"></script>
 <script src="./traceability-decode.js"></script>
 <script src="./traceability-explorer-ui.js"></script>
 <link rel="stylesheet" href="./traceability-explorer-ui.css">
@@ -102,6 +103,7 @@
     <button data-tab="materie-prime" data-i18n="nav.rawMaterial">Materie prime</button>
     <button data-tab="batch" data-i18n="nav.batch">Batch produzione</button>
     <button data-tab="foto" data-i18n="nav.photos">Libreria foto</button>
+    <button data-tab="documenti" data-i18n="nav.documents">Libreria documenti</button>
     <button data-tab="deleghe" data-i18n="nav.delegates">Deleghe</button>
     <button data-tab="esplora" data-i18n="nav.explore">Esplora registro</button>
   </nav>
@@ -182,6 +184,17 @@
     </div>
   </section>
 
+  <section class="tab" id="tab-documenti">
+    <div class="card">
+      <h2 data-i18n="documents.title">Libreria documenti</h2>
+      <p class="muted" data-i18n="documents.hint">Certificati, DDT e altri documenti collegabili a materie prime/batch tramite hash on-chain (richiede tier Gold per la registrazione dell'hash al momento del mint).</p>
+      <div class="row"><label data-i18n="documents.label">Etichetta</label><input type="text" id="documentLabel" data-i18n-placeholder="documents.labelPlaceholder" placeholder="es. Certificato spedizione 12/09/2026"></div>
+      <div class="row"><label data-i18n="documents.file">File</label><input type="file" id="documentFileInput" accept="application/pdf,image/png,image/jpeg,image/webp"></div>
+      <button class="primary" id="uploadDocumentBtn" data-i18n="documents.upload">Carica</button>
+      <div id="documentLibraryList" style="margin-top:14px;"></div>
+    </div>
+  </section>
+
   <section class="tab" id="tab-deleghe">
     <div class="card">
       <h2 data-i18n="delegates.title">Deleghe</h2>
@@ -233,7 +246,7 @@ const I18N = {
     "delegateAccess.invalidRegistry": "Indirizzo non valido come TraceabilityRegistry: {msg}",
     "app.activeRegistry": "Registro attivo:", "app.changeRegistry": "cambia registro",
     "nav.info": "Info registro", "nav.rawMaterial": "Materie prime", "nav.batch": "Batch produzione",
-    "nav.photos": "Libreria foto", "nav.delegates": "Deleghe", "nav.explore": "Esplora registro",
+    "nav.photos": "Libreria foto", "nav.documents": "Libreria documenti", "nav.delegates": "Deleghe", "nav.explore": "Esplora registro",
     "collection.currentTitle": "Metadata attuali", "collection.currentEmpty": "Nessun metadata di collezione impostato ancora.",
     "collection.currentLoadError": "Impossibile caricare i metadata attuali: {msg}",
     "explore.hint": "Stessa visualizzazione pubblica di explorer.html, qui per un controllo rapido senza uscire dal pannello.",
@@ -293,6 +306,16 @@ const I18N = {
     "photos.uploaded": "Foto caricata.", "photos.uploadError": "Errore upload foto: {msg}",
     "photos.needBoth": "Etichetta e file obbligatori.", "photos.hideError": "Errore nascondi foto: {msg}",
     "photos.suspendedNote": "Membership sospesa: upload disabilitato.",
+    "documents.title": "Libreria documenti", "documents.hint": "Certificati, DDT e altri documenti collegabili a materie prime/batch tramite hash on-chain (richiede tier Gold per la registrazione dell'hash al momento del mint).",
+    "documents.label": "Etichetta", "documents.labelPlaceholder": "es. Certificato spedizione 12/09/2026",
+    "documents.file": "File", "documents.upload": "Carica", "documents.none": "Nessun documento ancora.",
+    "documents.colLabel": "Etichetta", "documents.colCid": "CID", "documents.colFile": "File originale", "documents.hide": "Nascondi",
+    "documents.listError": "Impossibile caricare la libreria documenti: {msg}", "documents.uploading": "Upload documento in corso...",
+    "documents.uploaded": "Documento caricato.", "documents.uploadError": "Errore upload documento: {msg}",
+    "documents.needBoth": "Etichetta e file obbligatori.", "documents.hideError": "Errore nascondi documento: {msg}",
+    "documents.selectLabel": "Documento (libreria, opzionale — richiede tier Gold)",
+    "documents.hashAttachError": "Registrazione avvenuta, ma la registrazione dell'hash documento è fallita (verifica il tier Gold): {msg}",
+    "log.documentHashBatchSet": "Hash documento registrato su {n} lotti ({hash}). Riferimento: {tx}",
     "delegates.title": "Deleghe", "delegates.requirement": "Richiede tier Silver o superiore sulla Membership Corporate.",
     "delegates.tierNote": "Tier registryAdmin: {tier} ({status})", "delegates.enabled": "deleghe abilitate",
     "delegates.needSilver": "serve Silver o superiore", "delegates.address": "Indirizzo UP",
@@ -331,7 +354,7 @@ const I18N = {
     "delegateAccess.invalidRegistry": "Not a valid TraceabilityRegistry address: {msg}",
     "app.activeRegistry": "Active registry:", "app.changeRegistry": "change registry",
     "nav.info": "Registry info", "nav.rawMaterial": "Raw materials", "nav.batch": "Production batch",
-    "nav.photos": "Photo library", "nav.delegates": "Delegates", "nav.explore": "Explore registry",
+    "nav.photos": "Photo library", "nav.documents": "Document library", "nav.delegates": "Delegates", "nav.explore": "Explore registry",
     "collection.currentTitle": "Current metadata", "collection.currentEmpty": "No collection metadata set yet.",
     "collection.currentLoadError": "Could not load current metadata: {msg}",
     "explore.hint": "Same public view as explorer.html, here for a quick check without leaving the panel.",
@@ -391,6 +414,16 @@ const I18N = {
     "photos.uploaded": "Photo uploaded.", "photos.uploadError": "Photo upload error: {msg}",
     "photos.needBoth": "Label and file are required.", "photos.hideError": "Hide photo error: {msg}",
     "photos.suspendedNote": "Membership suspended: upload disabled.",
+    "documents.title": "Document library", "documents.hint": "Certificates, delivery notes and other documents linkable to raw materials/batches via on-chain hash (requires Gold tier to register the hash at mint time).",
+    "documents.label": "Label", "documents.labelPlaceholder": "e.g. Shipment certificate 12/09/2026",
+    "documents.file": "File", "documents.upload": "Upload", "documents.none": "No documents yet.",
+    "documents.colLabel": "Label", "documents.colCid": "CID", "documents.colFile": "Original file", "documents.hide": "Hide",
+    "documents.listError": "Could not load document library: {msg}", "documents.uploading": "Uploading document...",
+    "documents.uploaded": "Document uploaded.", "documents.uploadError": "Document upload error: {msg}",
+    "documents.needBoth": "Label and file are required.", "documents.hideError": "Hide document error: {msg}",
+    "documents.selectLabel": "Document (library, optional — requires Gold tier)",
+    "documents.hashAttachError": "Registration succeeded, but registering the document hash failed (check the Gold tier): {msg}",
+    "log.documentHashBatchSet": "Document hash registered on {n} lots ({hash}). Reference: {tx}",
     "delegates.title": "Delegates", "delegates.requirement": "Requires Silver tier or higher on the Membership Corporate.",
     "delegates.tierNote": "registryAdmin tier: {tier} ({status})", "delegates.enabled": "delegation enabled",
     "delegates.needSilver": "Silver or higher required", "delegates.address": "UP address",
@@ -463,6 +496,7 @@ const REGISTRY_ABI = [
   "function mintProductionBatch(bytes32 tokenId, bytes lsp4MetadataValue, bytes32[] usedLotTokenIds, uint256 indexDate) external",
   "function invalidateEntry(bytes32 tokenId, string reason) external",
   "function setDocumentHash(bytes32 tokenId, bytes32 documentHash) external",
+  "function setDocumentHashBatch(bytes32[] tokenIds, bytes32 documentHash) external",
 ];
 
 const MEMBERSHIP_ABI = ["function tierOf(address account) view returns (uint256)"];
@@ -636,6 +670,7 @@ async function selectRegistry(address) {
   document.getElementById("app").style.display = "block";
   await refreshPhotoLibrarySelects();
   await refreshPhotoLibraryList();
+  await refreshDocumentLibraryList();
   await refreshTierNote();
   await refreshDelegatesList();
   await refreshCurrentCollectionMetadata();
@@ -851,6 +886,59 @@ document.getElementById("uploadPhotoBtn").addEventListener("click", async () => 
 });
 
 // -----------------------------------------------------------------------
+// Libreria documenti — mirror della libreria foto; nessun gate di tier
+// lato UI qui (a differenza delle foto) perché il vincolo Gold vero e
+// proprio si applica al momento di collegare l'hash a un mint, non
+// all'upload/lista, coerente con quanto già commentato in documentRoutes.js.
+// -----------------------------------------------------------------------
+async function refreshDocumentLibraryList() {
+  try {
+    const documents = await TraceabilityDocumentLibrary.listDocuments({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
+    });
+    const el = document.getElementById("documentLibraryList");
+    if (documents.length === 0) { el.innerHTML = "<p class='muted'>" + t("documents.none") + "</p>"; return; }
+    let html = "<table><tr><th>" + t("documents.colLabel") + "</th><th>" + t("documents.colCid") + "</th><th>" + t("documents.colFile") + "</th><th></th></tr>";
+    documents.forEach((d) => {
+      html += "<tr><td>" + d.label + "</td><td>" + d.cid + "</td><td>" + (d.original_name || "?") + "</td>" +
+        "<td><button class='danger' onclick='hideDocumentRow(" + d.id + ")'>" + t("documents.hide") + "</button></td></tr>";
+    });
+    html += "</table>";
+    el.innerHTML = html;
+  } catch (err) {
+    log(t("documents.listError", { msg: err.message }));
+  }
+}
+
+async function hideDocumentRow(documentId) {
+  try {
+    await TraceabilityDocumentLibrary.hideDocument({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer, documentId,
+    });
+    await refreshDocumentLibraryList();
+  } catch (err) {
+    log(t("documents.hideError", { msg: err.message }));
+  }
+}
+
+document.getElementById("uploadDocumentBtn").addEventListener("click", async () => {
+  try {
+    const label = document.getElementById("documentLabel").value.trim();
+    const fileInput = document.getElementById("documentFileInput");
+    if (!label || !fileInput.files[0]) { alert(t("documents.needBoth")); return; }
+    log(t("documents.uploading"));
+    await TraceabilityDocumentLibrary.uploadDocument({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
+      label, fileBlob: fileInput.files[0], fileName: fileInput.files[0].name,
+    });
+    log(t("documents.uploaded"));
+    await refreshDocumentLibraryList();
+  } catch (err) {
+    log(t("documents.uploadError", { msg: err.message }));
+  }
+});
+
+// -----------------------------------------------------------------------
 // Deleghe
 // -----------------------------------------------------------------------
 async function refreshTierNote() {
@@ -1042,6 +1130,7 @@ async function processRawMaterialJson(json, previewEl) {
   extracted.lots.forEach((l) => { html += "<tr><td>" + l.nome + "</td><td>" + l.lotto + "</td><td>" + l.quantità + "</td></tr>"; });
   html += "</table>";
   html += "<div class='row'><label>" + t("rm.photoLabel") + "</label><select id='rmPhotoSelect'></select></div>";
+  html += "<div class='row'><label>" + t("documents.selectLabel") + "</label><select id='rmDocumentSelect'></select></div>";
   html += "<button class='primary' id='confirmMintRawMaterialBtn'>" + t("rm.confirmMint", { n: extracted.lots.length }) + "</button>";
   html += "<button type='button' class='secondary' id='backToEditRawMaterialBtn'>" + t("common.backToEdit") + "</button>";
   previewEl.innerHTML = html;
@@ -1055,6 +1144,11 @@ async function processRawMaterialJson(json, previewEl) {
   const sel = document.getElementById("rmPhotoSelect");
   sel.innerHTML = "<option value=''>" + t("common.noneF") + "</option>";
   photos.forEach((p) => { const o = document.createElement("option"); o.value = JSON.stringify(p); o.textContent = p.label; sel.appendChild(o); });
+
+  const documents = await TraceabilityDocumentLibrary.listDocuments({ backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer });
+  const docSel = document.getElementById("rmDocumentSelect");
+  docSel.innerHTML = "<option value=''>" + t("common.noneF") + "</option>";
+  documents.forEach((d) => { const o = document.createElement("option"); o.value = d.keccak256_hash; o.textContent = d.label; docSel.appendChild(o); });
 
   document.getElementById("confirmMintRawMaterialBtn").addEventListener("click", async () => {
     try {
@@ -1071,6 +1165,21 @@ async function processRawMaterialJson(json, previewEl) {
       log(t("rm.done", { tx: receipt.transactionHash }));
       previewEl.innerHTML = "<p class='ok'>" + t("rm.doneShort", { n: args.tokenIds.length, tx: receipt.transactionHash.slice(0, 10) }) + "</p>";
       document.getElementById("rawMaterialJsonInput").value = "";
+
+      // Passo separato e a sé stante: il mint sopra è già andato a buon fine
+      // a questo punto, un eventuale fallimento qui (es. tier non Gold) non
+      // deve essere confuso con un fallimento del mint stesso.
+      const selectedDocumentHash = docSel.value;
+      if (selectedDocumentHash) {
+        try {
+          log(t("log.settingDocumentHash", { tokenId: args.tokenIds.length + " lotti" }));
+          const hashTx = await activeRegistry.setDocumentHashBatch(args.tokenIds, selectedDocumentHash);
+          const hashReceipt = await hashTx.wait();
+          log(t("log.documentHashBatchSet", { n: args.tokenIds.length, hash: selectedDocumentHash, tx: hashReceipt.transactionHash }));
+        } catch (hashErr) {
+          log(t("documents.hashAttachError", { msg: hashErr.message }));
+        }
+      }
     } catch (err) {
       log(t("rm.mintError", { msg: err.message }));
     }
@@ -1213,6 +1322,7 @@ async function processProductionBatchJson(json, previewEl) {
   unmatched.forEach((u) => { matchHtml += "<tr><td>" + u.ingredienteNome + "</td><td>" + u.lotto + "</td><td class='warn'>" + t("batch.notFound") + "</td></tr>"; });
   matchHtml += "</table>";
   matchHtml += "<div class='row'><label>" + t("batch.photoLabel") + "</label><select id='batchPhotoSelect'></select></div>";
+  matchHtml += "<div class='row'><label>" + t("documents.selectLabel") + "</label><select id='batchDocumentSelect'></select></div>";
   matchHtml += "<button class='primary' id='confirmMintBatchBtn'>" + t("batch.confirmMint") + "</button>";
   matchHtml += "<button type='button' class='secondary' id='backToEditBatchBtn'>" + t("common.backToEdit") + "</button>";
   previewEl.innerHTML = html + matchHtml;
@@ -1226,6 +1336,11 @@ async function processProductionBatchJson(json, previewEl) {
   const sel = document.getElementById("batchPhotoSelect");
   sel.innerHTML = "<option value=''>" + t("common.noneF") + "</option>";
   photos.forEach((p) => { const o = document.createElement("option"); o.value = JSON.stringify(p); o.textContent = p.label; sel.appendChild(o); });
+
+  const documents = await TraceabilityDocumentLibrary.listDocuments({ backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer });
+  const docSel = document.getElementById("batchDocumentSelect");
+  docSel.innerHTML = "<option value=''>" + t("common.noneF") + "</option>";
+  documents.forEach((d) => { const o = document.createElement("option"); o.value = d.keccak256_hash; o.textContent = d.label; docSel.appendChild(o); });
 
   document.getElementById("confirmMintBatchBtn").addEventListener("click", async () => {
     try {
@@ -1250,6 +1365,20 @@ async function processProductionBatchJson(json, previewEl) {
       log(t("batch.done", { tx: receipt.transactionHash }));
       previewEl.innerHTML = "<p class='ok'>" + t("batch.doneShort", { tx: receipt.transactionHash.slice(0, 10) }) + "</p>";
       document.getElementById("batchJsonInput").value = "";
+
+      // Stesso principio del ramo materie prime: passo separato, un
+      // fallimento qui non deve oscurare il mint già andato a buon fine.
+      const selectedDocumentHash = docSel.value;
+      if (selectedDocumentHash) {
+        try {
+          log(t("log.settingDocumentHash", { tokenId: args.tokenId }));
+          const hashTx = await activeRegistry.setDocumentHash(args.tokenId, selectedDocumentHash);
+          const hashReceipt = await hashTx.wait();
+          log(t("log.documentHashSet", { hash: selectedDocumentHash, tx: hashReceipt.transactionHash }));
+        } catch (hashErr) {
+          log(t("documents.hashAttachError", { msg: hashErr.message }));
+        }
+      }
     } catch (err) {
       log(t("batch.mintError", { msg: err.message }));
     }

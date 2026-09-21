@@ -114,10 +114,12 @@ contract TraceabilityRegistry is LSP8IdentifiableDigitalAsset {
         _;
     }
 
-    /// @dev Autorizzato al mint/invalidazione E l'azienda ha tier Gold.
-    ///      Il tier è sempre quello di registryAdmin (l'azienda), non del
-    ///      singolo delegato che effettua la chiamata.
-    modifier onlyGoldFeature() {
+    /// @dev Estratta in funzione interna per lo stesso motivo di
+    ///      _requireAuthorizedAndActiveMembership(): con l'arrivo di
+    ///      setDocumentHashBatch questo modifier ha un secondo sito d'uso,
+    ///      e un modifier duplica il proprio corpo ad ogni uso — meglio
+    ///      chiamarla che duplicarla, stiamo già al limite EIP-170.
+    function _requireAuthorizedAndGoldTier() internal view {
         require(
             msg.sender == registryAdmin || delegates[msg.sender],
             "TraceabilityRegistry: caller is not authorized"
@@ -126,6 +128,13 @@ contract TraceabilityRegistry is LSP8IdentifiableDigitalAsset {
             membershipCorporate.tierOf(registryAdmin) >= GOLD_TIER,
             "TraceabilityRegistry: requires Gold tier"
         );
+    }
+
+    /// @dev Autorizzato al mint/invalidazione E l'azienda ha tier Gold.
+    ///      Il tier è sempre quello di registryAdmin (l'azienda), non del
+    ///      singolo delegato che effettua la chiamata.
+    modifier onlyGoldFeature() {
+        _requireAuthorizedAndGoldTier();
         _;
     }
 
@@ -282,6 +291,20 @@ contract TraceabilityRegistry is LSP8IdentifiableDigitalAsset {
     // solo il suo hash. Il CID resta privato nel backend ChainIntegrate.
     // ---------------------------------------------------------------------
     function setDocumentHash(bytes32 tokenId, bytes32 documentHash) external onlyGoldFeature {
+        _setDocumentHash(tokenId, documentHash);
+    }
+
+    /// @notice Come setDocumentHash ma per più token con LO STESSO documento
+    ///         (es. un certificato/DDT di una spedizione che copre più
+    ///         lotti) — una sola transazione invece di una per token.
+    function setDocumentHashBatch(bytes32[] calldata tokenIds, bytes32 documentHash) external onlyGoldFeature {
+        require(tokenIds.length > 0, "TraceabilityRegistry: empty tokenIds");
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            _setDocumentHash(tokenIds[i], documentHash);
+        }
+    }
+
+    function _setDocumentHash(bytes32 tokenId, bytes32 documentHash) internal {
         require(_exists(tokenId), "TraceabilityRegistry: tokenId does not exist");
         require(documentHash != bytes32(0), "TraceabilityRegistry: empty hash");
         _setDataForTokenId(tokenId, DOCUMENT_HASH_KEY, abi.encode(documentHash));

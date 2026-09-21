@@ -1030,6 +1030,67 @@ tracciati da git al momento di questa modifica).
   preservato. **Non ancora testato contro un vero nodo IPFS/wallet** — da
   fare al prossimo giro di test reale.
 
+## 44. Libreria documenti + `setDocumentHash(Batch)` nei form di mint (Gold)
+
+- **Richiesta**: il caricamento file atteso nell'area "Materie prime" (e
+  "Batch produzione") non era un semplice hash on-chain retroattivo
+  (come implementato inizialmente nella galleria "Esplora registro"), ma
+  un vero file **caricato e recuperabile in seguito**, come già avviene
+  per le foto — scelta confermata esplicitamente: "Salvato e recuperabile
+  (come libreria foto)".
+- **Modello scelto dall'utente**: un documento (es. certificato/DDT di
+  una spedizione) può coprire **più tokenId** in una sola operazione di
+  acquisto/produzione — non un documento per singolo lotto. Da qui
+  `setDocumentHashBatch(bytes32[] tokenIds, bytes32 documentHash)` sul
+  contratto, oltre al preesistente `setDocumentHash` singolo (usato nel
+  batch di produzione, che genera un solo tokenId per operazione).
+- **Contratto** (`TraceabilityRegistry.sol`): `onlyGoldFeature` refattorizzato
+  nello stesso pattern già usato per `onlyAuthorized` (corpo del modifier
+  estratto in una funzione interna `_requireAuthorizedAndGoldTier()`,
+  richiamata anziché duplicata a ogni sito d'uso) — fatto **prima** di
+  aggiungere un secondo sito d'uso, proprio per non ripetere il bug di
+  overflow EIP-170 già capitato con `onlyAuthorized`. Aggiunto
+  `setDocumentHashBatch` + helper interno condiviso `_setDocumentHash`.
+  **Compilazione non verificabile in sandbox** (nessun accesso di rete al
+  compilatore Solidity) — da compilare e controllare la dimensione
+  (EIP-170) prima del deploy, esattamente come già fatto per la fix
+  precedente sul tier.
+- **Backend**: nuova tabella `documents` (mirror di `photos`, stesso
+  pattern idempotente su `UNIQUE(registry_address, keccak256_hash)` e
+  stesso "hide" non distruttivo), nuovo `documentRoutes.js` (mirror di
+  `photoRoutes.js`: `POST /upload-document`, `GET /documents`,
+  `POST /documents/:id/hide`), limite 16MB (contro 8MB delle foto,
+  certificati scansionati possono pesare di più), MIME ammessi
+  `application/pdf` oltre a PNG/JPEG/WEBP. Wired in `server.js` con le
+  stesse attenzioni CORS già documentate al punto 43 (route a parte,
+  niente assunzioni di prefisso).
+- **Frontend**: nuovo `traceability-document-library.js` (mirror di
+  `traceability-photo-library.js`), nuova tab "Libreria documenti" in
+  `user.html` (upload + lista + nascondi), e un menu a tendina documento
+  aggiunto sia nel form di conferma mint materie prime
+  (`rmDocumentSelect`) sia in quello di conferma mint batch
+  (`batchDocumentSelect`) — valore dell'opzione = `keccak256_hash` del
+  documento, esattamente quello che serve passare a
+  `setDocumentHash`/`setDocumentHashBatch`, nessun ricalcolo.
+- **Sequenza post-mint**: la chiamata a `setDocumentHash(Batch)` avviene
+  **dopo** che il mint è già confermato (`tx.wait()`), in un try/catch
+  separato — un eventuale rifiuto (tier non Gold) non deve essere confuso
+  con un fallimento del mint stesso, che a quel punto è già avvenuto.
+- **Testato**: `node --check` su tutti i file JS toccati, bilanciamento
+  tag HTML, nessun `id` non-ASCII, copertura chiavi i18n IT/EN completa
+  (184 chiavi ciascuna, nessuna mancante/orfana), test funzionale jsdom
+  che verifica: tab "documenti" esistente e navigabile, form di upload
+  presente, `refreshDocumentLibraryList` popola la tabella dal client
+  documenti, e il dropdown `rmDocumentSelect` nel form materie prime usa
+  correttamente `keccak256_hash` come valore dell'opzione. **Non ancora
+  testato dal vivo** (serve prima compilare/ridistribuire il contratto
+  con `setDocumentHashBatch`).
+- **Non ancora fatto**: aggiornare il bottone "Registra hash documento"
+  già esistente nella galleria "Esplora registro" (dal lavoro
+  precedente) per usare la libreria documenti invece di un file grezzo —
+  da decidere insieme se serve ancora, ora che il flusso principale passa
+  dai form di mint.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
