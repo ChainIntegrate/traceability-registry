@@ -55,3 +55,14 @@
 .te-dochash-btn:disabled { opacity: 0.6; cursor: default; }
 .te-err { color: #c33; }
 .te-empty { text-align: center; padding: 40px; color: #999; }
+
+.te-dochash-info { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #eee; }
+.te-dochash-badge { display: inline-block; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; background: #fff4d6; color: #a67c00; }
+.te-dochash-value { font-size: 0.72rem; color: #777; }
+.te-verify-row { margin-top: 6px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.te-verify-input { font-size: 0.72rem; max-width: 140px; }
+.te-verify-btn { background: #fff; color: #0a6; border: 1px solid #0a6; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; cursor: pointer; }
+.te-verify-btn:hover { background: #e0f2e9; }
+.te-verify-result { font-size: 0.78rem; font-weight: 600; }
+.te-verify-result.te-verify-ok { color: #0a6; }
+.te-verify-result.te-verify-fail { color: #c33; }

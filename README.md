@@ -1091,6 +1091,60 @@ tracciati da git al momento di questa modifica).
   da decidere insieme se serve ancora, ora che il flusso principale passa
   dai form di mint.
 
+## 45. Fix EIP-170 residuo, link di download e visibilità dell'hash documento
+
+- **Fix EIP-170**: dopo il §44, la Factory sforava ancora di 44 byte pur
+  avendo già estratto `onlyAuthorized`/`onlyGoldFeature` in funzioni
+  interne. Causa: `onlyDelegationManager` (usato in `addDelegate`/
+  `removeDelegate`) era rimasto l'unico modifier non ancora estratto — il
+  compilatore ne duplicava il corpo nei 2 siti d'uso. Stesso fix degli
+  altri due: corpo spostato in `_requireDelegationManager()`. Compilato
+  con successo dall'utente, Factory ridistribuita su testnet e verificata
+  su Blockscout.
+- **Link di download nelle librerie**: "Libreria foto" e "Libreria
+  documenti" mostravano il CID come testo semplice — nessun modo diretto
+  di scaricare il file per chi lo aveva caricato. Aggiunta una colonna
+  con link cliccabile (`TraceabilityDecode.ipfsToHttp(cid)`, funzione già
+  esistente, prima usata solo per le immagini nell'explorer) in entrambe
+  le tabelle.
+- **Evidenza dell'hash documento nell'explorer**: l'hash registrato con
+  `setDocumentHash`/`setDocumentHashBatch` non compariva da nessuna parte
+  nella galleria (privata "Esplora registro" o pubblica explorer.html) —
+  solo verificabile leggendo direttamente il contratto. Scelte fatte
+  insieme all'utente:
+  - **Explorer pubblico**: nessun download del documento originale (resta
+    riservato a chi ha accesso alla libreria) — solo un badge "Documento
+    registrato" con l'hash abbreviato, più uno strumento di **verifica
+    locale**: l'utente sceglie un file dal proprio dispositivo, se ne
+    calcola il keccak256 interamente nel browser (nessun byte lasciato
+    dal browser) e lo confronta con l'hash on-chain. Stessa cosa
+    nell'explorer privato.
+  - **Upload "Registra hash documento" per-card**: se un token ha già un
+    hash registrato, il bottone di upload sparisce (sostituito dal badge
+    + verifica) — il contratto non impedisce la sovrascrittura, quindi il
+    gate è lato UI, per evitare rimpiazzi accidentali. Scelta esplicita
+    dell'utente rispetto a "permetti sostituzione con conferma".
+  - **Backend** (`chainReadRoutes.js`): aggiunta lettura `getDocumentHash`
+    (già esistente sul contratto, lettura pubblica come tutte le altre)
+    per ogni entry, in parallelo al metadata — nessuna nuova route,
+    nessuna nuova autenticazione. `registryAbi.js` esteso con la firma.
+  - **Frontend** (`traceability-explorer-ui.js`, condiviso da user.html
+    ed explorer.html): nuova funzione `computeFileKeccak256` (richiede
+    ethers, ora caricato anche in `explorer.html`), badge + riga di
+    verifica renderizzati quando `entry.documentHash` è diverso da
+    `bytes32(0)`, riga di upload nascosta nello stesso caso. Ricarica
+    della gallery dopo un `setDocumentHash` riuscito, così la card passa
+    subito da "upload" a "badge" senza refresh manuale.
+- **Testato**: `node --check` su tutti i file JS toccati, bilanciamento
+  tag HTML su `user.html`/`explorer.html`, copertura i18n IT/EN (incluso
+  un controllo incrociato delle chiavi usate da `traceability-explorer-
+  ui.js` contro entrambi i dizionari — le 4 chiavi di upload risultano
+  assenti nel dizionario di `explorer.html`, ma per costruzione mai
+  raggiunte lì: quella pagina non passa `onSetDocumentHash` alla
+  gallery). Test funzionale jsdom dedicato: verifica che la riga di
+  upload compaia solo quando l'hash non è impostato e il badge/verifica
+  solo quando lo è, su due entry sintetiche.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

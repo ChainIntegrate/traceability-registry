@@ -115,6 +115,10 @@ function buildChainReadRouter(provider, factoryContract) {
       // Metadata grezza (bytes VerifiableURI) per ogni entry, in parallelo.
       // La decodifica (CID + hash, poi fetch dal gateway IPFS pubblico) resta
       // lato client — stessa logica già scritta in traceability-mint-compose.js.
+      // getDocumentHash è una lettura pubblica quanto le altre (il contratto
+      // la espone a chiunque) — bytes32(0) quando non impostato, esposto
+      // così com'è: è il client a decidere se e come mostrarlo (badge +
+      // verifica locale, mai un download automatico dall'explorer pubblico).
       const entriesWithMetadata = await Promise.all(
         entries.map(async (entry) => {
           let metadataValue = null;
@@ -123,7 +127,13 @@ function buildChainReadRouter(provider, factoryContract) {
           } catch (err) {
             metadataValue = null; // entry esiste ma senza metadata leggibile: non blocca la risposta
           }
-          return { ...entry, metadataValue };
+          let documentHash = null;
+          try {
+            documentHash = await registry.getDocumentHash(entry.tokenId);
+          } catch (err) {
+            documentHash = null; // funzione assente su registry pre-esistenti (contratto non upgradabile)
+          }
+          return { ...entry, metadataValue, documentHash };
         })
       );
 

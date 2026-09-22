@@ -23,6 +23,27 @@
     return global.TraceabilityDecode.ipfsToHttp(url);
   }
 
+  // bytes32(0) letto on-chain quando nessun hash è stato registrato per il
+  // token — costruito con repeat() invece che scritto a mano per evitare un
+  // banale errore di conteggio degli zeri.
+  const ZERO_HASH = "0x" + "0".repeat(64);
+
+  function hasDocumentHash(entry) {
+    return !!entry.documentHash && entry.documentHash !== ZERO_HASH;
+  }
+
+  function shortHash(hash) {
+    return hash.slice(0, 10) + "…" + hash.slice(-6);
+  }
+
+  /** Richiede ethers (keccak256) già caricato in pagina — sia user.html che
+   * explorer.html lo includono per questo. Calcolo interamente lato client:
+   * nessun byte del file scelto per la verifica lascia il browser. */
+  async function computeFileKeccak256(file) {
+    const buffer = await file.arrayBuffer();
+    return global.ethers.utils.keccak256(new Uint8Array(buffer));
+  }
+
   async function buildCardDataById(entries) {
     const cardDataById = {};
     await Promise.all(
@@ -335,11 +356,30 @@
         if (onInvalidate && entry.status !== 1) {
           html += "<button type='button' class='te-invalidate-btn' data-invalidate-token='" + entry.tokenId + "'>" + t("card.invalidateButton") + "</button>";
         }
+        // Badge + verifica locale — mostrati su QUALUNQUE gallery (privata o
+        // pubblica su explorer.html) quando esiste un hash registrato:
+        // l'hash è comunque pubblico on-chain, quindi non c'è nulla da
+        // nascondere nel mostrarlo; la verifica avviene interamente lato
+        // client (nessun file caricato da nessuna parte), coerente con la
+        // scelta di non offrire un download pubblico del documento vero e
+        // proprio dall'explorer pubblico.
+        if (hasDocumentHash(entry)) {
+          html += "<div class='te-dochash-info'>" +
+            "<span class='te-dochash-badge'>" + t("card.documentHashBadge") + "</span> " +
+            "<code class='te-dochash-value' title='" + escapeHtml(entry.documentHash) + "'>" + escapeHtml(shortHash(entry.documentHash)) + "</code>" +
+            "<div class='te-verify-row'>" +
+            "<input type='file' class='te-verify-input' data-verify-token='" + entry.tokenId + "'>" +
+            "<button type='button' class='te-verify-btn' data-verify-token='" + entry.tokenId + "'>" + t("card.verifyButton") + "</button>" +
+            "<span class='te-verify-result' data-verify-result='" + entry.tokenId + "'></span>" +
+            "</div></div>";
+        }
         // Attestazione hash documento (Gold-only lato contratto —
         // onlyGoldFeature — non filtrato qui: il bottone compare per
         // chiunque abbia accesso a questa gallery col callback abilitato,
-        // il contratto stesso rifiuta la tx se il tier non è Gold).
-        if (onSetDocumentHash) {
+        // il contratto stesso rifiuta la tx se il tier non è Gold). Nascosto
+        // se un hash è già presente per non sovrascriverlo per sbaglio — il
+        // contratto non impedisce la sostituzione, quindi il gate è qui.
+        if (onSetDocumentHash && !hasDocumentHash(entry)) {
           html += "<div class='te-dochash-row'>" +
             "<input type='file' class='te-dochash-input' data-dochash-token='" + entry.tokenId + "'>" +
             "<button type='button' class='te-dochash-btn' data-dochash-token='" + entry.tokenId + "'>" + t("card.setDocumentHashButton") + "</button>" +
@@ -351,7 +391,8 @@
         card.addEventListener("click", (e) => {
           if (e.target.tagName === "A" || e.target.tagName === "INPUT" ||
               e.target.classList.contains("te-invalidate-btn") ||
-              e.target.classList.contains("te-dochash-btn")) return;
+              e.target.classList.contains("te-dochash-btn") ||
+              e.target.classList.contains("te-verify-btn")) return;
           card.classList.toggle("te-expanded");
         });
         gridEl.appendChild(card);
@@ -387,6 +428,30 @@
         });
       }
 
+      // Verifica locale — indipendente da onSetDocumentHash, disponibile
+      // anche sull'explorer pubblico (senza wallet): confronta il keccak256
+      // del file scelto con l'hash già letto on-chain per quell'entry.
+      gridEl.querySelectorAll(".te-verify-btn").forEach((btn) => {
+        btn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const tokenId = btn.dataset.verifyToken;
+          const input = gridEl.querySelector(".te-verify-input[data-verify-token='" + tokenId + "']");
+          const resultEl = gridEl.querySelector(".te-verify-result[data-verify-result='" + tokenId + "']");
+          const file = input && input.files[0];
+          if (!file) { window.alert(t("card.setDocumentHashNeedFile")); return; }
+          try {
+            const computedHash = await computeFileKeccak256(file);
+            const expectedHash = currentCardDataById[tokenId].entry.documentHash;
+            const matches = computedHash.toLowerCase() === String(expectedHash).toLowerCase();
+            resultEl.textContent = matches ? t("card.verifyMatch") : t("card.verifyMismatch");
+            resultEl.className = "te-verify-result " + (matches ? "te-verify-ok" : "te-verify-fail");
+          } catch (err) {
+            resultEl.textContent = t("card.verifyError", { msg: err.message });
+            resultEl.className = "te-verify-result te-verify-fail";
+          }
+        });
+      });
+
       if (onSetDocumentHash) {
         gridEl.querySelectorAll(".te-dochash-btn").forEach((btn) => {
           btn.addEventListener("click", async (e) => {
@@ -401,9 +466,11 @@
               await onSetDocumentHash(tokenId, file);
               window.alert(t("card.setDocumentHashSuccess"));
               if (input) input.value = "";
+              // Ricarica: la card deve ora mostrare il badge e nascondere
+              // l'upload, stessa logica già usata dopo onInvalidate.
+              if (lastLoadParams) await load(lastLoadParams.backendBaseUrl, lastLoadParams.registryAddress);
             } catch (err) {
               window.alert(t("card.setDocumentHashError", { msg: err.message }));
-            } finally {
               btn.disabled = false;
               btn.textContent = t("card.setDocumentHashButton");
             }

@@ -265,6 +265,9 @@ const I18N = {
     "card.setDocumentHashNeedFile": "Seleziona prima un file.",
     "card.setDocumentHashSuccess": "Hash del documento registrato on-chain.",
     "card.setDocumentHashError": "Errore registrazione hash: {msg}",
+    "card.documentHashBadge": "Documento registrato",
+    "card.verifyButton": "Verifica un file", "card.verifyMatch": "✓ Il file corrisponde.",
+    "card.verifyMismatch": "✗ Il file NON corrisponde.", "card.verifyError": "Errore verifica: {msg}",
     "log.invalidating": "Annullamento token {tokenId} in corso...",
     "log.invalidated": "Registrazione annullata. Riferimento: {tx}",
     "log.settingDocumentHash": "Registrazione hash documento per {tokenId} in corso...",
@@ -302,6 +305,7 @@ const I18N = {
     "photos.title": "Libreria foto", "photos.label": "Etichetta", "photos.labelPlaceholder": "es. Venti24, o Fornitore",
     "photos.file": "File", "photos.upload": "Carica", "photos.none": "Nessuna foto ancora.",
     "photos.colLabel": "Etichetta", "photos.colCid": "CID", "photos.colDims": "Dimensioni", "photos.hide": "Nascondi",
+    "photos.download": "Scarica",
     "photos.listError": "Impossibile caricare la libreria foto: {msg}", "photos.uploading": "Upload foto in corso...",
     "photos.uploaded": "Foto caricata.", "photos.uploadError": "Errore upload foto: {msg}",
     "photos.needBoth": "Etichetta e file obbligatori.", "photos.hideError": "Errore nascondi foto: {msg}",
@@ -310,6 +314,7 @@ const I18N = {
     "documents.label": "Etichetta", "documents.labelPlaceholder": "es. Certificato spedizione 12/09/2026",
     "documents.file": "File", "documents.upload": "Carica", "documents.none": "Nessun documento ancora.",
     "documents.colLabel": "Etichetta", "documents.colCid": "CID", "documents.colFile": "File originale", "documents.hide": "Nascondi",
+    "documents.download": "Scarica",
     "documents.listError": "Impossibile caricare la libreria documenti: {msg}", "documents.uploading": "Upload documento in corso...",
     "documents.uploaded": "Documento caricato.", "documents.uploadError": "Errore upload documento: {msg}",
     "documents.needBoth": "Etichetta e file obbligatori.", "documents.hideError": "Errore nascondi documento: {msg}",
@@ -373,6 +378,9 @@ const I18N = {
     "card.setDocumentHashNeedFile": "Select a file first.",
     "card.setDocumentHashSuccess": "Document hash registered on-chain.",
     "card.setDocumentHashError": "Hash registration error: {msg}",
+    "card.documentHashBadge": "Document registered",
+    "card.verifyButton": "Verify a file", "card.verifyMatch": "✓ The file matches.",
+    "card.verifyMismatch": "✗ The file does NOT match.", "card.verifyError": "Verification error: {msg}",
     "log.invalidating": "Invalidating token {tokenId}...",
     "log.invalidated": "Invalidated. Reference: {tx}",
     "log.settingDocumentHash": "Registering document hash for {tokenId}...",
@@ -410,6 +418,7 @@ const I18N = {
     "photos.title": "Photo library", "photos.label": "Label", "photos.labelPlaceholder": "e.g. Venti24, or Supplier",
     "photos.file": "File", "photos.upload": "Upload", "photos.none": "No photos yet.",
     "photos.colLabel": "Label", "photos.colCid": "CID", "photos.colDims": "Dimensions", "photos.hide": "Hide",
+    "photos.download": "Download",
     "photos.listError": "Could not load photo library: {msg}", "photos.uploading": "Uploading photo...",
     "photos.uploaded": "Photo uploaded.", "photos.uploadError": "Photo upload error: {msg}",
     "photos.needBoth": "Label and file are required.", "photos.hideError": "Hide photo error: {msg}",
@@ -418,6 +427,7 @@ const I18N = {
     "documents.label": "Label", "documents.labelPlaceholder": "e.g. Shipment certificate 12/09/2026",
     "documents.file": "File", "documents.upload": "Upload", "documents.none": "No documents yet.",
     "documents.colLabel": "Label", "documents.colCid": "CID", "documents.colFile": "Original file", "documents.hide": "Hide",
+    "documents.download": "Download",
     "documents.listError": "Could not load document library: {msg}", "documents.uploading": "Uploading document...",
     "documents.uploaded": "Document uploaded.", "documents.uploadError": "Document upload error: {msg}",
     "documents.needBoth": "Label and file are required.", "documents.hideError": "Hide document error: {msg}",
@@ -842,9 +852,11 @@ async function refreshPhotoLibraryList() {
     });
     const el = document.getElementById("photoLibraryList");
     if (photos.length === 0) { el.innerHTML = "<p class='muted'>" + t("photos.none") + "</p>"; return; }
-    let html = "<table><tr><th>" + t("photos.colLabel") + "</th><th>" + t("photos.colCid") + "</th><th>" + t("photos.colDims") + "</th><th></th></tr>";
+    let html = "<table><tr><th>" + t("photos.colLabel") + "</th><th>" + t("photos.colCid") + "</th><th>" + t("photos.colDims") + "</th><th></th><th></th></tr>";
     photos.forEach((p) => {
+      const downloadUrl = TraceabilityDecode.ipfsToHttp(p.cid);
       html += "<tr><td>" + p.label + "</td><td>" + p.cid + "</td><td>" + (p.width || "?") + "x" + (p.height || "?") + "</td>" +
+        "<td><a href='" + downloadUrl + "' target='_blank' rel='noopener'>" + t("photos.download") + "</a></td>" +
         "<td><button class='danger' onclick='hidePhotoRow(" + p.id + ")'>" + t("photos.hide") + "</button></td></tr>";
     });
     html += "</table>";
@@ -898,9 +910,11 @@ async function refreshDocumentLibraryList() {
     });
     const el = document.getElementById("documentLibraryList");
     if (documents.length === 0) { el.innerHTML = "<p class='muted'>" + t("documents.none") + "</p>"; return; }
-    let html = "<table><tr><th>" + t("documents.colLabel") + "</th><th>" + t("documents.colCid") + "</th><th>" + t("documents.colFile") + "</th><th></th></tr>";
+    let html = "<table><tr><th>" + t("documents.colLabel") + "</th><th>" + t("documents.colCid") + "</th><th>" + t("documents.colFile") + "</th><th></th><th></th></tr>";
     documents.forEach((d) => {
+      const downloadUrl = TraceabilityDecode.ipfsToHttp(d.cid);
       html += "<tr><td>" + d.label + "</td><td>" + d.cid + "</td><td>" + (d.original_name || "?") + "</td>" +
+        "<td><a href='" + downloadUrl + "' target='_blank' rel='noopener'>" + t("documents.download") + "</a></td>" +
         "<td><button class='danger' onclick='hideDocumentRow(" + d.id + ")'>" + t("documents.hide") + "</button></td></tr>";
     });
     html += "</table>";

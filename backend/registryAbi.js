@@ -15,6 +15,7 @@ const TRACEABILITY_REGISTRY_READ_ABI = [
   "function getUsedLots(bytes32 tokenId) view returns (bytes32[])",
   "function getDataForTokenId(bytes32 tokenId, bytes32 dataKey) view returns (bytes)",
   "function getData(bytes32 dataKey) view returns (bytes)",
+  "function getDocumentHash(bytes32 tokenId) view returns (bytes32)",
   "event RawMaterialLotMinted(bytes32 indexed tokenId, uint256 indexDate)",
   "event ProductionBatchMinted(bytes32 indexed tokenId, bytes32[] usedLots, uint256 indexDate)",
   "event EntryInvalidated(bytes32 indexed tokenId, address indexed by, string reason)",
