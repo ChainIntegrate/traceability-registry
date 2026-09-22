@@ -1027,8 +1027,8 @@ tracciati da git al momento di questa modifica).
   tra i due file, non per ispezione visiva. Flusso end-to-end verificato
   con firma/fetch finti: esattamente 1 `signMessage` e 1 chiamata
   `pin-json-batch` per 3 lotti (non 3), ordine lotti→CID→tokenId
-  preservato. **Non ancora testato contro un vero nodo IPFS/wallet** — da
-  fare al prossimo giro di test reale.
+  preservato. **Confermato dal vivo**: import di un JSON multi-lotto con
+  una sola firma, nessun problema con IPFS/wallet reali.
 
 ## 44. Libreria documenti + `setDocumentHash(Batch)` nei form di mint (Gold)
 
@@ -1082,14 +1082,16 @@ tracciati da git al momento di questa modifica).
   che verifica: tab "documenti" esistente e navigabile, form di upload
   presente, `refreshDocumentLibraryList` popola la tabella dal client
   documenti, e il dropdown `rmDocumentSelect` nel form materie prime usa
-  correttamente `keccak256_hash` come valore dell'opzione. **Non ancora
-  testato dal vivo** (serve prima compilare/ridistribuire il contratto
-  con `setDocumentHashBatch`).
-- **Non ancora fatto**: aggiornare il bottone "Registra hash documento"
-  già esistente nella galleria "Esplora registro" (dal lavoro
-  precedente) per usare la libreria documenti invece di un file grezzo —
-  da decidere insieme se serve ancora, ora che il flusso principale passa
-  dai form di mint.
+  correttamente `keccak256_hash` come valore dell'opzione.
+  **Confermato dal vivo** (dopo il redeploy Factory del §45): mint
+  materie prime multi-lotto con un solo certificato aggregato selezionato
+  — l'hash si propaga correttamente su tutti i tokenId del batch.
+  **Ancora da testare**: lo stesso flusso con tier sotto Gold (deve
+  fallire solo l'aggancio hash, mai il mint) e il mint batch di
+  produzione con documento (`setDocumentHash` singolo).
+- **Aggiornato nel §46**: il bottone "Registra hash documento" già
+  esistente nella galleria "Esplora registro" ora usa la libreria
+  documenti invece di un file grezzo.
 
 ## 45. Fix EIP-170 residuo, link di download e visibilità dell'hash documento
 
@@ -1144,6 +1146,10 @@ tracciati da git al momento di questa modifica).
   gallery). Test funzionale jsdom dedicato: verifica che la riga di
   upload compaia solo quando l'hash non è impostato e il badge/verifica
   solo quando lo è, su due entry sintetiche.
+- **Confermato dal vivo**: badge + verifica compaiono sia nell'explorer
+  privato che in quello pubblico per un token con hash registrato; la
+  verifica segnala correttamente "mismatch" quando si sceglie un file
+  diverso da quello originale.
 
 ## 46. Bug trovato subito dopo il deploy: "Registra hash documento" non salvava il file
 
@@ -1177,7 +1183,12 @@ tracciati da git al momento di questa modifica).
   file), che si popoli correttamente dalla libreria fornita (valore
   opzione = `keccak256_hash`, testo = label), e che confermando la
   selezione `onSetDocumentHash` venga chiamato con l'hash della libreria
-  (non un file). **Non ancora testato dal vivo.**
+  (non un file). **Confermato parzialmente dal vivo**: la select si popola
+  correttamente coi documenti già pinnati su IPFS. **Ancora da
+  verificare**: che la conferma della selezione scriva davvero l'hash
+  on-chain e che il badge sostituisca l'upload dopo il ricaricamento, e
+  il comportamento con un account sotto tier Gold (deve fallire con
+  l'errore del contratto, non con un errore generico).
 
 ## 39. Punti aperti / TODO
 
