@@ -103,7 +103,15 @@ contract TraceabilityRegistry is LSP8IdentifiableDigitalAsset {
         _;
     }
 
-    modifier onlyDelegationManager() {
+    /// @dev Estratta in funzione interna per lo stesso motivo delle altre
+    ///      due sopra: usata in 2 siti (addDelegate/removeDelegate), un
+    ///      modifier duplicherebbe il corpo in entrambi — trovato durante
+    ///      la caccia ai 44 byte mancanti per rientrare in EIP-170 dopo
+    ///      l'aggiunta di setDocumentHashBatch (la Factory, che include il
+    ///      bytecode di creazione di TraceabilityRegistry, sforava di 44
+    ///      byte pur avendo già applicato lo stesso fix ad onlyAuthorized
+    ///      e onlyGoldFeature — questo modifier era rimasto non estratto).
+    function _requireDelegationManager() internal view {
         bool isChainIntegrate = msg.sender == owner();
         bool isAdminWithSilver = msg.sender == registryAdmin &&
             membershipCorporate.tierOf(registryAdmin) >= SILVER_TIER;
@@ -111,6 +119,10 @@ contract TraceabilityRegistry is LSP8IdentifiableDigitalAsset {
             isChainIntegrate || isAdminWithSilver,
             "TraceabilityRegistry: not allowed to manage delegates"
         );
+    }
+
+    modifier onlyDelegationManager() {
+        _requireDelegationManager();
         _;
     }
 
