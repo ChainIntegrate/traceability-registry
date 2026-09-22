@@ -1145,6 +1145,40 @@ tracciati da git al momento di questa modifica).
   upload compaia solo quando l'hash non è impostato e il badge/verifica
   solo quando lo è, su due entry sintetiche.
 
+## 46. Bug trovato subito dopo il deploy: "Registra hash documento" non salvava il file
+
+- **Segnalazione**: appena provato in pratica, il bottone "Registra hash
+  documento" nella card della galleria privata prendeva un file dal
+  dispositivo, ne calcolava l'hash e lo scriveva on-chain — ma il file
+  stesso **non veniva mai pinnato su IPFS**. L'hash risultava verificabile
+  (`getDocumentHash` + confronto locale) ma il documento vero e proprio
+  irrecuperabile: né dall'azienda che l'aveva "registrato", né da chi
+  verifica in seguito. Era rimasto il comportamento della primissima
+  versione di questa funzione (da prima del pivot al modello libreria
+  documenti del §44), mai aggiornato — segnalato come punto aperto nel
+  §44 ("da decidere insieme se serve ancora") e confermato ora dall'uso
+  reale.
+- **Scelta**: sostituire l'input file con una select che pesca dalla
+  libreria documenti già esistente (stesso pattern di `rmDocumentSelect`/
+  `batchDocumentSelect` nei form di mint), invece di rimuovere la
+  funzionalità — così l'hash scritto on-chain corrisponde SEMPRE a un
+  file realmente salvato e scaricabile.
+- **Fix** (`traceability-explorer-ui.js`): `createGalleryInstance` accetta
+  ora anche `listDocumentsForSelect` (funzione async che ritorna l'elenco
+  documenti); la riga di upload per-card mostra una `<select>` invece di
+  un `<input type=file>`, popolata una sola volta per l'intero caricamento
+  della galleria (la libreria è la stessa per tutto il registry, non
+  cambia per token). Il callback `onSetDocumentHash(tokenId, documentHash)`
+  ora riceve direttamente l'hash scelto dalla libreria — non più un
+  oggetto `File` da hashare in `user.html`, eliminando ogni possibilità
+  di disallineamento tra "hash scritto" e "file davvero pinnato".
+- **Testato**: `node --check`, test funzionale jsdom dedicato che verifica
+  — su una entry senza hash — che compaia la select (non più l'input
+  file), che si popoli correttamente dalla libreria fornita (valore
+  opzione = `keccak256_hash`, testo = label), e che confermando la
+  selezione `onSetDocumentHash` venga chiamato con l'hash della libreria
+  (non un file). **Non ancora testato dal vivo.**
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

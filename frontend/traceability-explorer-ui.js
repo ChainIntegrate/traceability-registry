@@ -147,7 +147,7 @@
     return values;
   }
 
-  function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate, onSetDocumentHash }) {
+  function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate, onSetDocumentHash, listDocumentsForSelect }) {
     let currentCardDataById = {};
     let activeFilters = {};
     let lotSearchText = "";
@@ -379,9 +379,14 @@
         // il contratto stesso rifiuta la tx se il tier non è Gold). Nascosto
         // se un hash è già presente per non sovrascriverlo per sbaglio — il
         // contratto non impedisce la sostituzione, quindi il gate è qui.
+        // Select invece di un file grezzo: l'hash scritto on-chain deve
+        // sempre corrispondere a un documento REALMENTE salvato in libreria
+        // (su IPFS), altrimenti è verificabile ma irrecuperabile — bug
+        // trovato testando la prima versione (file scelto a mano, mai
+        // pinnato da nessuna parte).
         if (onSetDocumentHash && !hasDocumentHash(entry)) {
           html += "<div class='te-dochash-row'>" +
-            "<input type='file' class='te-dochash-input' data-dochash-token='" + entry.tokenId + "'>" +
+            "<select class='te-dochash-select' data-dochash-token='" + entry.tokenId + "'><option value=''>" + t("common.loadingDocuments") + "</option></select>" +
             "<button type='button' class='te-dochash-btn' data-dochash-token='" + entry.tokenId + "'>" + t("card.setDocumentHashButton") + "</button>" +
             "</div>";
         }
@@ -389,7 +394,7 @@
 
         card.innerHTML = html;
         card.addEventListener("click", (e) => {
-          if (e.target.tagName === "A" || e.target.tagName === "INPUT" ||
+          if (e.target.tagName === "A" || e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "OPTION" ||
               e.target.classList.contains("te-invalidate-btn") ||
               e.target.classList.contains("te-dochash-btn") ||
               e.target.classList.contains("te-verify-btn")) return;
@@ -457,15 +462,17 @@
           btn.addEventListener("click", async (e) => {
             e.stopPropagation();
             const tokenId = btn.dataset.dochashToken;
-            const input = gridEl.querySelector(".te-dochash-input[data-dochash-token='" + tokenId + "']");
-            const file = input && input.files[0];
-            if (!file) { window.alert(t("card.setDocumentHashNeedFile")); return; }
+            const select = gridEl.querySelector(".te-dochash-select[data-dochash-token='" + tokenId + "']");
+            const documentHash = select && select.value;
+            if (!documentHash) { window.alert(t("card.setDocumentHashNeedSelection")); return; }
             btn.disabled = true;
             btn.textContent = t("card.settingDocumentHash");
             try {
-              await onSetDocumentHash(tokenId, file);
+              // documentHash arriva già dalla libreria (keccak256_hash del
+              // file effettivamente pinnato su IPFS) — nessun ricalcolo qui,
+              // stesso principio già seguito nei form di mint.
+              await onSetDocumentHash(tokenId, documentHash);
               window.alert(t("card.setDocumentHashSuccess"));
-              if (input) input.value = "";
               // Ricarica: la card deve ora mostrare il badge e nascondere
               // l'upload, stessa logica già usata dopo onInvalidate.
               if (lastLoadParams) await load(lastLoadParams.backendBaseUrl, lastLoadParams.registryAddress);
@@ -476,7 +483,34 @@
             }
           });
         });
+
+        // Popolate una volta sola per tutte le card di questo load — la
+        // libreria documenti è la stessa per l'intero registry, non cambia
+        // da un token all'altro.
+        if (listDocumentsForSelect) {
+          populateDocumentSelects();
+        }
       }
+    }
+
+    async function populateDocumentSelects() {
+      const selects = gridEl.querySelectorAll(".te-dochash-select");
+      if (selects.length === 0) return;
+      let documents = [];
+      try {
+        documents = await listDocumentsForSelect();
+      } catch (err) {
+        documents = []; // libreria non raggiungibile: select resta con la sola opzione vuota
+      }
+      selects.forEach((sel) => {
+        sel.innerHTML = "<option value=''>" + t("common.noneF") + "</option>";
+        documents.forEach((d) => {
+          const opt = document.createElement("option");
+          opt.value = d.keccak256_hash;
+          opt.textContent = d.label;
+          sel.appendChild(opt);
+        });
+      });
     }
 
     async function load(backendBaseUrl, registryAddress) {

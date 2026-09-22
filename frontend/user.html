@@ -268,6 +268,8 @@ const I18N = {
     "card.documentHashBadge": "Documento registrato",
     "card.verifyButton": "Verifica un file", "card.verifyMatch": "✓ Il file corrisponde.",
     "card.verifyMismatch": "✗ Il file NON corrisponde.", "card.verifyError": "Errore verifica: {msg}",
+    "card.setDocumentHashNeedSelection": "Seleziona prima un documento dalla libreria.",
+    "common.loadingDocuments": "Caricamento documenti...",
     "log.invalidating": "Annullamento token {tokenId} in corso...",
     "log.invalidated": "Registrazione annullata. Riferimento: {tx}",
     "log.settingDocumentHash": "Registrazione hash documento per {tokenId} in corso...",
@@ -381,6 +383,8 @@ const I18N = {
     "card.documentHashBadge": "Document registered",
     "card.verifyButton": "Verify a file", "card.verifyMatch": "✓ The file matches.",
     "card.verifyMismatch": "✗ The file does NOT match.", "card.verifyError": "Verification error: {msg}",
+    "card.setDocumentHashNeedSelection": "Select a document from the library first.",
+    "common.loadingDocuments": "Loading documents...",
     "log.invalidating": "Invalidating token {tokenId}...",
     "log.invalidated": "Invalidated. Reference: {tx}",
     "log.settingDocumentHash": "Registering document hash for {tokenId}...",
@@ -724,14 +728,19 @@ const exploreGallery = TraceabilityExplorerUI.createGalleryInstance({
   // il bottone è sempre visibile: serve proprio a verificare dal vivo che
   // il contratto accetti la registrazione con tier Gold e la rifiuti
   // altrimenti (mai testato finora, GOLD_TIER = 3 non ancora esercitato).
-  onSetDocumentHash: async (tokenId, file) => {
-    const buffer = await file.arrayBuffer();
-    const documentHash = ethers.utils.keccak256(new Uint8Array(buffer));
+  // documentHash arriva già dalla libreria (select in traceability-
+  // explorer-ui.js) — MAI più un file scelto a mano qui: un hash calcolato
+  // su un file non pinnato da nessuna parte sarebbe verificabile ma
+  // irrecuperabile, bug trovato testando la prima versione di questo bottone.
+  onSetDocumentHash: async (tokenId, documentHash) => {
     log(t("log.settingDocumentHash", { tokenId: tokenId }));
     const tx = await activeRegistry.setDocumentHash(tokenId, documentHash);
     const receipt = await tx.wait();
     log(t("log.documentHashSet", { tx: receipt.transactionHash, hash: documentHash }));
   },
+  listDocumentsForSelect: async () => TraceabilityDocumentLibrary.listDocuments({
+    backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
+  }),
 });
 
 document.getElementById("changeRegistryLink").addEventListener("click", (e) => {
