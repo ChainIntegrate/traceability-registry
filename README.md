@@ -8,7 +8,7 @@ sistema ERC-721 di `Materie_Prime.html`/`Batch.html`), pensato fin dall'inizio
 per essere offerto anche ad altre aziende.
 
 Stato: **Factory deployata e verificata su testnet**
-([`0xA57527bE3AaDF4F1A60AF9829BaCA0949DAce315`](https://explorer.execution.testnet.lukso.network/address/0xA57527bE3AaDF4F1A60AF9829BaCA0949DAce315) —
+([`0xAB030297Ced2bad38a380e9232fc8e06D4ADdE3B`](https://explorer.execution.testnet.lukso.network/address/0xAB030297Ced2bad38a380e9232fc8e06D4ADdE3B) —
 sorgente pubblicata su Blockscout, verificabile da chiunque). Non ancora
 deployata su mainnet, non ancora deployato nessun `TraceabilityRegistry` di
 singola azienda (serve una UP con Membership Corporate almeno Bronze che
