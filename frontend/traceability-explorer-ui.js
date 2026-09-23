@@ -497,12 +497,22 @@
       const selects = gridEl.querySelectorAll(".te-dochash-select");
       if (selects.length === 0) return;
       let documents = [];
+      let loadError = null;
       try {
         documents = await listDocumentsForSelect();
       } catch (err) {
-        documents = []; // libreria non raggiungibile: select resta con la sola opzione vuota
+        // IMPORTANTE: non confondere un errore reale (firma rifiutata,
+        // rete, backend) con una libreria genuinamente vuota — prima lo
+        // ingoiavamo qui e la select restava vuota in entrambi i casi,
+        // indistinguibile per l'utente. Ora l'errore viene mostrato come
+        // opzione disabilitata dedicata.
+        loadError = err;
       }
       selects.forEach((sel) => {
+        if (loadError) {
+          sel.innerHTML = "<option value=''>" + t("card.documentListError", { msg: loadError.message }) + "</option>";
+          return;
+        }
         sel.innerHTML = "<option value=''>" + t("common.noneF") + "</option>";
         documents.forEach((d) => {
           const opt = document.createElement("option");

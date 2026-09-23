@@ -1183,12 +1183,55 @@ tracciati da git al momento di questa modifica).
   file), che si popoli correttamente dalla libreria fornita (valore
   opzione = `keccak256_hash`, testo = label), e che confermando la
   selezione `onSetDocumentHash` venga chiamato con l'hash della libreria
-  (non un file). **Confermato parzialmente dal vivo**: la select si popola
-  correttamente coi documenti già pinnati su IPFS. **Ancora da
-  verificare**: che la conferma della selezione scriva davvero l'hash
-  on-chain e che il badge sostituisca l'upload dopo il ricaricamento, e
-  il comportamento con un account sotto tier Gold (deve fallire con
-  l'errore del contratto, non con un errore generico).
+  (non un file). **Confermato dal vivo**: mint batch con hash allegato in
+  fase di mint funziona perfettamente (§44); mint con una sola materia
+  prima + un certificato aggregato si riproduce su tutti i tokenId; carica/
+  scarica sia libreria documenti che libreria foto funziona; l'explorer
+  privato propone la verifica per i tokenId con documento registrato;
+  l'explorer pubblico propone la verifica e segnala correttamente il
+  mismatch con un file sbagliato; la select "Registra hash documento" per
+  card propone i file realmente pinnati su IPFS. **Ancora non testato**:
+  mint su un tokenId senza tier Gold, mint batch senza hash allegato,
+  conferma end-to-end della select per-card su un tokenId che non aveva
+  ricevuto un documento in fase di mint (bloccato dal bug del §47, ora
+  corretto — da riverificare dal vivo).
+
+## 47. Select "Registra hash documento" vuota su un tokenId non gestito al mint
+
+- **Segnalazione**: dopo aver confermato che il mint batch con hash
+  funziona perfettamente, provando a caricare un documento dal lato
+  explorer privato (per-card, §46) su un tokenId che NON aveva ricevuto un
+  documento durante il mint, la select si apriva **vuota** — nonostante la
+  libreria documenti contenesse già file caricati e visibili nel tab
+  "Libreria documenti". Confermato via domanda di chiarimento che non si
+  trattava di un file picker nativo del sistema operativo (problema di
+  cache/refresh), ma proprio della select dell'applicazione, vuota.
+- **Causa**: `populateDocumentSelects()` in `traceability-explorer-ui.js`
+  avvolgeva la chiamata a `listDocumentsForSelect()` in un `try/catch` che
+  **inghiottiva silenziosamente qualsiasi errore** (firma rifiutata dal
+  wallet, timeout di rete, verifica fallita lato backend, ecc.) e mostrava
+  comunque la select con la sola opzione vuota — risultato identico,
+  indistinguibile per l'utente, a "libreria realmente vuota". La libreria
+  non era affatto vuota: qualcosa nella chiamata falliva silenziosamente.
+- **Fix**: la funzione ora distingue i due casi. Se `listDocumentsForSelect()`
+  fallisce, l'errore viene catturato separatamente e mostrato come opzione
+  disabilitata dedicata (`card.documentListError`: "Errore caricamento
+  libreria: {msg}"), invece di essere confuso con una libreria vuota
+  (`common.noneF`: "— nessuna —"). Nuova chiave i18n aggiunta solo in
+  `user.html` (IT/EN) — non in `explorer.html`, che non passa mai
+  `onSetDocumentHash`/`listDocumentsForSelect` essendo una pagina
+  pubblica, sola lettura.
+- **Testato**: `node --check` su `traceability-explorer-ui.js`, cross-check
+  automatico delle chiavi i18n IT/EN in `user.html` (194 chiavi per
+  lingua, nessuna disallineata), test funzionale jsdom dedicato che
+  simula sia il caso "libreria vuota" sia il caso "errore nel caricamento"
+  e verifica che producano due contenuti HTML distinti per la select (il
+  messaggio d'errore compare solo nel secondo caso). **Non ancora
+  confermato dal vivo**: serve riprovare lo stesso scenario (tokenId senza
+  documento assegnato al mint) per vedere se ora la select si popola
+  correttamente, oppure se compare il messaggio d'errore — che a quel
+  punto indicherebbe la causa reale (es. firma rifiutata, problema di
+  rete) invece di un falso "nessun documento".
 
 ## 39. Punti aperti / TODO
 
