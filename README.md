@@ -1190,11 +1190,11 @@ tracciati da git al momento di questa modifica).
   privato propone la verifica per i tokenId con documento registrato;
   l'explorer pubblico propone la verifica e segnala correttamente il
   mismatch con un file sbagliato; la select "Registra hash documento" per
-  card propone i file realmente pinnati su IPFS. **Ancora non testato**:
-  mint su un tokenId senza tier Gold, mint batch senza hash allegato,
-  conferma end-to-end della select per-card su un tokenId che non aveva
-  ricevuto un documento in fase di mint (bloccato dal bug del §47, ora
-  corretto — da riverificare dal vivo).
+  card propone i file realmente pinnati su IPFS, e — dopo il fix del §47 —
+  si popola correttamente anche su un tokenId che non aveva ricevuto un
+  documento in fase di mint, con scrittura dell'hash on-chain riuscita.
+  **Ancora non testato**: mint su un tokenId senza tier Gold, mint batch
+  senza hash allegato.
 
 ## 47. Select "Registra hash documento" vuota su un tokenId non gestito al mint
 
@@ -1226,12 +1226,11 @@ tracciati da git al momento di questa modifica).
   lingua, nessuna disallineata), test funzionale jsdom dedicato che
   simula sia il caso "libreria vuota" sia il caso "errore nel caricamento"
   e verifica che producano due contenuti HTML distinti per la select (il
-  messaggio d'errore compare solo nel secondo caso). **Non ancora
-  confermato dal vivo**: serve riprovare lo stesso scenario (tokenId senza
-  documento assegnato al mint) per vedere se ora la select si popola
-  correttamente, oppure se compare il messaggio d'errore — che a quel
-  punto indicherebbe la causa reale (es. firma rifiutata, problema di
-  rete) invece di un falso "nessun documento".
+  messaggio d'errore compare solo nel secondo caso). **Confermato dal
+  vivo**: sullo stesso scenario che aveva fatto emergere il bug (tokenId
+  senza documento assegnato al mint), la select ora si popola
+  correttamente coi documenti realmente presenti in libreria, e la
+  scrittura dell'hash on-chain per quella card funziona regolarmente.
 
 ## 39. Punti aperti / TODO
 
