@@ -1232,6 +1232,104 @@ tracciati da git al momento di questa modifica).
   correttamente coi documenti realmente presenti in libreria, e la
   scrittura dell'hash on-chain per quella card funziona regolarmente.
 
+## 48. Generalizzazione multi-settore — design deciso, implementazione in corso
+
+Discussione lunga su come far uscire TraceabilityRegistry da "solo Birra20Venti"
+verso più settori/clienti. Riporto qui le decisioni prese, perché toccano
+contratto, backend e frontend e si rischia di perderne pezzi tra una sessione
+e l'altra.
+
+**Cosa NON serve cambiare (già generico di suo):**
+- Il contratto `TraceabilityRegistry` non interpreta mai il JSON: `mintRawMaterialLotBatch`/
+  `mintProductionBatch` scrivono `lsp4MetadataValue` come `bytes` opachi. Qualunque
+  vocabolario di campi passa senza modifiche al contratto. L'unica struttura
+  imposta on-chain è `EntryType` (RawMaterialLot/ProductionBatch) + il vincolo
+  che un batch possa referenziare solo lotti — entrambi validi per qualsiasi
+  settore, restano invariati.
+- Non serve un Factory per settore, né domini/Factory duplicati: un solo
+  Factory, un solo backend, un solo nodo IPFS servono tutti i settori.
+
+**Cosa invece varia per settore (tutto lato frontend/off-chain):**
+- Le date riconosciute per il batch (`RECOGNIZED_DATE_TRAIT_TYPES_BATCH` in
+  `traceability-json-validators.js`) — birra ne ha due (Produzione +
+  Imbottigliamento), altri settori una sola.
+- I facet-key della galleria (`ALLOWED_FACET_KEYS` in `traceability-explorer-ui.js`).
+- (Lo schema materie prime — fornitore/lotto/quantità — resta invece condiviso
+  tra tutti i settori "alimentari": diverge solo se un settore ha un concetto
+  di acquisto radicalmente diverso.)
+
+**Rinomina decisa**: l'attributo che guida la selezione della foto per un
+batch passa da `"Ricetta"` (specifico birra) a `"Codice"` — diventa una
+convenzione condivisa da tutti i settori, come già lo è `"Lotto "` per il
+collegamento materie-prime→batch. Non è più una voce di config per settore.
+
+**Tre settori iniziali** (nomi scelti per struttura, non per prodotto — così
+un cliente futuro con lo stesso pattern non richiede un rename):
+- `alimentare_monodata` — una data di produzione, schema materie prime standard.
+- `alimentare_bidata` — due date (produzione + imbottigliamento/confezionamento)
+  — è lo schema di oggi (Birra20Venti), solo rinominato/generalizzato.
+- `industria` — una data, verosimilmente senza il concetto "Codice"/foto-guida.
+
+Anche se `alimentare_monodata` e `industria` partono quasi identici, restano
+config separate fin dal primo giorno: condividere codice per una somiglianza
+solo coincidentale (non strutturale) costringerebbe a disaccoppiarli sotto
+pressione appena uno dei due evolve.
+
+**Come si assegna il settore**: `sectorOf(address)` sul Factory (vedi sotto),
+scritto SOLO da ChainIntegrate — mai auto-dichiarabile dall'azienda, perché è
+ChainIntegrate a costruire la UI di quel settore ed è un impegno commerciale
+(accordo prima dell'attivazione). Riassegnabile in qualunque momento: non
+tocca mai i token già mintati (la loro metadata è uno snapshot immutabile),
+incide solo su quale UI/config si propone da quel momento in poi per i mint
+successivi.
+
+**Come si instradano le UI**: pagine "tipizzate" sotto lo stesso dominio
+(`traceability.chainintegrate.it/.../user-alimentare-bidata.html`, ecc.) come
+default a costo zero — nessun nuovo DNS, nessun nuovo backend, nessuna
+duplicazione delle librerie JS condivise (`traceability-decode.js`,
+`traceability-json-validators.js`, `traceability-metadata.js`,
+`traceability-mint-compose.js`, `traceability-tokenid.js`,
+`traceability-document-library.js`, `traceability-photo-library.js`,
+`traceability-explorer-ui.js`, `explorer.html` restano UNICI e condivisi da
+tutti i settori). Un sottodominio dedicato (`birrificio.chainintegrate.it`)
+resta un'opzione, riservata su richiesta a un cliente importante.
+
+Meccanica concreta della differenziazione tra le pagine `user-*.html`: la
+`CONFIG` di `traceability-json-validators.js` è già esposta come oggetto
+mutabile (`global.TraceabilityValidators = { CONFIG, ... }`), quindi ogni
+pagina di settore la sovrascrive con un paio di righe subito dopo aver
+caricato lo script condiviso — nessuna duplicazione di logica. L'unica
+eccezione che richiederà una vera modifica di codice (una tantum, non per
+ogni settore) è `ALLOWED_FACET_KEYS`, oggi costante interna non esposta in
+`traceability-explorer-ui.js`: va promossa a parametro di
+`createGalleryInstance({...})`.
+
+**Piano a fasi**:
+1. Fase 0 (rifattorizzazione a costo zero, da fare quando capita di toccare
+   quei file): rinomina "Ricetta"→"Codice", estrazione date/facet-key in
+   config iniettabile.
+2. **Fase 1 — Factory (INIZIATA in questa sessione)**: aggiunti a
+   `TraceabilityRegistryFactory.sol` — `mapping(address => bytes32) public sectorOf`,
+   `function setSector(address account, bytes32 sector) external onlyChainIntegrate`
+   (stesso modifier già usato per `setMembershipCorporate`), evento
+   `SectorAssigned`, e un require in `deployRegistry` che blocca il deploy se
+   `sectorOf[msg.sender] == bytes32(0)` (nessun effetto sul registry già
+   esistente di Birra20Venti — vale solo per nuovi deploy da questo momento).
+   **Non ancora compilato/testato/deployato** — attenzione al margine EIP-170:
+   il Factory incorpora nel proprio bytecode il bytecode di creazione di
+   `TraceabilityRegistry` (succede sempre con `new X(...)` dentro un altro
+   contratto), quindi ogni bytecode aggiunto qui va verificato con
+   `npx hardhat compile` prima di procedere, come già successo con l'overflow
+   del §45 (risolto allora lato `TraceabilityRegistry.sol`, non lato Factory).
+3. Fase 2 — backend: arricchire `/api/traceability/registry/:address/entries`
+   con `sector`, risolto via `registry.registryAdmin()` → `factory.sectorOf(...)`,
+   stesso pattern difensivo try/catch già usato per `documentHash` (§45).
+4. Fase 3 — frontend: da `admin.html`, assegnare il settore a Birra20Venti
+   (`alimentare_bidata`) come primo uso reale di `setSector`; generalizzare
+   `user.html`/`explorer.html` a leggere la config invece delle costanti
+   fisse; clonare la pagina per un nuovo settore solo quando arriva un
+   cliente reale di quel settore.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
