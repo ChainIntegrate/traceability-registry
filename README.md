@@ -8,7 +8,7 @@ sistema ERC-721 di `Materie_Prime.html`/`Batch.html`), pensato fin dall'inizio
 per essere offerto anche ad altre aziende.
 
 Stato: **Factory deployata e verificata su testnet**
-([`0xAB030297Ced2bad38a380e9232fc8e06D4ADdE3B`](https://explorer.execution.testnet.lukso.network/address/0xAB030297Ced2bad38a380e9232fc8e06D4ADdE3B) —
+([`0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9`](https://explorer.execution.testnet.lukso.network/address/0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9) —
 sorgente pubblicata su Blockscout, verificabile da chiunque). Non ancora
 deployata su mainnet, non ancora deployato nessun `TraceabilityRegistry` di
 singola azienda (serve una UP con Membership Corporate almeno Bronze che
@@ -1326,9 +1326,14 @@ ogni settore) è `ALLOWED_FACET_KEYS`, oggi costante interna non esposta in
    a 1 (accettabile: le funzioni del Factory sono chiamate raramente, una
    tantum per azienda, non un hot path di gas). **Confermato**: `npx hardhat
    compile` ricompila 28 file senza alcun warning.
-   **Ancora da fare in questa fase**: deploy testnet del nuovo Factory,
-   verifica su Blockscout, aggiornamento `FACTORY_ADDRESS` nei tre file
-   frontend e nel `.env` del backend.
+   **Fatto**: nuovo Factory deployato su testnet e verificato su Blockscout —
+   [`0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9`](https://explorer.execution.testnet.lukso.network/address/0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9).
+   **Ancora da fare in questa fase**: aggiornare `FACTORY_ADDRESS` nei tre
+   file frontend e nel `.env` del backend sulla VPS, poi assegnare un
+   settore a Birra20Venti con `setSector` prima che possa deployare
+   qualunque nuovo registry (il require aggiunto blocca `deployRegistry`
+   senza settore assegnato — attenzione, vale anche per Birra20Venti se
+   dovesse mai deployarne un secondo).
 3. Fase 2 — backend: arricchire `/api/traceability/registry/:address/entries`
    con `sector`, risolto via `registry.registryAdmin()` → `factory.sectorOf(...)`,
    stesso pattern difensivo try/catch già usato per `documentHash` (§45).
