@@ -38,8 +38,21 @@ contract TraceabilityRegistryFactory {
     // una isAuthorized() che ritorna sempre true e usare il nostro backend
     // (IPFS, RPC) gratuitamente.
 
+    // Settore merceologico dell'azienda (es. keccak256("alimentare_bidata")),
+    // NON un tier: puramente informativo/di instradamento per il frontend
+    // (quale UI di mint proporre), scritto SOLO da ChainIntegrate — mai
+    // auto-dichiarabile dall'azienda. bytes32(0) = "nessun settore assegnato
+    // ancora", stato che blocca deployRegistry (vedi sotto): un'azienda deve
+    // avere un accordo commerciale e un settore assegnato prima di poter
+    // creare il proprio registry. Riassegnabile in qualunque momento senza
+    // effetto retroattivo sui registry già deployati (la loro metadata
+    // resta quella con cui sono stati mintati, il settore incide solo su
+    // quale UI viene proposta per le operazioni successive).
+    mapping(address => bytes32) public sectorOf;
+
     event RegistryDeployed(address indexed company, address indexed registry, uint256 registryIndex);
     event MembershipCorporateUpdated(address indexed oldAddress, address indexed newAddress);
+    event SectorAssigned(address indexed account, bytes32 sector);
 
     modifier onlyChainIntegrate() {
         require(msg.sender == chainIntegrateOwner, "TraceabilityRegistryFactory: caller is not ChainIntegrate");
@@ -62,6 +75,19 @@ contract TraceabilityRegistryFactory {
         address old = address(membershipCorporate);
         membershipCorporate = IMembershipCorporate(newMembershipCorporate);
         emit MembershipCorporateUpdated(old, newMembershipCorporate);
+    }
+
+    /// @notice Assegna (o riassegna) il settore merceologico di un'azienda.
+    ///         Solo ChainIntegrate — l'azienda non può auto-dichiararsi un
+    ///         settore diverso da quello concordato commercialmente.
+    /// @dev bytes32 e non string per costo gas e per confronto diretto con
+    ///      costanti lato frontend (stesso schema di ENTRY_TYPE_KEY su
+    ///      TraceabilityRegistry.sol), es. keccak256("alimentare_bidata").
+    function setSector(address account, bytes32 sector) external onlyChainIntegrate {
+        require(account != address(0), "TraceabilityRegistryFactory: zero address");
+        require(sector != bytes32(0), "TraceabilityRegistryFactory: sector required");
+        sectorOf[account] = sector;
+        emit SectorAssigned(account, sector);
     }
 
     /// @notice Numero massimo di registry consentiti per un dato tier.
@@ -88,6 +114,8 @@ contract TraceabilityRegistryFactory {
         string memory name_,
         string memory symbol_
     ) external returns (address registry) {
+        require(sectorOf[msg.sender] != bytes32(0), "TraceabilityRegistryFactory: no sector assigned");
+
         uint256 tier = membershipCorporate.tierOf(msg.sender);
         uint256 limit = maxRegistriesForTier(tier);
         require(limit > 0, "TraceabilityRegistryFactory: no valid membership");
