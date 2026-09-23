@@ -14,8 +14,20 @@ module.exports = {
   solidity: {
     version: "0.8.28",
     settings: {
-      viaIR: true,
-      optimizer: { enabled: true, runs: 200 },
+      // viaIR disattivato e runs abbassato da 200 a 1: il Factory è tornato
+      // sopra il limite EIP-170 dopo l'aggiunta di sectorOf/setSector (§48).
+      // Verificato con una compilazione locale (solc puro, fuori da Hardhat,
+      // stesso compilatore 0.8.28) che entrambi i contratti compilano senza
+      // errori con viaIR disattivato — non risultava necessario per nessuno
+      // dei due file, solo impostato in precedenza. runs basso dice
+      // all'ottimizzatore di preferire bytecode più piccolo al costo di gas
+      // leggermente più alto per chiamata — accettabile qui: deployRegistry/
+      // setSector sono chiamate rare (una tantum per azienda), non un hot
+      // path come un trasferimento token. TraceabilityRegistry.sol ha
+      // comunque ampio margine (~18.5KB su 24.576) in ogni combinazione
+      // testata, nessun rischio di farlo scendere sotto quel limite.
+      viaIR: false,
+      optimizer: { enabled: true, runs: 1 },
     },
   },
   networks: {
