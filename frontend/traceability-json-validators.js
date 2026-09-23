@@ -16,7 +16,12 @@
   // -----------------------------------------------------------------------
   const CONFIG = {
     LOT_PREFIX: "Lotto ", // qualunque trait_type che inizia così è un candidato al matching
-    RECIPE_TRAIT_TYPE: "Ricetta", // guida la libreria foto per i batch
+    // Rinominato da "Ricetta" a "Codice" (§48): non è più un'etichetta
+    // specifica del settore alimentare/birra, ma una convenzione condivisa
+    // da tutti i settori — l'attributo che guida la selezione della foto
+    // per un batch, qualunque cosa "codice" significhi per quell'azienda
+    // (ricetta, codice prodotto, codice intervento, ecc.).
+    CODE_TRAIT_TYPE: "Codice", // guida la libreria foto per i batch
     RECOGNIZED_DATE_TRAIT_TYPES_BATCH: ["Data Produzione", "Data Imbottigliamento"],
     RECOGNIZED_DATE_TRAIT_TYPES_LOT: ["Data Acquisto"],
     REQUIRED_ATTRIBUTES_RAW_MATERIAL_PURCHASE: ["Fornitore", "Data Acquisto"],
@@ -141,9 +146,9 @@
       return { valid: false, errors: errors, warnings: warnings };
     }
 
-    const ricettaAttr = findAttribute(json.attributes, CONFIG.RECIPE_TRAIT_TYPE);
-    if (!ricettaAttr || !isNonEmptyString(String(ricettaAttr.value))) {
-      errors.push("Attributo obbligatorio mancante: '" + CONFIG.RECIPE_TRAIT_TYPE + "' (serve per la libreria foto).");
+    const codiceAttr = findAttribute(json.attributes, CONFIG.CODE_TRAIT_TYPE);
+    if (!codiceAttr || !isNonEmptyString(String(codiceAttr.value))) {
+      errors.push("Attributo obbligatorio mancante: '" + CONFIG.CODE_TRAIT_TYPE + "' (serve per la libreria foto).");
     }
 
     const dateCandidates = CONFIG.RECOGNIZED_DATE_TRAIT_TYPES_BATCH.filter(function (traitType) {
@@ -160,14 +165,14 @@
 
   /**
    * Estrae dal JSON batch già validato:
-   * - il nome ricetta (per la libreria foto)
+   * - il codice (per la libreria foto)
    * - le date candidate (se più di una, la UI DEVE far scegliere l'utente —
    *   mai un fallback automatico, come deciso)
    * - i riferimenti a lotti da tentare di collegare (ogni trait_type che
    *   inizia per "Lotto ")
    */
   function extractProductionBatchData(json) {
-    const ricettaAttr = findAttribute(json.attributes, CONFIG.RECIPE_TRAIT_TYPE);
+    const codiceAttr = findAttribute(json.attributes, CONFIG.CODE_TRAIT_TYPE);
 
     const dateCandidates = json.attributes
       .filter(function (a) {
@@ -190,7 +195,7 @@
       });
 
     return {
-      ricetta: ricettaAttr ? String(ricettaAttr.value) : null,
+      codice: codiceAttr ? String(codiceAttr.value) : null,
       dateCandidates: dateCandidates, // [] impossibile qui: la validazione l'avrebbe già bloccato
       requiresDateSelection: dateCandidates.length > 1,
       lotReferences: lotReferences,

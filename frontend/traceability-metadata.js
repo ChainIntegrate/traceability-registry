@@ -69,7 +69,8 @@
    * è già quasi nel formato giusto — qui si riusano name/description/attributes
    * as-is (le righe "Lotto X" RESTANO nella metadata per leggibilità, anche
    * se il collegamento vero ora è on-chain via usedLotTokenIds) e si sostituisce
-   * solo l'immagine con quella della libreria (chiave: attributo "Ricetta").
+   * solo l'immagine con quella della libreria (chiave: attributo "Codice",
+   * rinominato da "Ricetta" per non essere legato al settore alimentare/birra).
    */
   function buildProductionBatchMetadata(originalBatchJson, photoLibraryEntry) {
     if (!originalBatchJson || !originalBatchJson.name || !Array.isArray(originalBatchJson.attributes)) {

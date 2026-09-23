@@ -273,7 +273,7 @@
     }
 
     const extracted = global.TraceabilityValidators.extractProductionBatchData(batchJson);
-    const photoEntry = resolvePhoto ? await Promise.resolve(resolvePhoto(extracted.ricetta)) : null;
+    const photoEntry = resolvePhoto ? await Promise.resolve(resolvePhoto(extracted.codice)) : null;
 
     const metadataObject = global.TraceabilityMetadata.buildProductionBatchMetadata(batchJson, photoEntry);
     const metadataJsonString = JSON.stringify(metadataObject);

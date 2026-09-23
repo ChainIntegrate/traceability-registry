@@ -125,11 +125,16 @@
    * elementi si distinguono per attributo data-token-id dentro il proprio
    * gridEl, non per id globale.
    */
-  // Solo queste chiavi diventano pillole "normali" (corrispondenza esatta
-  // chiave+valore) — tutto il resto (Nome, Quantità, e soprattutto ogni
+  // Elenco di default (schema Birra20Venti/"alimentare_bidata") — solo
+  // queste chiavi diventano pillole "normali" (corrispondenza esatta
+  // chiave+valore); tutto il resto (Nome, Quantità, e soprattutto ogni
   // "Lotto <ingrediente>" diverso per ogni batch) escluso apposta: con
   // decine di ingredienti diversi i filtri diventavano troppi da scorrere.
-  const ALLOWED_FACET_KEYS = ["Fornitore", "Data Acquisto", "Data Scadenza", "Ricetta", "Data Produzione", "Data Imbottigliamento"];
+  // Settori diversi passano il proprio elenco via il parametro `facetKeys`
+  // di createGalleryInstance (§48) — questo resta solo il fallback per chi
+  // non lo specifica, cosi le pagine esistenti continuano a funzionare
+  // identiche senza modifiche.
+  const DEFAULT_FACET_KEYS = ["Fornitore", "Data Acquisto", "Data Scadenza", "Codice", "Data Produzione", "Data Imbottigliamento"];
 
   /** Tutti i valori di lotto esistenti, aggregati attraverso qualunque
    * chiave "Lotto" o "Lotto <ingrediente>" — usati per popolare la pillola
@@ -147,7 +152,8 @@
     return values;
   }
 
-  function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate, onSetDocumentHash, listDocumentsForSelect }) {
+  function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate, onSetDocumentHash, listDocumentsForSelect, facetKeys }) {
+    const allowedFacetKeys = facetKeys || DEFAULT_FACET_KEYS;
     let currentCardDataById = {};
     let activeFilters = {};
     let lotSearchText = "";
@@ -166,7 +172,7 @@
     function renderFilters(cardDataById) {
       if (!filtersEl) return;
       const facets = collectFacets(cardDataById);
-      const allowedKeys = ALLOWED_FACET_KEYS.filter((k) => facets[k]);
+      const allowedKeys = allowedFacetKeys.filter((k) => facets[k]);
       const lotValues = collectLotValues(cardDataById);
       if (allowedKeys.length === 0 && lotValues.size === 0) { filtersEl.style.display = "none"; return; }
 
