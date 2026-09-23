@@ -1315,12 +1315,20 @@ ogni settore) è `ALLOWED_FACET_KEYS`, oggi costante interna non esposta in
    `SectorAssigned`, e un require in `deployRegistry` che blocca il deploy se
    `sectorOf[msg.sender] == bytes32(0)` (nessun effetto sul registry già
    esistente di Birra20Venti — vale solo per nuovi deploy da questo momento).
-   **Non ancora compilato/testato/deployato** — attenzione al margine EIP-170:
-   il Factory incorpora nel proprio bytecode il bytecode di creazione di
-   `TraceabilityRegistry` (succede sempre con `new X(...)` dentro un altro
-   contratto), quindi ogni bytecode aggiunto qui va verificato con
-   `npx hardhat compile` prima di procedere, come già successo con l'overflow
-   del §45 (risolto allora lato `TraceabilityRegistry.sol`, non lato Factory).
+   **Overflow EIP-170 (3° occorrenza) trovato e risolto**: `npx hardhat compile`
+   segnalava il Factory a 24923 byte (limite 24576) — stesso meccanismo delle
+   volte precedenti (il Factory incorpora nel proprio bytecode il bytecode di
+   creazione di `TraceabilityRegistry` via `new TraceabilityRegistry(...)`,
+   quindi cresce insieme a lui/alle proprie aggiunte). Risolto stavolta in
+   `hardhat.config.js`, non nel contratto: `viaIR` disattivato (non
+   risultava necessario per nessuno dei due file, verificato con una
+   compilazione locale fuori da Hardhat) e `optimizer.runs` abbassato da 200
+   a 1 (accettabile: le funzioni del Factory sono chiamate raramente, una
+   tantum per azienda, non un hot path di gas). **Confermato**: `npx hardhat
+   compile` ricompila 28 file senza alcun warning.
+   **Ancora da fare in questa fase**: deploy testnet del nuovo Factory,
+   verifica su Blockscout, aggiornamento `FACTORY_ADDRESS` nei tre file
+   frontend e nel `.env` del backend.
 3. Fase 2 — backend: arricchire `/api/traceability/registry/:address/entries`
    con `sector`, risolto via `registry.registryAdmin()` → `factory.sectorOf(...)`,
    stesso pattern difensivo try/catch già usato per `documentHash` (§45).
