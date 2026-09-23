@@ -65,6 +65,23 @@
 </div>
 
 <div class="card">
+  <h2 data-i18n="sector.title">Assegna settore</h2>
+  <p class="muted" data-i18n="sector.hint">Va fatto PRIMA che l'azienda possa fare deployRegistry() (nuovi deploy soltanto — non ha effetto retroattivo sui registry già esistenti).</p>
+  <div class="row"><label data-i18n="sector.address">Indirizzo azienda (Universal Profile)</label><input type="text" id="sectorAccountAddress" placeholder="0x..."></div>
+  <div class="row">
+    <label data-i18n="sector.select">Settore</label>
+    <select id="sectorSelect">
+      <option value="alimentare_monodata">alimentare_monodata</option>
+      <option value="alimentare_bidata">alimentare_bidata</option>
+      <option value="industria">industria</option>
+    </select>
+  </div>
+  <button class="primary" id="checkSectorBtn" data-i18n="sector.check">Controlla settore attuale</button>
+  <button class="primary" id="setSectorBtn" data-i18n="sector.assign">Assegna settore</button>
+  <div id="sectorInfo" class="muted"></div>
+</div>
+
+<div class="card">
   <h2><span data-i18n="registries.allTitle">Tutti i registry</span> (<span id="totalRegistries">0</span>)</h2>
   <button class="primary" id="loadRegistriesBtn" data-i18n="registries.load">Carica elenco</button>
   <div id="registriesTable"></div>
@@ -96,6 +113,14 @@ const I18N = {
     "factory.youAreOwner": "(sei tu)", "factory.notOwner": "(NON sei tu — le scritture falliranno)",
     "factory.readError": "Errore lettura Factory: {msg}", "factory.updated": "Factory.membershipCorporate aggiornato. Tx: {tx}",
     "factory.updateError": "Errore aggiornamento Factory: {msg}",
+    "sector.title": "Assegna settore",
+    "sector.hint": "Va fatto PRIMA che l'azienda possa fare deployRegistry() (nuovi deploy soltanto — non ha effetto retroattivo sui registry già esistenti).",
+    "sector.address": "Indirizzo azienda (Universal Profile)", "sector.select": "Settore",
+    "sector.check": "Controlla settore attuale", "sector.assign": "Assegna settore",
+    "sector.current": "Settore attuale per {addr}: {sector}", "sector.none": "Nessun settore assegnato per {addr}.",
+    "sector.checkError": "Errore lettura settore: {msg}",
+    "sector.assigned": "Settore \"{sector}\" assegnato a {addr}. Tx: {tx}",
+    "sector.assignError": "Errore assegnazione settore: {msg}",
     "registries.allTitle": "Tutti i registry", "registries.load": "Carica elenco", "registries.none": "Nessun registry ancora.",
     "registries.colIndex": "#", "registries.colAddress": "Indirizzo", "registries.loadError": "Errore caricamento registry: {msg}",
     "single.title": "Azioni su un singolo registry", "single.address": "Indirizzo registry",
@@ -124,6 +149,14 @@ const I18N = {
     "factory.youAreOwner": "(that's you)", "factory.notOwner": "(NOT you — writes will fail)",
     "factory.readError": "Factory read error: {msg}", "factory.updated": "Factory.membershipCorporate updated. Tx: {tx}",
     "factory.updateError": "Factory update error: {msg}",
+    "sector.title": "Assign sector",
+    "sector.hint": "Must be done BEFORE the company can call deployRegistry() (new deployments only — no retroactive effect on already-existing registries).",
+    "sector.address": "Company address (Universal Profile)", "sector.select": "Sector",
+    "sector.check": "Check current sector", "sector.assign": "Assign sector",
+    "sector.current": "Current sector for {addr}: {sector}", "sector.none": "No sector assigned for {addr}.",
+    "sector.checkError": "Sector read error: {msg}",
+    "sector.assigned": "Sector \"{sector}\" assigned to {addr}. Tx: {tx}",
+    "sector.assignError": "Sector assignment error: {msg}",
     "registries.allTitle": "All registries", "registries.load": "Load list", "registries.none": "No registries yet.",
     "registries.colIndex": "#", "registries.colAddress": "Address", "registries.loadError": "Registry load error: {msg}",
     "single.title": "Actions on a single registry", "single.address": "Registry address",
@@ -178,7 +211,18 @@ const FACTORY_ABI = [
   "function totalRegistries() view returns (uint256)",
   "function allRegistries(uint256) view returns (address)",
   "function setMembershipCorporate(address newMembershipCorporate) external",
+  "function sectorOf(address) view returns (bytes32)",
+  "function setSector(address account, bytes32 sector) external",
 ];
+
+// Settori noti (§48) — solo per la visualizzazione: dato un bytes32 letto
+// on-chain, prova a risalire al nome leggibile. Se domani si aggiunge un
+// settore, basta aggiungerlo qui E all'elenco <option> sopra.
+const KNOWN_SECTORS = ["alimentare_monodata", "alimentare_bidata", "industria"];
+function sectorLabel(bytes32Value) {
+  const known = KNOWN_SECTORS.find((name) => ethers.utils.id(name) === bytes32Value);
+  return known || bytes32Value;
+}
 
 const REGISTRY_ABI = [
   "function owner() view returns (address)",
@@ -256,6 +300,37 @@ document.getElementById("setFactoryMembershipBtn").addEventListener("click", asy
     await refreshFactoryInfo();
   } catch (err) {
     log(t("factory.updateError", { msg: err.message }));
+  }
+});
+
+document.getElementById("checkSectorBtn").addEventListener("click", async () => {
+  const addr = document.getElementById("sectorAccountAddress").value.trim();
+  if (!ethers.utils.isAddress(addr)) { alert(t("log.invalidAddress")); return; }
+  try {
+    const sector = await factory.sectorOf(addr);
+    const el = document.getElementById("sectorInfo");
+    if (!sector || /^0x0+$/.test(sector)) {
+      el.textContent = t("sector.none", { addr: addr });
+    } else {
+      el.textContent = t("sector.current", { addr: addr, sector: sectorLabel(sector) });
+    }
+  } catch (err) {
+    log(t("sector.checkError", { msg: err.message }));
+  }
+});
+
+document.getElementById("setSectorBtn").addEventListener("click", async () => {
+  const addr = document.getElementById("sectorAccountAddress").value.trim();
+  const sectorName = document.getElementById("sectorSelect").value;
+  if (!ethers.utils.isAddress(addr)) { alert(t("log.invalidAddress")); return; }
+  try {
+    const sectorBytes32 = ethers.utils.id(sectorName);
+    const tx = await factory.setSector(addr, sectorBytes32);
+    const receipt = await tx.wait();
+    log(t("sector.assigned", { sector: sectorName, addr: addr, tx: receipt.transactionHash }));
+    document.getElementById("sectorInfo").textContent = t("sector.current", { addr: addr, sector: sectorName });
+  } catch (err) {
+    log(t("sector.assignError", { msg: err.message }));
   }
 });
 

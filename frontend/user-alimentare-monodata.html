@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TraceabilityRegistry — Pannello Azienda</title>
+<link rel="icon" type="image/x-icon" href="./favicon.ico">
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<script src="./traceability-json-validators.js"></script>
+<script src="./traceability-tokenid.js"></script>
+<script src="./traceability-metadata.js"></script>
+<script src="./traceability-mint-compose.js"></script>
+<script src="./traceability-photo-library.js"></script>
+<script src="./traceability-document-library.js"></script>
+<script src="./traceability-decode.js"></script>
+<script src="./traceability-explorer-ui.js"></script>
+<link rel="stylesheet" href="./traceability-explorer-ui.css">
+<style>
+  :root { --powder-line: #e2e2e2; --ink-soft: #6b7280; --blueprint: #3454d1; }
+  body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
+  header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .site-logo { height: 72px; width: 72px; object-fit: contain; border-radius: 10px; flex-shrink: 0; }
+  .site-banner { display: block; max-height: 160px; width: auto; max-width: 100%; margin: 0 auto 16px; border-radius: 10px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .lang-toggle { display: flex; gap: 4px; }
+  .lang-btn { padding: 4px 10px; border: 1px solid #999; background: #f4f4f4; cursor: pointer; border-radius: 4px; font-size: 0.85rem; }
+  .lang-btn.active { background: #222; color: #fff; }
+  nav { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  nav button { padding: 8px 14px; border: 1px solid #999; background: #f4f4f4; cursor: pointer; border-radius: 6px; }
+  nav button.active { background: #222; color: #fff; }
+  section.tab { display: none; }
+  section.tab.active { display: block; }
+  .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+  .row { margin-bottom: 10px; }
+  label { display: block; font-weight: 600; margin-bottom: 4px; }
+  input[type=text], input[type=file], select, textarea { width: 100%; padding: 6px; box-sizing: border-box; }
+  button.primary { background: #0a6; color: #fff; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; }
+  button.secondary { background: #eee; color: #222; border: 1px solid #999; padding: 8px 14px; border-radius: 6px; cursor: pointer; margin-bottom: 10px; }
+  button.danger { background: #c33; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; font-size: 0.9rem; }
+  .warn { color: #a60; }
+  .ok { color: #0a6; }
+  .err { color: #c33; }
+  .muted { color: #777; font-size: 0.85rem; }
+  .subtabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .subtab-btn { padding: 6px 12px; border: 1px solid #999; background: #f8f8f8; cursor: pointer; border-radius: 6px; font-size: 0.85rem; }
+  .subtab-btn.active { background: #444; color: #fff; }
+  .subtab-content { display: none; }
+  .subtab-content.active { display: block; }
+  .material-row, .lot-row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .material-row input, .lot-row input { flex: 1; }
+  #log { white-space: pre-wrap; background: #111; color: #0f0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; max-height: 110px; overflow-y: auto; }
+</style>
+</head>
+<body>
+
+<img src="./banner._1800x1004.png" alt="" class="site-banner">
+
+<header>
+  <div class="header-left">
+    <img src="./logo_700x700.png" alt="TraceabilityRegistry" class="site-logo">
+    <h1>TraceabilityRegistry</h1>
+  </div>
+  <div class="header-right">
+    <div class="lang-toggle">
+      <button id="langItBtn" class="lang-btn active">IT</button>
+      <button id="langEnBtn" class="lang-btn">EN</button>
+    </div>
+    <span id="connectedAddress" class="muted"></span>
+    <button id="connectBtn" class="primary" data-i18n="connect.button">Connetti Universal Profile</button>
+    <button id="disconnectBtn" class="secondary" data-i18n="connect.disconnect" style="display:none;">Disconnetti</button>
+  </div>
+</header>
+
+<section id="registrySetup" style="display:none;">
+  <div class="card">
+    <h2 data-i18n="registries.title">I tuoi registri</h2>
+    <div id="registryList"></div>
+    <div id="deployRegistryForm" style="margin-top:14px;">
+      <div class="row"><label data-i18n="registries.name">Nome registro</label><input type="text" id="newRegistryName" data-i18n-placeholder="registries.namePlaceholder" placeholder="es. Birra20Venti Traceability"></div>
+      <div class="row"><label data-i18n="registries.symbol">Simbolo</label><input type="text" id="newRegistrySymbol" data-i18n-placeholder="registries.symbolPlaceholder" placeholder="es. B20VTR"></div>
+      <button class="primary" id="deployRegistryBtn" data-i18n="registries.create">Crea il mio registro</button>
+      <p class="muted" id="deployLimitNote"></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 data-i18n="delegateAccess.title">Sei un delegato su un altro registro?</h2>
+    <p class="muted" data-i18n="delegateAccess.hint">Se un'azienda ti ha delegato, il suo registro non compare sopra (quello mostra solo i registri creati da questo indirizzo) — inserisci qui l'indirizzo che ti è stato comunicato.</p>
+    <div class="row"><label data-i18n="delegateAccess.address">Indirizzo registry</label><input type="text" id="delegateAccessAddressInput" placeholder="0x..."></div>
+    <button class="secondary" id="delegateAccessConnectBtn" data-i18n="delegateAccess.connect">Connetti a questo registry</button>
+    <p class="muted" id="delegateAccessNote"></p>
+  </div>
+</section>
+
+<section id="app" style="display:none;">
+  <p class="muted"><span data-i18n="app.activeRegistry">Registro attivo:</span> <span id="activeRegistryAddress"></span> — <a href="#" id="changeRegistryLink" data-i18n="app.changeRegistry">cambia registro</a></p>
+
+  <nav>
+    <button data-tab="info" class="active" data-i18n="nav.info">Info registro</button>
+    <button data-tab="materie-prime" data-i18n="nav.rawMaterial">Materie prime</button>
+    <button data-tab="batch" data-i18n="nav.batch">Batch produzione</button>
+    <button data-tab="foto" data-i18n="nav.photos">Libreria foto</button>
+    <button data-tab="documenti" data-i18n="nav.documents">Libreria documenti</button>
+    <button data-tab="deleghe" data-i18n="nav.delegates">Deleghe</button>
+    <button data-tab="esplora" data-i18n="nav.explore">Esplora registro</button>
+  </nav>
+
+  <section class="tab active" id="tab-info">
+    <div class="card">
+      <h2 data-i18n="collection.currentTitle">Metadata attuali</h2>
+      <div id="currentCollectionHeader" class="te-collection-header"></div>
+      <p class="muted" id="currentCollectionEmpty" data-i18n="collection.currentEmpty">Nessun metadata di collezione impostato ancora.</p>
+    </div>
+    <div class="card">
+      <h2 data-i18n="collection.title">Metadata della collezione</h2>
+      <p class="muted" data-i18n="collection.description">Nome/descrizione/immagini visibili come "collezione" su universaleverything.io. Solo il registryAdmin può modificarli.</p>
+      <div class="row"><label data-i18n="collection.name">Nome</label><input type="text" id="collectionName"></div>
+      <div class="row"><label data-i18n="collection.desc">Descrizione</label><textarea id="collectionDescription" rows="2"></textarea></div>
+      <div class="row"><label data-i18n="collection.square">Immagine square (dalla libreria foto)</label><select id="collectionSquarePhoto"></select></div>
+      <div class="row"><label data-i18n="collection.banner">Banner (dalla libreria foto, opzionale)</label><select id="collectionBannerPhoto"><option value="" data-i18n="common.none">— nessuno —</option></select></div>
+      <button class="primary" id="saveCollectionMetadataBtn" data-i18n="collection.save">Salva metadata collezione</button>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-materie-prime">
+    <div class="card">
+      <h2 data-i18n="rm.title">Acquisto materie prime</h2>
+      <div class="subtabs">
+        <button class="subtab-btn active" data-subtab="rm-upload" data-i18n="mode.upload">Carica JSON</button>
+        <button class="subtab-btn" data-subtab="rm-manual" data-i18n="mode.manual">Compila manualmente</button>
+      </div>
+      <div class="subtab-content active" id="rm-upload">
+        <input type="file" id="rawMaterialJsonInput" accept="application/json">
+      </div>
+      <div class="subtab-content" id="rm-manual">
+        <div class="row"><label data-i18n="rm.fornitore">Fornitore</label><input type="text" id="rmFornitoreInput"></div>
+        <div class="row"><label data-i18n="rm.dataAcquisto">Data acquisto (GG/MM/AAAA)</label><input type="text" id="rmDataAcquistoInput" placeholder="09/07/2026"></div>
+        <div id="rmMaterialRows"></div>
+        <button type="button" class="secondary" id="rmAddRowBtn" data-i18n="rm.addRow">+ Aggiungi materiale</button>
+        <br>
+        <button class="primary" id="rmBuildJsonBtn" data-i18n="common.generatePreview">Genera anteprima</button>
+      </div>
+      <div id="rawMaterialPreview"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-batch">
+    <div class="card">
+      <h2 data-i18n="batch.title">Batch di produzione</h2>
+      <div class="subtabs">
+        <button class="subtab-btn active" data-subtab="batch-upload" data-i18n="mode.upload">Carica JSON</button>
+        <button class="subtab-btn" data-subtab="batch-manual" data-i18n="mode.manual">Compila manualmente</button>
+      </div>
+      <div class="subtab-content active" id="batch-upload">
+        <input type="file" id="batchJsonInput" accept="application/json">
+      </div>
+      <div class="subtab-content" id="batch-manual">
+        <div class="row"><label data-i18n="batch.nome">Nome batch</label><input type="text" id="batchNomeInput" placeholder="Batch #131"></div>
+        <div class="row"><label data-i18n="batch.descrizione">Descrizione</label><input type="text" id="batchDescInput"></div>
+        <div class="row"><label data-i18n="batch.codice">Codice</label><input type="text" id="batchCodiceInput"></div>
+        <div class="row"><label data-i18n="batch.dataProduzione">Data produzione</label><input type="text" id="batchDataProduzioneInput" placeholder="25-07-2026"></div>
+        <p class="muted" data-i18n="batch.lotsHint">Lotti materie prime usate (facoltativo, per il matching automatico):</p>
+        <div id="batchLotRows"></div>
+        <button type="button" class="secondary" id="batchAddLotBtn" data-i18n="batch.addLot">+ Aggiungi lotto ingrediente</button>
+        <br>
+        <button class="primary" id="batchBuildJsonBtn" data-i18n="common.generatePreview">Genera anteprima</button>
+      </div>
+      <div id="batchPreview"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-foto">
+    <div class="card">
+      <h2 data-i18n="photos.title">Libreria foto</h2>
+      <div class="row"><label data-i18n="photos.label">Etichetta</label><input type="text" id="photoLabel" data-i18n-placeholder="photos.labelPlaceholder" placeholder="es. Venti24, o Fornitore"></div>
+      <div class="row"><label data-i18n="photos.file">File</label><input type="file" id="photoFileInput" accept="image/png,image/jpeg,image/webp"></div>
+      <button class="primary" id="uploadPhotoBtn" data-i18n="photos.upload">Carica</button>
+      <p id="photoUploadGateNote" class="muted" style="display:none;" data-i18n="photos.suspendedNote">Membership sospesa: upload disabilitato.</p>
+      <div id="photoLibraryList" style="margin-top:14px;"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-documenti">
+    <div class="card">
+      <h2 data-i18n="documents.title">Libreria documenti</h2>
+      <p class="muted" data-i18n="documents.hint">Certificati, DDT e altri documenti collegabili a materie prime/batch tramite hash on-chain (richiede tier Gold per la registrazione dell'hash al momento del mint).</p>
+      <div class="row"><label data-i18n="documents.label">Etichetta</label><input type="text" id="documentLabel" data-i18n-placeholder="documents.labelPlaceholder" placeholder="es. Certificato spedizione 12/09/2026"></div>
+      <div class="row"><label data-i18n="documents.file">File</label><input type="file" id="documentFileInput" accept="application/pdf,image/png,image/jpeg,image/webp"></div>
+      <button class="primary" id="uploadDocumentBtn" data-i18n="documents.upload">Carica</button>
+      <div id="documentLibraryList" style="margin-top:14px;"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-deleghe">
+    <div class="card">
+      <h2 data-i18n="delegates.title">Deleghe</h2>
+      <p class="muted"><span data-i18n="delegates.requirement">Richiede tier Silver o superiore sulla Membership Corporate.</span> <span id="tierNote"></span></p>
+      <div id="delegatesList"></div>
+      <div class="row"><label data-i18n="delegates.address">Indirizzo UP</label><input type="text" id="delegateAddressInput" placeholder="0x..."></div>
+      <button class="primary" id="addDelegateBtn" data-i18n="delegates.add">Aggiungi delega</button>
+      <button class="danger" id="removeDelegateBtn" data-i18n="delegates.remove">Rimuovi delega</button>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-esplora">
+    <div class="card">
+      <h2 data-i18n="nav.explore">Esplora registro</h2>
+      <p class="muted" data-i18n="explore.hint">Stessa visualizzazione pubblica di explorer.html, qui per un controllo rapido senza uscire dal pannello.</p>
+      <div id="exploreCollectionHeader" class="te-collection-header"></div>
+      <div id="exploreStatus" class="muted"></div>
+      <div id="exploreFilters" class="te-filters"></div>
+      <div id="exploreGrid" class="te-grid"></div>
+    </div>
+  </section>
+</section>
+
+<pre id="log"></pre>
+
+<script>
+// -----------------------------------------------------------------------
+// Override settore (§48): "alimentare_monodata" ha una sola data
+// riconosciuta per i batch di produzione (a differenza di
+// "alimentare_bidata", che ne ha due — produzione + imbottigliamento).
+// TraceabilityValidators.CONFIG è pensato per essere mutato così, pagina
+// per pagina, senza duplicare traceability-json-validators.js.
+// -----------------------------------------------------------------------
+TraceabilityValidators.CONFIG.RECOGNIZED_DATE_TRAIT_TYPES_BATCH = ["Data Produzione"];
+
+// -----------------------------------------------------------------------
+// i18n — dizionario + pulsanti sempre visibili (nessun autorilevamento)
+// -----------------------------------------------------------------------
+const I18N = {
+  it: {
+    "connect.button": "Connetti Universal Profile", "connect.connected": "Connesso",
+    "connect.disconnect": "Disconnetti",
+    "footer.rights": "© 2026 Chain Integrate — Tutti i diritti riservati.",
+    "footer.consulting": "Servizi di consulenza in integrazione dati & blockchain a cura di ChainIntegrate",
+    "footer.telegram": "Assistenza via Telegram",
+    "common.backToEdit": "Torna a modifica",
+    "registries.title": "I tuoi registri", "registries.name": "Nome registro",
+    "registries.namePlaceholder": "es. Birra20Venti Traceability", "registries.symbol": "Simbolo",
+    "registries.symbolPlaceholder": "es. B20VTR", "registries.create": "Crea il mio registro",
+    "registries.none": "Nessun registro ancora. Creane uno sotto.",
+    "registries.loadingNames": "Caricamento nomi registri...",
+    "registries.usage": "Registri usati: {used} / {limit} (tier attuale: {tier})",
+    "registries.needBoth": "Nome e simbolo obbligatori.",
+    "delegateAccess.title": "Sei un delegato su un altro registro?",
+    "delegateAccess.hint": "Se un'azienda ti ha delegato, il suo registro non compare sopra (quello mostra solo i registri creati da questo indirizzo) — inserisci qui l'indirizzo che ti è stato comunicato.",
+    "delegateAccess.address": "Indirizzo registry", "delegateAccess.connect": "Connetti a questo registry",
+    "delegateAccess.notAuthorized": "Attenzione: questo indirizzo non risulta autorizzato (né registryAdmin né delegato) su questo registry — potrai comunque vederlo, ma le operazioni di scrittura falliranno.",
+    "delegateAccess.invalidRegistry": "Indirizzo non valido come TraceabilityRegistry: {msg}",
+    "app.activeRegistry": "Registro attivo:", "app.changeRegistry": "cambia registro",
+    "nav.info": "Info registro", "nav.rawMaterial": "Materie prime", "nav.batch": "Batch produzione",
+    "nav.photos": "Libreria foto", "nav.documents": "Libreria documenti", "nav.delegates": "Deleghe", "nav.explore": "Esplora registro",
+    "collection.currentTitle": "Metadata attuali", "collection.currentEmpty": "Nessun metadata di collezione impostato ancora.",
+    "collection.currentLoadError": "Impossibile caricare i metadata attuali: {msg}",
+    "explore.hint": "Stessa visualizzazione pubblica di explorer.html, qui per un controllo rapido senza uscire dal pannello.",
+    "status.loading": "Caricamento...", "status.error": "Errore: {msg}",
+    "status.empty": "Nessuna registrazione ancora per questo registry.",
+    "status.noMatch": "Nessuna scheda corrisponde ai filtri selezionati.",
+    "filters.clear": "Cancella filtri",
+    "filters.lotSearchPlaceholder": "Cerca per numero di lotto (qualunque ingrediente)...",
+    "badge.lot": "Materia prima", "badge.batch": "Batch", "badge.invalidated": "Annullato",
+    "card.usedLots": "Lotti utilizzati", "card.noImage": "Nessuna immagine",
+    "card.invalidationReasonLabel": "Motivo:",
+    "card.invalidateButton": "Annulla", "card.invalidating": "Annullamento in corso...",
+    "card.invalidateReasonPrompt": "Motivo dell'annullamento (visibile pubblicamente e non modificabile):",
+    "card.invalidateError": "Errore annullamento: {msg}",
+    "card.setDocumentHashButton": "Registra hash documento", "card.settingDocumentHash": "Registrazione in corso...",
+    "card.setDocumentHashNeedFile": "Seleziona prima un file.",
+    "card.setDocumentHashSuccess": "Hash del documento registrato on-chain.",
+    "card.setDocumentHashError": "Errore registrazione hash: {msg}",
+    "card.documentHashBadge": "Documento registrato",
+    "card.verifyButton": "Verifica un file", "card.verifyMatch": "✓ Il file corrisponde.",
+    "card.verifyMismatch": "✗ Il file NON corrisponde.", "card.verifyError": "Errore verifica: {msg}",
+    "card.setDocumentHashNeedSelection": "Seleziona prima un documento dalla libreria.",
+    "card.documentListError": "Errore caricamento libreria: {msg}",
+    "common.loadingDocuments": "Caricamento documenti...",
+    "log.invalidating": "Annullamento token {tokenId} in corso...",
+    "log.invalidated": "Registrazione annullata. Riferimento: {tx}",
+    "log.settingDocumentHash": "Registrazione hash documento per {tokenId} in corso...",
+    "log.documentHashSet": "Hash documento registrato ({hash}). Riferimento: {tx}",
+    "collection.title": "Metadata della collezione",
+    "collection.description": "Nome/descrizione/immagini visibili come \"collezione\" su universaleverything.io. Solo il registryAdmin può modificarli.",
+    "collection.name": "Nome", "collection.desc": "Descrizione",
+    "collection.square": "Immagine square (dalla libreria foto)", "collection.banner": "Banner (dalla libreria foto, opzionale)",
+    "collection.save": "Salva metadata collezione",
+    "common.none": "— nessuno —", "common.noneF": "— nessuna —", "common.generatePreview": "Genera anteprima",
+    "mode.upload": "Carica JSON", "mode.manual": "Compila manualmente",
+    "rm.title": "Acquisto materie prime", "rm.fornitore": "Fornitore", "rm.dataAcquisto": "Data acquisto (GG/MM/AAAA)",
+    "rm.addRow": "+ Aggiungi materiale", "rm.nome": "Nome", "rm.quantita": "Quantità", "rm.lotto": "Lotto",
+    "rm.scadenzaOpz": "Scadenza (opzionale)", "rm.errFornitoreData": "Fornitore e data acquisto obbligatori.",
+    "rm.summary": "Fornitore: {fornitore} — Data: {data}",
+    "rm.photoLabel": "Foto (libreria, per fornitore)", "rm.confirmMint": "Conferma e registra ({n} lotti, una firma)",
+    "rm.composing": "Preparazione della registrazione in corso ({n} lotti)...",
+    "rm.signing": "Registrazione in corso...", "rm.done": "Registrazione completata. Riferimento: {tx}",
+    "rm.doneShort": "Fatto — {n} lotti registrati (rif. {tx}...).",
+    "rm.mintError": "Errore registrazione materie prime: {msg}", "common.readErrors": "Errori: {errs}",
+    "common.readFileError": "Errore lettura file: {msg}",
+    "batch.title": "Batch di produzione", "batch.nome": "Nome batch", "batch.descrizione": "Descrizione",
+    "batch.codice": "Codice", "batch.dataProduzione": "Data produzione",
+    "batch.lotsHint": "Lotti materie prime usate (facoltativo, per il matching automatico):",
+    "batch.addLot": "+ Aggiungi lotto ingrediente", "batch.ingrediente": "Nome ingrediente", "batch.lottoValore": "Valore lotto",
+    "batch.errNomeRicetta": "Nome batch e codice obbligatori.", "batch.errAlmenoUnaData": "Serve la data di produzione.",
+    "batch.summary": "Codice: {codice}", "batch.chooseDate": "Quale data usare per l'ordinamento?",
+    "batch.matching": "Matching lotti in corso...", "batch.matchingTitle": "Matching lotti",
+    "batch.colIngrediente": "Ingrediente", "batch.colLotto": "Lotto", "batch.colEsito": "Esito",
+    "batch.found": "trovato", "batch.notFound": "NON trovato — resterà solo testo",
+    "batch.photoLabel": "Foto (libreria, per codice)", "batch.confirmMint": "Conferma e registra",
+    "batch.composing": "Preparazione della registrazione del batch in corso...", "batch.done": "Registrazione completata. Riferimento: {tx}",
+    "batch.doneShort": "Fatto — batch registrato (rif. {tx}...).", "batch.mintError": "Errore registrazione batch: {msg}",
+    "photos.title": "Libreria foto", "photos.label": "Etichetta", "photos.labelPlaceholder": "es. Venti24, o Fornitore",
+    "photos.file": "File", "photos.upload": "Carica", "photos.none": "Nessuna foto ancora.",
+    "photos.colLabel": "Etichetta", "photos.colCid": "CID", "photos.colDims": "Dimensioni", "photos.hide": "Nascondi",
+    "photos.download": "Scarica",
+    "photos.listError": "Impossibile caricare la libreria foto: {msg}", "photos.uploading": "Upload foto in corso...",
+    "photos.uploaded": "Foto caricata.", "photos.uploadError": "Errore upload foto: {msg}",
+    "photos.needBoth": "Etichetta e file obbligatori.", "photos.hideError": "Errore nascondi foto: {msg}",
+    "photos.suspendedNote": "Membership sospesa: upload disabilitato.",
+    "documents.title": "Libreria documenti", "documents.hint": "Certificati, DDT e altri documenti collegabili a materie prime/batch tramite hash on-chain (richiede tier Gold per la registrazione dell'hash al momento del mint).",
+    "documents.label": "Etichetta", "documents.labelPlaceholder": "es. Certificato spedizione 12/09/2026",
+    "documents.file": "File", "documents.upload": "Carica", "documents.none": "Nessun documento ancora.",
+    "documents.colLabel": "Etichetta", "documents.colCid": "CID", "documents.colFile": "File originale", "documents.hide": "Nascondi",
+    "documents.download": "Scarica",
+    "documents.listError": "Impossibile caricare la libreria documenti: {msg}", "documents.uploading": "Upload documento in corso...",
+    "documents.uploaded": "Documento caricato.", "documents.uploadError": "Errore upload documento: {msg}",
+    "documents.needBoth": "Etichetta e file obbligatori.", "documents.hideError": "Errore nascondi documento: {msg}",
+    "documents.selectLabel": "Documento (libreria, opzionale — richiede tier Gold)",
+    "documents.hashAttachError": "Registrazione avvenuta, ma la registrazione dell'hash documento è fallita (verifica il tier Gold): {msg}",
+    "log.documentHashBatchSet": "Hash documento registrato su {n} lotti ({hash}). Riferimento: {tx}",
+    "delegates.title": "Deleghe", "delegates.requirement": "Richiede tier Silver o superiore sulla Membership Corporate.",
+    "delegates.tierNote": "Tier registryAdmin: {tier} ({status})", "delegates.enabled": "deleghe abilitate",
+    "delegates.needSilver": "serve Silver o superiore", "delegates.address": "Indirizzo UP",
+    "delegates.add": "Aggiungi delega", "delegates.remove": "Rimuovi delega", "delegates.none": "Nessuna delega attiva.",
+    "delegates.colAddress": "Indirizzo delegato", "delegates.listError": "Impossibile caricare le deleghe: {msg}",
+    "delegates.invalidAddress": "Indirizzo non valido.", "delegates.added": "Delega aggiunta. Riferimento: {tx}",
+    "delegates.removed": "Delega rimossa. Riferimento: {tx}", "delegates.addError": "Errore aggiunta delega: {msg}",
+    "delegates.removeError": "Errore rimozione delega: {msg}",
+    "log.noExtension": "Nessuna Universal Profile extension rilevata.",
+    "log.connectRejected": "Connessione rifiutata o annullata: {msg}",
+    "log.noAccountAuthorized": "Nessun account autorizzato — apri l'estensione della Universal Profile e riprova (controlla che non sia bloccata/minimizzata o che il popup non sia stato chiuso).",
+    "log.deploying": "Creazione registro in corso...", "log.deployed": "Registro creato. Riferimento: {tx}",
+    "log.deployError": "Errore deploy registro: {msg}", "log.tierReadError": "Impossibile leggere il tier: {msg}",
+    "log.tierDelegatesError": "Impossibile leggere il tier per le deleghe: {msg}",
+    "log.pinningCollection": "Salvataggio immagini in corso...", "log.writingOnChain": "Salvataggio in corso...",
+    "log.collectionUpdated": "Metadata collezione aggiornata. Tx: {tx}", "log.collectionError": "Errore metadata collezione: {msg}",
+  },
+  en: {
+    "connect.button": "Connect Universal Profile", "connect.connected": "Connected",
+    "connect.disconnect": "Disconnect",
+    "footer.rights": "© 2026 Chain Integrate — All rights reserved.",
+    "footer.consulting": "Data integration & blockchain consulting services by ChainIntegrate",
+    "footer.telegram": "Support via Telegram",
+    "common.backToEdit": "Back to edit",
+    "registries.title": "Your registries", "registries.name": "Registry name",
+    "registries.namePlaceholder": "e.g. Birra20Venti Traceability", "registries.symbol": "Symbol",
+    "registries.symbolPlaceholder": "e.g. B20VTR", "registries.create": "Create my registry",
+    "registries.none": "No registry yet. Create one below.",
+    "registries.loadingNames": "Loading registry names...",
+    "registries.usage": "Registries used: {used} / {limit} (current tier: {tier})",
+    "registries.needBoth": "Name and symbol are required.",
+    "delegateAccess.title": "Are you a delegate on another registry?",
+    "delegateAccess.hint": "If a company delegated you, their registry won't appear above (that only shows registries created by this address) — enter the address they gave you.",
+    "delegateAccess.address": "Registry address", "delegateAccess.connect": "Connect to this registry",
+    "delegateAccess.notAuthorized": "Warning: this address is not authorized (neither registryAdmin nor delegate) on this registry — you can still view it, but write operations will fail.",
+    "delegateAccess.invalidRegistry": "Not a valid TraceabilityRegistry address: {msg}",
+    "app.activeRegistry": "Active registry:", "app.changeRegistry": "change registry",
+    "nav.info": "Registry info", "nav.rawMaterial": "Raw materials", "nav.batch": "Production batch",
+    "nav.photos": "Photo library", "nav.documents": "Document library", "nav.delegates": "Delegates", "nav.explore": "Explore registry",
+    "collection.currentTitle": "Current metadata", "collection.currentEmpty": "No collection metadata set yet.",
+    "collection.currentLoadError": "Could not load current metadata: {msg}",
+    "explore.hint": "Same public view as explorer.html, here for a quick check without leaving the panel.",
+    "status.loading": "Loading...", "status.error": "Error: {msg}",
+    "status.empty": "No entries yet for this registry.",
+    "status.noMatch": "No cards match the selected filters.",
+    "filters.clear": "Clear filters",
+    "filters.lotSearchPlaceholder": "Search by lot number (any ingredient)...",
+    "badge.lot": "Raw material", "badge.batch": "Batch", "badge.invalidated": "Invalidated",
+    "card.usedLots": "Lots used", "card.noImage": "No image",
+    "card.invalidationReasonLabel": "Reason:",
+    "card.invalidateButton": "Invalidate", "card.invalidating": "Invalidating...",
+    "card.invalidateReasonPrompt": "Reason for invalidation (publicly visible, cannot be changed):",
+    "card.invalidateError": "Invalidation error: {msg}",
+    "card.setDocumentHashButton": "Register document hash", "card.settingDocumentHash": "Registering...",
+    "card.setDocumentHashNeedFile": "Select a file first.",
+    "card.setDocumentHashSuccess": "Document hash registered on-chain.",
+    "card.setDocumentHashError": "Hash registration error: {msg}",
+    "card.documentHashBadge": "Document registered",
+    "card.verifyButton": "Verify a file", "card.verifyMatch": "✓ The file matches.",
+    "card.verifyMismatch": "✗ The file does NOT match.", "card.verifyError": "Verification error: {msg}",
+    "card.setDocumentHashNeedSelection": "Select a document from the library first.",
+    "card.documentListError": "Library load error: {msg}",
+    "common.loadingDocuments": "Loading documents...",
+    "log.invalidating": "Invalidating token {tokenId}...",
+    "log.invalidated": "Invalidated. Reference: {tx}",
+    "log.settingDocumentHash": "Registering document hash for {tokenId}...",
+    "log.documentHashSet": "Document hash registered ({hash}). Reference: {tx}",
+    "collection.title": "Collection metadata",
+    "collection.description": "Name/description/images shown as the \"collection\" on universaleverything.io. Only the registryAdmin can edit these.",
+    "collection.name": "Name", "collection.desc": "Description",
+    "collection.square": "Square image (from photo library)", "collection.banner": "Banner (from photo library, optional)",
+    "collection.save": "Save collection metadata",
+    "common.none": "— none —", "common.noneF": "— none —", "common.generatePreview": "Generate preview",
+    "mode.upload": "Upload JSON", "mode.manual": "Fill in manually",
+    "rm.title": "Raw material purchase", "rm.fornitore": "Supplier", "rm.dataAcquisto": "Purchase date (DD/MM/YYYY)",
+    "rm.addRow": "+ Add material", "rm.nome": "Name", "rm.quantita": "Quantity", "rm.lotto": "Lot",
+    "rm.scadenzaOpz": "Expiry (optional)", "rm.errFornitoreData": "Supplier and purchase date are required.",
+    "rm.summary": "Supplier: {fornitore} — Date: {data}",
+    "rm.photoLabel": "Photo (library, per supplier)", "rm.confirmMint": "Confirm and register ({n} lots, one signature)",
+    "rm.composing": "Preparing the registration ({n} lots)...",
+    "rm.signing": "Registering...", "rm.done": "Registration completed. Reference: {tx}",
+    "rm.doneShort": "Done — {n} lots registered (ref. {tx}...).",
+    "rm.mintError": "Raw material registration error: {msg}", "common.readErrors": "Errors: {errs}",
+    "common.readFileError": "File read error: {msg}",
+    "batch.title": "Production batch", "batch.nome": "Batch name", "batch.descrizione": "Description",
+    "batch.codice": "Code", "batch.dataProduzione": "Production date",
+    "batch.lotsHint": "Raw material lots used (optional, for automatic matching):",
+    "batch.addLot": "+ Add ingredient lot", "batch.ingrediente": "Ingredient name", "batch.lottoValore": "Lot value",
+    "batch.errNomeRicetta": "Batch name and code are required.", "batch.errAlmenoUnaData": "Production date is required.",
+    "batch.summary": "Code: {codice}", "batch.chooseDate": "Which date should be used for ordering?",
+    "batch.matching": "Matching lots...", "batch.matchingTitle": "Lot matching",
+    "batch.colIngrediente": "Ingredient", "batch.colLotto": "Lot", "batch.colEsito": "Result",
+    "batch.found": "found", "batch.notFound": "NOT found — will stay as text only",
+    "batch.photoLabel": "Photo (library, by code)", "batch.confirmMint": "Confirm and register",
+    "batch.composing": "Preparing the batch registration...", "batch.done": "Registration completed. Reference: {tx}",
+    "batch.doneShort": "Done — batch registered (ref. {tx}...).", "batch.mintError": "Batch registration error: {msg}",
+    "photos.title": "Photo library", "photos.label": "Label", "photos.labelPlaceholder": "e.g. Venti24, or Supplier",
+    "photos.file": "File", "photos.upload": "Upload", "photos.none": "No photos yet.",
+    "photos.colLabel": "Label", "photos.colCid": "CID", "photos.colDims": "Dimensions", "photos.hide": "Hide",
+    "photos.download": "Download",
+    "photos.listError": "Could not load photo library: {msg}", "photos.uploading": "Uploading photo...",
+    "photos.uploaded": "Photo uploaded.", "photos.uploadError": "Photo upload error: {msg}",
+    "photos.needBoth": "Label and file are required.", "photos.hideError": "Hide photo error: {msg}",
+    "photos.suspendedNote": "Membership suspended: upload disabled.",
+    "documents.title": "Document library", "documents.hint": "Certificates, delivery notes and other documents linkable to raw materials/batches via on-chain hash (requires Gold tier to register the hash at mint time).",
+    "documents.label": "Label", "documents.labelPlaceholder": "e.g. Shipment certificate 12/09/2026",
+    "documents.file": "File", "documents.upload": "Upload", "documents.none": "No documents yet.",
+    "documents.colLabel": "Label", "documents.colCid": "CID", "documents.colFile": "Original file", "documents.hide": "Hide",
+    "documents.download": "Download",
+    "documents.listError": "Could not load document library: {msg}", "documents.uploading": "Uploading document...",
+    "documents.uploaded": "Document uploaded.", "documents.uploadError": "Document upload error: {msg}",
+    "documents.needBoth": "Label and file are required.", "documents.hideError": "Hide document error: {msg}",
+    "documents.selectLabel": "Document (library, optional — requires Gold tier)",
+    "documents.hashAttachError": "Registration succeeded, but registering the document hash failed (check the Gold tier): {msg}",
+    "log.documentHashBatchSet": "Document hash registered on {n} lots ({hash}). Reference: {tx}",
+    "delegates.title": "Delegates", "delegates.requirement": "Requires Silver tier or higher on the Membership Corporate.",
+    "delegates.tierNote": "registryAdmin tier: {tier} ({status})", "delegates.enabled": "delegation enabled",
+    "delegates.needSilver": "Silver or higher required", "delegates.address": "UP address",
+    "delegates.add": "Add delegate", "delegates.remove": "Remove delegate", "delegates.none": "No active delegates.",
+    "delegates.colAddress": "Delegate address", "delegates.listError": "Could not load delegates: {msg}",
+    "delegates.invalidAddress": "Invalid address.", "delegates.added": "Delegate added. Reference: {tx}",
+    "delegates.removed": "Delegate removed. Reference: {tx}", "delegates.addError": "Add delegate error: {msg}",
+    "delegates.removeError": "Remove delegate error: {msg}",
+    "log.noExtension": "No Universal Profile extension detected.",
+    "log.connectRejected": "Connection rejected or cancelled: {msg}",
+    "log.noAccountAuthorized": "No account authorized — open the Universal Profile extension and try again (check it isn't blocked/minimized or that the popup wasn't closed).",
+    "log.deploying": "Creating registry...", "log.deployed": "Registry created. Reference: {tx}",
+    "log.deployError": "Registry deploy error: {msg}", "log.tierReadError": "Could not read tier: {msg}",
+    "log.tierDelegatesError": "Could not read tier for delegates: {msg}",
+    "log.pinningCollection": "Saving images...", "log.writingOnChain": "Saving...",
+    "log.collectionUpdated": "Collection metadata updated. Tx: {tx}", "log.collectionError": "Collection metadata error: {msg}",
+  },
+};
+
+let currentLang = localStorage.getItem("traceabilityLang") || "it";
+
+function t(key, params) {
+  const dict = I18N[currentLang] || I18N.it;
+  let str = dict[key] !== undefined ? dict[key] : (I18N.it[key] !== undefined ? I18N.it[key] : key);
+  if (params) {
+    Object.keys(params).forEach((k) => { str = str.split("{" + k + "}").join(params[k]); });
+  }
+  return str;
+}
+
+function applyLanguage() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+  document.getElementById("langItBtn").classList.toggle("active", currentLang === "it");
+  document.getElementById("langEnBtn").classList.toggle("active", currentLang === "en");
+  if (connectBtnConnected) document.getElementById("connectBtn").textContent = t("connect.connected");
+}
+
+let connectBtnConnected = false;
+
+document.getElementById("langItBtn").addEventListener("click", () => { currentLang = "it"; localStorage.setItem("traceabilityLang", "it"); applyLanguage(); });
+document.getElementById("langEnBtn").addEventListener("click", () => { currentLang = "en"; localStorage.setItem("traceabilityLang", "en"); applyLanguage(); });
+
+// -----------------------------------------------------------------------
+// Configurazione — TODO: aggiornare per mainnet
+// -----------------------------------------------------------------------
+const CONFIG = {
+  FACTORY_ADDRESS: "0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9",
+  BACKEND_BASE_URL: "https://traceability.chainintegrate.it",
+};
+
+const FACTORY_ABI = [
+  "function deployRegistry(string name_, string symbol_) external returns (address)",
+  "function getRegistries(address company) view returns (address[])",
+  "function registryCountOf(address company) view returns (uint256)",
+  "function membershipCorporate() view returns (address)",
+  "function maxRegistriesForTier(uint256 tier) pure returns (uint256)",
+];
+
+const REGISTRY_ABI = [
+  "function owner() view returns (address)",
+  "function registryAdmin() view returns (address)",
+  "function membershipCorporate() view returns (address)",
+  "function delegates(address) view returns (bool)",
+  "function isAuthorized(address) view returns (bool)",
+  "function setRegistryMetadata(bytes lsp4MetadataValue) external",
+  "function addDelegate(address delegate) external",
+  "function removeDelegate(address delegate) external",
+  "function mintRawMaterialLotBatch(bytes32[] tokenIds, bytes[] lsp4MetadataValues, uint256[] indexDates) external",
+  "function mintProductionBatch(bytes32 tokenId, bytes lsp4MetadataValue, bytes32[] usedLotTokenIds, uint256 indexDate) external",
+  "function invalidateEntry(bytes32 tokenId, string reason) external",
+  "function setDocumentHash(bytes32 tokenId, bytes32 documentHash) external",
+  "function setDocumentHashBatch(bytes32[] tokenIds, bytes32 documentHash) external",
+];
+
+const MEMBERSHIP_ABI = ["function tierOf(address account) view returns (uint256)"];
+
+let provider, signer, myAddress, factory, activeRegistryAddress, activeRegistry;
+let activeRegistryTier = null;
+
+const LOG_MAX_LINES = 5;
+let logLines = [];
+
+function log(msg) {
+  logLines.push(msg);
+  if (logLines.length > LOG_MAX_LINES) logLines = logLines.slice(-LOG_MAX_LINES);
+  const el = document.getElementById("log");
+  el.textContent = logLines.join("\n");
+  el.scrollTop = el.scrollHeight;
+  console.log(msg);
+}
+
+// -----------------------------------------------------------------------
+// Connessione UP
+// -----------------------------------------------------------------------
+document.getElementById("connectBtn").addEventListener("click", async () => {
+  const injected = window.lukso || window.ethereum;
+  if (!injected) {
+    alert(t("log.noExtension"));
+    return;
+  }
+  provider = new ethers.providers.Web3Provider(injected);
+
+  let accounts;
+  try {
+    accounts = await provider.send("eth_requestAccounts", []);
+  } catch (err) {
+    alert(t("log.connectRejected", { msg: err.message }));
+    return;
+  }
+  if (!accounts || accounts.length === 0) {
+    // Capita se l'estensione non mostra il popup di autorizzazione (o viene
+    // ignorato/chiuso) — senza questo controllo esplicito, l'errore emerge
+    // solo dopo, criptico, sparso in più punti del pannello
+    // ("unknown account #0", da ethers, non da un problema nostro).
+    alert(t("log.noAccountAuthorized"));
+    return;
+  }
+
+  signer = provider.getSigner();
+  try {
+    myAddress = await signer.getAddress();
+  } catch (err) {
+    alert(t("log.noAccountAuthorized"));
+    return;
+  }
+
+  document.getElementById("connectedAddress").textContent = myAddress;
+  connectBtnConnected = true;
+  document.getElementById("connectBtn").textContent = t("connect.connected");
+  document.getElementById("connectBtn").style.display = "none";
+  document.getElementById("disconnectBtn").style.display = "inline-block";
+  factory = new ethers.Contract(CONFIG.FACTORY_ADDRESS, FACTORY_ABI, signer);
+  document.getElementById("registrySetup").style.display = "block";
+  await loadMyRegistries();
+});
+
+document.getElementById("disconnectBtn").addEventListener("click", () => {
+  // Non esiste un modo universale per revocare davvero il collegamento lato
+  // wallet (varia da estensione a estensione) — qui si azzera lo stato
+  // dell'app e si torna al punto di partenza, come "disconnetti" in
+  // qualunque dApp: se si vuole revocare anche dal lato dell'estensione,
+  // va fatto da lì.
+  provider = undefined;
+  signer = undefined;
+  myAddress = undefined;
+  factory = undefined;
+  activeRegistryAddress = undefined;
+  activeRegistry = undefined;
+  connectBtnConnected = false;
+
+  document.getElementById("connectedAddress").textContent = "";
+  document.getElementById("connectBtn").textContent = t("connect.button");
+  document.getElementById("connectBtn").style.display = "inline-block";
+  document.getElementById("disconnectBtn").style.display = "none";
+  document.getElementById("registrySetup").style.display = "none";
+  document.getElementById("app").style.display = "none";
+});
+
+async function loadMyRegistries() {
+  const registries = await factory.getRegistries(myAddress);
+  const listEl = document.getElementById("registryList");
+  listEl.innerHTML = "";
+  if (registries.length === 0) {
+    listEl.innerHTML = "<p class='muted'>" + t("registries.none") + "</p>";
+  } else {
+    listEl.innerHTML = "<p class='muted'>" + t("registries.loadingNames") + "</p>";
+
+    // Nome dal metadata di collezione al posto del nudo indirizzo — molto
+    // più riconoscibile quando si hanno più registri. Se un registro non ha
+    // ancora metadata (appena creato) si ripiega sull'indirizzo, sempre
+    // mostrato comunque sotto il nome come riferimento tecnico.
+    const withNames = await Promise.all(registries.map(async (addr) => {
+      let name = null;
+      try {
+        const data = await TraceabilityDecode.fetchRegistryEntries(CONFIG.BACKEND_BASE_URL, addr);
+        if (data.collectionMetadataValue) {
+          const { json } = await TraceabilityDecode.decodeMetadataValue(data.collectionMetadataValue);
+          name = (json.LSP4Metadata && json.LSP4Metadata.name) || null;
+        }
+      } catch (err) {
+        name = null; // ripiega silenziosamente sull'indirizzo, non blocca l'elenco
+      }
+      return { addr, name };
+    }));
+
+    listEl.innerHTML = "";
+    withNames.forEach(({ addr, name }) => {
+      const btn = document.createElement("button");
+      btn.style.display = "block";
+      btn.style.marginBottom = "6px";
+      btn.style.textAlign = "left";
+      if (name) {
+        const strong = document.createElement("strong");
+        strong.textContent = name;
+        const span = document.createElement("span");
+        span.className = "muted";
+        span.style.display = "block";
+        span.style.fontSize = "0.75rem";
+        span.textContent = addr;
+        btn.appendChild(strong);
+        btn.appendChild(span);
+      } else {
+        btn.textContent = addr;
+      }
+      btn.addEventListener("click", () => selectRegistry(addr));
+      listEl.appendChild(btn);
+    });
+  }
+
+  try {
+    const membershipAddr = await factory.membershipCorporate();
+    const membership = new ethers.Contract(membershipAddr, MEMBERSHIP_ABI, provider);
+    const tier = await membership.tierOf(myAddress);
+    const limit = await factory.maxRegistriesForTier(tier);
+    document.getElementById("deployLimitNote").textContent =
+      t("registries.usage", { used: registries.length, limit: limit.toString(), tier: tier.toString() });
+    document.getElementById("deployRegistryBtn").disabled = registries.length >= limit.toNumber();
+  } catch (err) {
+    log(t("log.tierReadError", { msg: err.message }));
+  }
+}
+
+document.getElementById("deployRegistryBtn").addEventListener("click", async () => {
+  const name = document.getElementById("newRegistryName").value.trim();
+  const symbol = document.getElementById("newRegistrySymbol").value.trim();
+  if (!name || !symbol) { alert(t("registries.needBoth")); return; }
+  try {
+    log(t("log.deploying"));
+    const tx = await factory.deployRegistry(name, symbol);
+    const receipt = await tx.wait();
+    log(t("log.deployed", { tx: receipt.transactionHash }));
+    await loadMyRegistries();
+  } catch (err) {
+    log(t("log.deployError", { msg: err.message }));
+  }
+});
+
+async function selectRegistry(address) {
+  activeRegistryAddress = address;
+  activeRegistry = new ethers.Contract(address, REGISTRY_ABI, signer);
+  document.getElementById("activeRegistryAddress").textContent = address;
+  document.getElementById("registrySetup").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  await refreshPhotoLibrarySelects();
+  await refreshPhotoLibraryList();
+  await refreshDocumentLibraryList();
+  await refreshTierNote();
+  await refreshDelegatesList();
+  await refreshCurrentCollectionMetadata();
+}
+
+async function refreshCurrentCollectionMetadata() {
+  try {
+    const data = await TraceabilityDecode.fetchRegistryEntries(CONFIG.BACKEND_BASE_URL, activeRegistryAddress);
+    const headerEl = document.getElementById("currentCollectionHeader");
+    const emptyEl = document.getElementById("currentCollectionEmpty");
+    if (data.collectionMetadataValue) {
+      await TraceabilityExplorerUI.renderCollectionHeader(headerEl, data.collectionMetadataValue);
+      emptyEl.style.display = "none";
+    } else {
+      headerEl.style.display = "none";
+      emptyEl.style.display = "block";
+    }
+  } catch (err) {
+    log(t("collection.currentLoadError", { msg: err.message }));
+  }
+}
+
+// -----------------------------------------------------------------------
+// Tab "Esplora registro" — stessa galleria di explorer.html, caricata solo
+// quando il tab viene aperto (non ad ogni selezione di registro, per non
+// appesantire inutilmente le altre operazioni).
+// -----------------------------------------------------------------------
+const exploreGallery = TraceabilityExplorerUI.createGalleryInstance({
+  headerEl: document.getElementById("exploreCollectionHeader"),
+  statusEl: document.getElementById("exploreStatus"),
+  filtersEl: document.getElementById("exploreFilters"),
+  gridEl: document.getElementById("exploreGrid"),
+  t: t,
+  onInvalidate: async (tokenId, reason) => {
+    log(t("log.invalidating", { tokenId: tokenId }));
+    const tx = await activeRegistry.invalidateEntry(tokenId, reason || "");
+    const receipt = await tx.wait();
+    log(t("log.invalidated", { tx: receipt.transactionHash }));
+  },
+  // Gold-only lato contratto (onlyGoldFeature) — nessun filtro di tier qui,
+  // il bottone è sempre visibile: serve proprio a verificare dal vivo che
+  // il contratto accetti la registrazione con tier Gold e la rifiuti
+  // altrimenti (mai testato finora, GOLD_TIER = 3 non ancora esercitato).
+  // documentHash arriva già dalla libreria (select in traceability-
+  // explorer-ui.js) — MAI più un file scelto a mano qui: un hash calcolato
+  // su un file non pinnato da nessuna parte sarebbe verificabile ma
+  // irrecuperabile, bug trovato testando la prima versione di questo bottone.
+  onSetDocumentHash: async (tokenId, documentHash) => {
+    log(t("log.settingDocumentHash", { tokenId: tokenId }));
+    const tx = await activeRegistry.setDocumentHash(tokenId, documentHash);
+    const receipt = await tx.wait();
+    log(t("log.documentHashSet", { tx: receipt.transactionHash, hash: documentHash }));
+  },
+  listDocumentsForSelect: async () => TraceabilityDocumentLibrary.listDocuments({
+    backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
+  }),
+});
+
+document.getElementById("changeRegistryLink").addEventListener("click", (e) => {
+  e.preventDefault();
+  document.getElementById("app").style.display = "none";
+  document.getElementById("registrySetup").style.display = "block";
+});
+
+document.getElementById("delegateAccessConnectBtn").addEventListener("click", async () => {
+  const addr = document.getElementById("delegateAccessAddressInput").value.trim();
+  const noteEl = document.getElementById("delegateAccessNote");
+  if (!ethers.utils.isAddress(addr)) { alert(t("delegates.invalidAddress")); return; }
+
+  const candidate = new ethers.Contract(addr, REGISTRY_ABI, provider);
+  try {
+    const authorized = await candidate.isAuthorized(myAddress);
+    if (!authorized) {
+      noteEl.innerHTML = "<span class='warn'>" + t("delegateAccess.notAuthorized") + "</span>";
+    } else {
+      noteEl.textContent = "";
+    }
+  } catch (err) {
+    noteEl.innerHTML = "<span class='err'>" + t("delegateAccess.invalidRegistry", { msg: err.message }) + "</span>";
+    return; // non e' un TraceabilityRegistry valido, non ha senso selezionarlo
+  }
+
+  await selectRegistry(addr);
+});
+
+// -----------------------------------------------------------------------
+// Tab switching (principale + sotto-tab upload/manuale)
+// -----------------------------------------------------------------------
+document.querySelectorAll("nav button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("nav button").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll("section.tab").forEach((s) => s.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+    if (btn.dataset.tab === "esplora" && activeRegistryAddress) {
+      exploreGallery.load(CONFIG.BACKEND_BASE_URL, activeRegistryAddress);
+    }
+  });
+});
+
+document.querySelectorAll(".subtab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const parent = btn.closest(".card");
+    parent.querySelectorAll(".subtab-btn").forEach((b) => b.classList.remove("active"));
+    parent.querySelectorAll(".subtab-content").forEach((c) => c.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.subtab).classList.add("active");
+  });
+});
+
+// -----------------------------------------------------------------------
+// Metadata collezione (square + banner)
+// -----------------------------------------------------------------------
+async function refreshPhotoLibrarySelects() {
+  try {
+    const photos = await TraceabilityPhotoLibrary.listPhotos({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
+    });
+    const squareSel = document.getElementById("collectionSquarePhoto");
+    const bannerSel = document.getElementById("collectionBannerPhoto");
+    squareSel.innerHTML = "";
+    bannerSel.innerHTML = "<option value=''>" + t("common.none") + "</option>";
+    photos.forEach((p) => {
+      const opt1 = document.createElement("option");
+      opt1.value = JSON.stringify(p); opt1.textContent = p.label + " (" + p.cid.slice(0, 10) + "...)";
+      squareSel.appendChild(opt1);
+      const opt2 = opt1.cloneNode(true);
+      bannerSel.appendChild(opt2);
+    });
+  } catch (err) {
+    log(t("photos.listError", { msg: err.message }));
+  }
+}
+
+document.getElementById("saveCollectionMetadataBtn").addEventListener("click", async () => {
+  try {
+    const name = document.getElementById("collectionName").value.trim();
+    const description = document.getElementById("collectionDescription").value.trim();
+    const squareVal = document.getElementById("collectionSquarePhoto").value;
+    const bannerVal = document.getElementById("collectionBannerPhoto").value;
+    const square = squareVal ? toLibraryEntry(JSON.parse(squareVal)) : null;
+    const banner = bannerVal ? toLibraryEntry(JSON.parse(bannerVal)) : null;
+
+    const metadataObject = TraceabilityMetadata.buildRegistryCollectionMetadata(name, description, square, banner);
+    const metadataJsonString = JSON.stringify(metadataObject);
+
+    log(t("log.pinningCollection"));
+    const cid = await TraceabilityMintCompose.pinMetadataToIpfs({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer, metadataJsonString,
+    });
+    const encodedValue = await TraceabilityMintCompose.encodeLsp4MetadataValue(metadataObject, cid);
+
+    log(t("log.writingOnChain"));
+    const tx = await activeRegistry.setRegistryMetadata(encodedValue);
+    const receipt = await tx.wait();
+    log(t("log.collectionUpdated", { tx: receipt.transactionHash }));
+    await refreshCurrentCollectionMetadata();
+  } catch (err) {
+    log(t("log.collectionError", { msg: err.message }));
+  }
+});
+
+function toLibraryEntry(photoRow) {
+  return { cid: photoRow.cid, keccak256Hash: photoRow.keccak256_hash, width: photoRow.width, height: photoRow.height };
+}
+
+// -----------------------------------------------------------------------
+// Libreria foto
+// -----------------------------------------------------------------------
+async function refreshPhotoLibraryList() {
+  try {
+    const photos = await TraceabilityPhotoLibrary.listPhotos({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
+    });
+    const el = document.getElementById("photoLibraryList");
+    if (photos.length === 0) { el.innerHTML = "<p class='muted'>" + t("photos.none") + "</p>"; return; }
+    let html = "<table><tr><th>" + t("photos.colLabel") + "</th><th>" + t("photos.colCid") + "</th><th>" + t("photos.colDims") + "</th><th></th><th></th></tr>";
+    photos.forEach((p) => {
+      const downloadUrl = TraceabilityDecode.ipfsToHttp(p.cid);
+      html += "<tr><td>" + p.label + "</td><td>" + p.cid + "</td><td>" + (p.width || "?") + "x" + (p.height || "?") + "</td>" +
+        "<td><a href='" + downloadUrl + "' target='_blank' rel='noopener'>" + t("photos.download") + "</a></td>" +
+        "<td><button class='danger' onclick='hidePhotoRow(" + p.id + ")'>" + t("photos.hide") + "</button></td></tr>";
+    });
+    html += "</table>";
+    el.innerHTML = html;
+  } catch (err) {
+    log(t("photos.listError", { msg: err.message }));
+  }
+}
+
+async function hidePhotoRow(photoId) {
+  try {
+    await TraceabilityPhotoLibrary.hidePhoto({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer, photoId,
+    });
+    await refreshPhotoLibraryList();
+    await refreshPhotoLibrarySelects();
+  } catch (err) {
+    log(t("photos.hideError", { msg: err.message }));
+  }
+}
+
+document.getElementById("uploadPhotoBtn").addEventListener("click", async () => {
+  if (activeRegistryTier === 0) { alert(t("photos.suspendedNote")); return; }
+  try {
+    const label = document.getElementById("photoLabel").value.trim();
+    const fileInput = document.getElementById("photoFileInput");
+    if (!label || !fileInput.files[0]) { alert(t("photos.needBoth")); return; }
+    log(t("photos.uploading"));
+    await TraceabilityPhotoLibrary.uploadPhoto({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
+      label, fileBlob: fileInput.files[0], fileName: fileInput.files[0].name,
+    });
+    log(t("photos.uploaded"));
+    await refreshPhotoLibraryList();
+    await refreshPhotoLibrarySelects();
+  } catch (err) {
+    log(t("photos.uploadError", { msg: err.message }));
+  }
+});
+
+// -----------------------------------------------------------------------
+// Libreria documenti — mirror della libreria foto; nessun gate di tier
+// lato UI qui (a differenza delle foto) perché il vincolo Gold vero e
+// proprio si applica al momento di collegare l'hash a un mint, non
+// all'upload/lista, coerente con quanto già commentato in documentRoutes.js.
+// -----------------------------------------------------------------------
+async function refreshDocumentLibraryList() {
+  try {
+    const documents = await TraceabilityDocumentLibrary.listDocuments({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
+    });
+    const el = document.getElementById("documentLibraryList");
+    if (documents.length === 0) { el.innerHTML = "<p class='muted'>" + t("documents.none") + "</p>"; return; }
+    let html = "<table><tr><th>" + t("documents.colLabel") + "</th><th>" + t("documents.colCid") + "</th><th>" + t("documents.colFile") + "</th><th></th><th></th></tr>";
+    documents.forEach((d) => {
+      const downloadUrl = TraceabilityDecode.ipfsToHttp(d.cid);
+      html += "<tr><td>" + d.label + "</td><td>" + d.cid + "</td><td>" + (d.original_name || "?") + "</td>" +
+        "<td><a href='" + downloadUrl + "' target='_blank' rel='noopener'>" + t("documents.download") + "</a></td>" +
+        "<td><button class='danger' onclick='hideDocumentRow(" + d.id + ")'>" + t("documents.hide") + "</button></td></tr>";
+    });
+    html += "</table>";
+    el.innerHTML = html;
+  } catch (err) {
+    log(t("documents.listError", { msg: err.message }));
+  }
+}
+
+async function hideDocumentRow(documentId) {
+  try {
+    await TraceabilityDocumentLibrary.hideDocument({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer, documentId,
+    });
+    await refreshDocumentLibraryList();
+  } catch (err) {
+    log(t("documents.hideError", { msg: err.message }));
+  }
+}
+
+document.getElementById("uploadDocumentBtn").addEventListener("click", async () => {
+  try {
+    const label = document.getElementById("documentLabel").value.trim();
+    const fileInput = document.getElementById("documentFileInput");
+    if (!label || !fileInput.files[0]) { alert(t("documents.needBoth")); return; }
+    log(t("documents.uploading"));
+    await TraceabilityDocumentLibrary.uploadDocument({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
+      label, fileBlob: fileInput.files[0], fileName: fileInput.files[0].name,
+    });
+    log(t("documents.uploaded"));
+    await refreshDocumentLibraryList();
+  } catch (err) {
+    log(t("documents.uploadError", { msg: err.message }));
+  }
+});
+
+// -----------------------------------------------------------------------
+// Deleghe
+// -----------------------------------------------------------------------
+async function refreshTierNote() {
+  try {
+    const membershipAddr = await activeRegistry.membershipCorporate();
+    const membership = new ethers.Contract(membershipAddr, MEMBERSHIP_ABI, provider);
+    const registryAdmin = await activeRegistry.registryAdmin();
+    const tier = await membership.tierOf(registryAdmin);
+    activeRegistryTier = tier.toNumber();
+    const status = activeRegistryTier >= 2 ? t("delegates.enabled") : t("delegates.needSilver");
+    document.getElementById("tierNote").textContent = t("delegates.tierNote", { tier: tier.toString(), status: status });
+    applyMembershipGate();
+  } catch (err) {
+    log(t("log.tierDelegatesError", { msg: err.message }));
+  }
+}
+
+// Gate solo lato UI: nessuna garanzia di sicurezza (l'upload foto non ha
+// alcun controllo di tier lato backend/contratto, a differenza del mint),
+// ma evita che un'azienda sospesa carichi comunque foto nella libreria
+// dall'interfaccia normale. Chiamata dopo ogni lettura del tier.
+function applyMembershipGate() {
+  const suspended = activeRegistryTier === 0;
+  const uploadBtn = document.getElementById("uploadPhotoBtn");
+  if (uploadBtn) uploadBtn.disabled = suspended;
+  const note = document.getElementById("photoUploadGateNote");
+  if (note) note.style.display = suspended ? "block" : "none";
+}
+
+async function refreshDelegatesList() {
+  const el = document.getElementById("delegatesList");
+  el.innerHTML = "<p class='muted'>...</p>";
+  try {
+    const res = await fetch(CONFIG.BACKEND_BASE_URL.replace(/\/$/, "") + "/api/traceability/registry/" + activeRegistryAddress + "/delegates");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "unknown error");
+    if (data.delegates.length === 0) {
+      el.innerHTML = "<p class='muted'>" + t("delegates.none") + "</p>";
+    } else {
+      let html = "<table><tr><th>" + t("delegates.colAddress") + "</th></tr>";
+      data.delegates.forEach((d) => { html += "<tr><td>" + d + "</td></tr>"; });
+      html += "</table>";
+      el.innerHTML = html;
+    }
+  } catch (err) {
+    el.innerHTML = "<p class='err'>" + t("delegates.listError", { msg: err.message }) + "</p>";
+  }
+}
+
+document.getElementById("addDelegateBtn").addEventListener("click", async () => {
+  const addr = document.getElementById("delegateAddressInput").value.trim();
+  if (!ethers.utils.isAddress(addr)) { alert(t("delegates.invalidAddress")); return; }
+  try {
+    const tx = await activeRegistry.addDelegate(addr);
+    const receipt = await tx.wait();
+    log(t("delegates.added", { tx: receipt.transactionHash }));
+    await refreshDelegatesList();
+  } catch (err) {
+    log(t("delegates.addError", { msg: err.message }));
+  }
+});
+
+document.getElementById("removeDelegateBtn").addEventListener("click", async () => {
+  const addr = document.getElementById("delegateAddressInput").value.trim();
+  if (!ethers.utils.isAddress(addr)) { alert(t("delegates.invalidAddress")); return; }
+  try {
+    const tx = await activeRegistry.removeDelegate(addr);
+    const receipt = await tx.wait();
+    log(t("delegates.removed", { tx: receipt.transactionHash }));
+    await refreshDelegatesList();
+  } catch (err) {
+    log(t("delegates.removeError", { msg: err.message }));
+  }
+});
+
+// -----------------------------------------------------------------------
+// Materie prime — riga form manuale
+// -----------------------------------------------------------------------
+function addRawMaterialRow() {
+  const container = document.getElementById("rmMaterialRows");
+  const div = document.createElement("div");
+  div.className = "material-row";
+  div.innerHTML =
+    "<input type='text' class='rm-nome' placeholder='" + t("rm.nome") + "'>" +
+    "<input type='text' class='rm-quantita' placeholder='" + t("rm.quantita") + "'>" +
+    "<input type='text' class='rm-lotto' placeholder='" + t("rm.lotto") + "'>" +
+    "<input type='text' class='rm-scadenza' placeholder='" + t("rm.scadenzaOpz") + "'>" +
+    "<button type='button' class='danger rm-remove'>×</button>";
+  div.querySelector(".rm-remove").addEventListener("click", () => div.remove());
+  container.appendChild(div);
+  return div;
+}
+document.getElementById("rmAddRowBtn").addEventListener("click", () => addRawMaterialRow());
+addRawMaterialRow(); // una riga di partenza
+
+/** Cambia sotto-tab (upload/manuale) programmaticamente — stessa logica del
+ * click sui pulsanti, usata anche per portare l'utente sul form dopo un
+ * caricamento file (così il JSON importato diventa modificabile). */
+function switchToSubtab(subtabId) {
+  const targetContent = document.getElementById(subtabId);
+  if (!targetContent) return;
+  const parent = targetContent.closest(".card");
+  parent.querySelectorAll(".subtab-btn").forEach((b) => b.classList.remove("active"));
+  parent.querySelectorAll(".subtab-content").forEach((c) => c.classList.remove("active"));
+  const btn = parent.querySelector(".subtab-btn[data-subtab='" + subtabId + "']");
+  if (btn) btn.classList.add("active");
+  targetContent.classList.add("active");
+}
+
+function populateRawMaterialForm(extracted) {
+  document.getElementById("rmFornitoreInput").value = extracted.fornitore || "";
+  document.getElementById("rmDataAcquistoInput").value = extracted.dataAcquistoRaw || "";
+  const container = document.getElementById("rmMaterialRows");
+  container.innerHTML = "";
+  const lots = extracted.lots.length > 0 ? extracted.lots : [{}];
+  lots.forEach((lot) => {
+    const row = addRawMaterialRow();
+    row.querySelector(".rm-nome").value = lot.nome || "";
+    row.querySelector(".rm-quantita").value = lot.quantità || "";
+    row.querySelector(".rm-lotto").value = lot.lotto || "";
+    row.querySelector(".rm-scadenza").value = lot.data_scadenza || "";
+  });
+}
+
+document.getElementById("rmBuildJsonBtn").addEventListener("click", () => {
+  const fornitore = document.getElementById("rmFornitoreInput").value.trim();
+  const dataAcquisto = document.getElementById("rmDataAcquistoInput").value.trim();
+  if (!fornitore || !dataAcquisto) { alert(t("rm.errFornitoreData")); return; }
+
+  const rows = Array.from(document.querySelectorAll("#rmMaterialRows .material-row"));
+  const materie_prime = rows.map((row) => ({
+    nome: row.querySelector(".rm-nome").value.trim(),
+    quantità: row.querySelector(".rm-quantita").value.trim(),
+    lotto: row.querySelector(".rm-lotto").value.trim(),
+    data_scadenza: row.querySelector(".rm-scadenza").value.trim(),
+  })).filter((m) => m.nome || m.lotto);
+
+  const json = {
+    name: "Acquisto Materie Prime - " + dataAcquisto,
+    description: "Registro delle materie prime acquistate il " + dataAcquisto + " dal fornitore " + fornitore + ".",
+    attributes: [
+      { trait_type: "Fornitore", value: fornitore },
+      { trait_type: "Data Acquisto", value: dataAcquisto },
+      { trait_type: "Numero Materie Prime", value: materie_prime.length },
+    ],
+    materie_prime: materie_prime,
+  };
+
+  processRawMaterialJson(json, document.getElementById("rawMaterialPreview"));
+});
+
+// -----------------------------------------------------------------------
+// Mint materie prime — un file caricato popola il form (diventa
+// modificabile) invece di andare dritto in anteprima; da lì in poi upload e
+// compilazione manuale condividono lo stesso percorso.
+// -----------------------------------------------------------------------
+document.getElementById("rawMaterialJsonInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const previewEl = document.getElementById("rawMaterialPreview");
+  previewEl.innerHTML = "";
+  try {
+    const text = await file.text();
+    const json = JSON.parse(text);
+    const validation = TraceabilityValidators.validateRawMaterialPurchaseJson(json);
+    if (!validation.valid) {
+      previewEl.innerHTML = "<p class='err'>" + t("common.readErrors", { errs: validation.errors.join("; ") }) + "</p>";
+      return;
+    }
+    const extracted = TraceabilityValidators.extractRawMaterialPurchaseData(json);
+    populateRawMaterialForm(extracted);
+    switchToSubtab("rm-manual");
+  } catch (err) {
+    previewEl.innerHTML = "<p class='err'>" + t("common.readFileError", { msg: err.message }) + "</p>";
+  }
+});
+
+async function processRawMaterialJson(json, previewEl) {
+  const validation = TraceabilityValidators.validateRawMaterialPurchaseJson(json);
+  if (!validation.valid) {
+    previewEl.innerHTML = "<p class='err'>" + t("common.readErrors", { errs: validation.errors.join("; ") }) + "</p>";
+    return;
+  }
+  const extracted = TraceabilityValidators.extractRawMaterialPurchaseData(json);
+  const indexDate = TraceabilityTokenId.parseItalianDateToUnixSeconds(extracted.dataAcquistoRaw);
+
+  let html = "<p>" + t("rm.summary", { fornitore: extracted.fornitore, data: extracted.dataAcquistoRaw }) + "</p>";
+  html += "<table><tr><th>" + t("rm.nome") + "</th><th>" + t("rm.lotto") + "</th><th>" + t("rm.quantita") + "</th></tr>";
+  extracted.lots.forEach((l) => { html += "<tr><td>" + l.nome + "</td><td>" + l.lotto + "</td><td>" + l.quantità + "</td></tr>"; });
+  html += "</table>";
+  html += "<div class='row'><label>" + t("rm.photoLabel") + "</label><select id='rmPhotoSelect'></select></div>";
+  html += "<div class='row'><label>" + t("documents.selectLabel") + "</label><select id='rmDocumentSelect'></select></div>";
+  html += "<button class='primary' id='confirmMintRawMaterialBtn'>" + t("rm.confirmMint", { n: extracted.lots.length }) + "</button>";
+  html += "<button type='button' class='secondary' id='backToEditRawMaterialBtn'>" + t("common.backToEdit") + "</button>";
+  previewEl.innerHTML = html;
+
+  document.getElementById("backToEditRawMaterialBtn").addEventListener("click", () => {
+    previewEl.innerHTML = "";
+    switchToSubtab("rm-manual");
+  });
+
+  const photos = await TraceabilityPhotoLibrary.listPhotos({ backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer });
+  const sel = document.getElementById("rmPhotoSelect");
+  sel.innerHTML = "<option value=''>" + t("common.noneF") + "</option>";
+  photos.forEach((p) => { const o = document.createElement("option"); o.value = JSON.stringify(p); o.textContent = p.label; sel.appendChild(o); });
+
+  const documents = await TraceabilityDocumentLibrary.listDocuments({ backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer });
+  const docSel = document.getElementById("rmDocumentSelect");
+  docSel.innerHTML = "<option value=''>" + t("common.noneF") + "</option>";
+  documents.forEach((d) => { const o = document.createElement("option"); o.value = d.keccak256_hash; o.textContent = d.label; docSel.appendChild(o); });
+
+  document.getElementById("confirmMintRawMaterialBtn").addEventListener("click", async () => {
+    try {
+      const photoVal = sel.value;
+      const resolvePhoto = () => (photoVal ? toLibraryEntry(JSON.parse(photoVal)) : null);
+      log(t("rm.composing", { n: extracted.lots.length }));
+      const args = await TraceabilityMintCompose.composeRawMaterialLotBatchMintArgs({
+        registryAddress: activeRegistryAddress, acquistoJson: json, resolvePhoto, signer, indexDate,
+        backendBaseUrl: CONFIG.BACKEND_BASE_URL,
+      });
+      log(t("rm.signing"));
+      const tx = await activeRegistry.mintRawMaterialLotBatch(args.tokenIds, args.lsp4MetadataValues, args.indexDates);
+      const receipt = await tx.wait();
+      log(t("rm.done", { tx: receipt.transactionHash }));
+      previewEl.innerHTML = "<p class='ok'>" + t("rm.doneShort", { n: args.tokenIds.length, tx: receipt.transactionHash.slice(0, 10) }) + "</p>";
+      document.getElementById("rawMaterialJsonInput").value = "";
+
+      // Passo separato e a sé stante: il mint sopra è già andato a buon fine
+      // a questo punto, un eventuale fallimento qui (es. tier non Gold) non
+      // deve essere confuso con un fallimento del mint stesso.
+      const selectedDocumentHash = docSel.value;
+      if (selectedDocumentHash) {
+        try {
+          log(t("log.settingDocumentHash", { tokenId: args.tokenIds.length + " lotti" }));
+          const hashTx = await activeRegistry.setDocumentHashBatch(args.tokenIds, selectedDocumentHash);
+          const hashReceipt = await hashTx.wait();
+          log(t("log.documentHashBatchSet", { n: args.tokenIds.length, hash: selectedDocumentHash, tx: hashReceipt.transactionHash }));
+        } catch (hashErr) {
+          log(t("documents.hashAttachError", { msg: hashErr.message }));
+        }
+      }
+    } catch (err) {
+      log(t("rm.mintError", { msg: err.message }));
+    }
+  });
+}
+
+// -----------------------------------------------------------------------
+// Batch — riga form manuale
+// -----------------------------------------------------------------------
+function addBatchLotRow() {
+  const container = document.getElementById("batchLotRows");
+  const div = document.createElement("div");
+  div.className = "lot-row";
+  div.innerHTML =
+    "<input type='text' class='batch-ingrediente' placeholder='" + t("batch.ingrediente") + "'>" +
+    "<input type='text' class='batch-lotto' placeholder='" + t("batch.lottoValore") + "'>" +
+    "<button type='button' class='danger batch-remove'>×</button>";
+  div.querySelector(".batch-remove").addEventListener("click", () => div.remove());
+  container.appendChild(div);
+  return div;
+}
+document.getElementById("batchAddLotBtn").addEventListener("click", () => addBatchLotRow());
+addBatchLotRow(); // una riga di partenza
+
+function populateBatchForm(json, extracted) {
+  document.getElementById("batchNomeInput").value = json.name || "";
+  document.getElementById("batchDescInput").value = json.description || "";
+  document.getElementById("batchCodiceInput").value = extracted.codice || "";
+  const dataProdCandidate = extracted.dateCandidates.find((d) => d.trait_type === "Data Produzione");
+  document.getElementById("batchDataProduzioneInput").value = dataProdCandidate ? dataProdCandidate.value : "";
+
+  const container = document.getElementById("batchLotRows");
+  container.innerHTML = "";
+  const refs = extracted.lotReferences.length > 0 ? extracted.lotReferences : [{}];
+  refs.forEach((ref) => {
+    const row = addBatchLotRow();
+    row.querySelector(".batch-ingrediente").value = ref.ingredienteNome || "";
+    row.querySelector(".batch-lotto").value = ref.lotto || "";
+  });
+}
+
+document.getElementById("batchBuildJsonBtn").addEventListener("click", () => {
+  const nome = document.getElementById("batchNomeInput").value.trim();
+  const descrizione = document.getElementById("batchDescInput").value.trim();
+  const codice = document.getElementById("batchCodiceInput").value.trim();
+  const dataProd = document.getElementById("batchDataProduzioneInput").value.trim();
+  if (!nome || !codice) { alert(t("batch.errNomeRicetta")); return; }
+  if (!dataProd) { alert(t("batch.errAlmenoUnaData")); return; }
+
+  const attributes = [{ trait_type: "Codice", value: codice }];
+  attributes.push({ trait_type: "Data Produzione", value: dataProd });
+
+  Array.from(document.querySelectorAll("#batchLotRows .lot-row")).forEach((row) => {
+    const ingr = row.querySelector(".batch-ingrediente").value.trim();
+    const lotto = row.querySelector(".batch-lotto").value.trim();
+    if (ingr && lotto) attributes.push({ trait_type: "Lotto " + ingr, value: lotto });
+  });
+
+  const json = { name: nome, description: descrizione, attributes: attributes };
+  processProductionBatchJson(json, document.getElementById("batchPreview"));
+});
+
+// -----------------------------------------------------------------------
+// Mint batch — un file caricato popola il form (diventa modificabile)
+// invece di andare dritto in anteprima; da lì in poi upload e
+// compilazione manuale condividono lo stesso percorso.
+// -----------------------------------------------------------------------
+document.getElementById("batchJsonInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const previewEl = document.getElementById("batchPreview");
+  previewEl.innerHTML = "";
+  try {
+    const text = await file.text();
+    const json = JSON.parse(text);
+    const validation = TraceabilityValidators.validateProductionBatchJson(json);
+    if (!validation.valid) {
+      previewEl.innerHTML = "<p class='err'>" + t("common.readErrors", { errs: validation.errors.join("; ") }) + "</p>";
+      return;
+    }
+    const extracted = TraceabilityValidators.extractProductionBatchData(json);
+    populateBatchForm(json, extracted);
+    switchToSubtab("batch-manual");
+  } catch (err) {
+    previewEl.innerHTML = "<p class='err'>" + t("common.readFileError", { msg: err.message }) + "</p>";
+  }
+});
+
+async function processProductionBatchJson(json, previewEl) {
+  const validation = TraceabilityValidators.validateProductionBatchJson(json);
+  if (!validation.valid) {
+    previewEl.innerHTML = "<p class='err'>" + t("common.readErrors", { errs: validation.errors.join("; ") }) + "</p>";
+    return;
+  }
+  const extracted = TraceabilityValidators.extractProductionBatchData(json);
+
+  let html = "<p>" + t("batch.summary", { codice: extracted.codice }) + "</p>";
+
+  let dateHtml = "";
+  if (extracted.requiresDateSelection) {
+    dateHtml = "<div class='row'><label>" + t("batch.chooseDate") + "</label>";
+    extracted.dateCandidates.forEach((d, i) => {
+      dateHtml += "<label><input type='radio' name='dateChoice' value='" + i + "'" + (i === 0 ? " checked" : "") + "> " + d.trait_type + ": " + d.value + "</label><br>";
+    });
+    dateHtml += "</div>";
+  }
+  html += dateHtml;
+
+  html += "<p>" + t("batch.matching") + "</p>";
+  previewEl.innerHTML = html;
+
+  const { entries } = await TraceabilityDecode.fetchRegistryEntries(CONFIG.BACKEND_BASE_URL, activeRegistryAddress);
+  const lotEntries = entries.filter((en) => en.entryType === 0 && en.status === 0);
+
+  const decodedLots = [];
+  for (const en of lotEntries) {
+    try {
+      const { json: lotJson } = await TraceabilityDecode.decodeMetadataValue(en.metadataValue);
+      const lottoAttr = (lotJson.LSP4Metadata.attributes || []).find((a) => a.key === "Lotto");
+      decodedLots.push({ tokenId: en.tokenId, lotto: lottoAttr ? lottoAttr.value : null });
+    } catch (err) {
+      log("Lot decode error " + en.tokenId + ": " + err.message);
+    }
+  }
+
+  const matched = [];
+  const unmatched = [];
+  extracted.lotReferences.forEach((ref) => {
+    const found = decodedLots.find((dl) => dl.lotto === ref.lotto);
+    if (found) matched.push({ ref, tokenId: found.tokenId });
+    else unmatched.push(ref);
+  });
+
+  let matchHtml = "<h3>" + t("batch.matchingTitle") + "</h3><table><tr><th>" + t("batch.colIngrediente") + "</th><th>" + t("batch.colLotto") + "</th><th>" + t("batch.colEsito") + "</th></tr>";
+  matched.forEach((m) => { matchHtml += "<tr><td>" + m.ref.ingredienteNome + "</td><td>" + m.ref.lotto + "</td><td class='ok'>" + t("batch.found") + "</td></tr>"; });
+  unmatched.forEach((u) => { matchHtml += "<tr><td>" + u.ingredienteNome + "</td><td>" + u.lotto + "</td><td class='warn'>" + t("batch.notFound") + "</td></tr>"; });
+  matchHtml += "</table>";
+  matchHtml += "<div class='row'><label>" + t("batch.photoLabel") + "</label><select id='batchPhotoSelect'></select></div>";
+  matchHtml += "<div class='row'><label>" + t("documents.selectLabel") + "</label><select id='batchDocumentSelect'></select></div>";
+  matchHtml += "<button class='primary' id='confirmMintBatchBtn'>" + t("batch.confirmMint") + "</button>";
+  matchHtml += "<button type='button' class='secondary' id='backToEditBatchBtn'>" + t("common.backToEdit") + "</button>";
+  previewEl.innerHTML = html + matchHtml;
+
+  document.getElementById("backToEditBatchBtn").addEventListener("click", () => {
+    previewEl.innerHTML = "";
+    switchToSubtab("batch-manual");
+  });
+
+  const photos = await TraceabilityPhotoLibrary.listPhotos({ backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer });
+  const sel = document.getElementById("batchPhotoSelect");
+  sel.innerHTML = "<option value=''>" + t("common.noneF") + "</option>";
+  photos.forEach((p) => { const o = document.createElement("option"); o.value = JSON.stringify(p); o.textContent = p.label; sel.appendChild(o); });
+
+  const documents = await TraceabilityDocumentLibrary.listDocuments({ backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer });
+  const docSel = document.getElementById("batchDocumentSelect");
+  docSel.innerHTML = "<option value=''>" + t("common.noneF") + "</option>";
+  documents.forEach((d) => { const o = document.createElement("option"); o.value = d.keccak256_hash; o.textContent = d.label; docSel.appendChild(o); });
+
+  document.getElementById("confirmMintBatchBtn").addEventListener("click", async () => {
+    try {
+      let chosenDateStr = extracted.dateCandidates[0].value;
+      if (extracted.requiresDateSelection) {
+        const checked = document.querySelector("input[name=dateChoice]:checked");
+        chosenDateStr = extracted.dateCandidates[parseInt(checked.value, 10)].value;
+      }
+      const indexDate = TraceabilityTokenId.parseItalianDateToUnixSeconds(chosenDateStr);
+      const usedLotTokenIds = matched.map((m) => m.tokenId);
+      const photoVal = sel.value;
+      const resolvePhoto = () => (photoVal ? toLibraryEntry(JSON.parse(photoVal)) : null);
+
+      log(t("batch.composing"));
+      const args = await TraceabilityMintCompose.composeProductionBatchMintArgs({
+        registryAddress: activeRegistryAddress, batchJson: json, usedLotTokenIds, resolvePhoto, signer, indexDate,
+        backendBaseUrl: CONFIG.BACKEND_BASE_URL,
+      });
+      log(t("rm.signing"));
+      const tx = await activeRegistry.mintProductionBatch(args.tokenId, args.lsp4MetadataValue, args.usedLotTokenIds, args.indexDate);
+      const receipt = await tx.wait();
+      log(t("batch.done", { tx: receipt.transactionHash }));
+      previewEl.innerHTML = "<p class='ok'>" + t("batch.doneShort", { tx: receipt.transactionHash.slice(0, 10) }) + "</p>";
+      document.getElementById("batchJsonInput").value = "";
+
+      // Stesso principio del ramo materie prime: passo separato, un
+      // fallimento qui non deve oscurare il mint già andato a buon fine.
+      const selectedDocumentHash = docSel.value;
+      if (selectedDocumentHash) {
+        try {
+          log(t("log.settingDocumentHash", { tokenId: args.tokenId }));
+          const hashTx = await activeRegistry.setDocumentHash(args.tokenId, selectedDocumentHash);
+          const hashReceipt = await hashTx.wait();
+          log(t("log.documentHashSet", { hash: selectedDocumentHash, tx: hashReceipt.transactionHash }));
+        } catch (hashErr) {
+          log(t("documents.hashAttachError", { msg: hashErr.message }));
+        }
+      }
+    } catch (err) {
+      log(t("batch.mintError", { msg: err.message }));
+    }
+  });
+}
+
+// Applica la lingua salvata (o l'italiano di default) al caricamento pagina.
+applyLanguage();
+</script>
+
+<footer style="border-top:1px solid var(--powder-line); background:rgba(250,251,252,0.9); padding:16px 28px; margin-top:40px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; font-size:13px; color:var(--ink-soft);">
+  <div id="footer-rights" data-i18n="footer.rights">© 2026 Chain Integrate — Tutti i diritti riservati.</div>
+  <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+    <span id="footer-consulting" data-i18n="footer.consulting">Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate</span>
+    <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="ChainIntegrate su LinkedIn" style="color:var(--blueprint); display:inline-flex;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+    </a>
+    <span>·</span>
+    <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener" id="footer-telegram" data-i18n="footer.telegram" style="color:var(--blueprint); text-decoration:none; font-weight:600;">Assistenza via Telegram</a>
+  </div>
+</footer>
+</body>
+</html>

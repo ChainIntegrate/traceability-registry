@@ -1328,20 +1328,59 @@ ogni settore) è `ALLOWED_FACET_KEYS`, oggi costante interna non esposta in
    compile` ricompila 28 file senza alcun warning.
    **Fatto**: nuovo Factory deployato su testnet e verificato su Blockscout —
    [`0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9`](https://explorer.execution.testnet.lukso.network/address/0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9).
-   **Ancora da fare in questa fase**: aggiornare `FACTORY_ADDRESS` nei tre
-   file frontend e nel `.env` del backend sulla VPS, poi assegnare un
-   settore a Birra20Venti con `setSector` prima che possa deployare
-   qualunque nuovo registry (il require aggiunto blocca `deployRegistry`
-   senza settore assegnato — attenzione, vale anche per Birra20Venti se
-   dovesse mai deployarne un secondo).
+   `FACTORY_ADDRESS` aggiornato in `user-alimentare-bidata.html` e `admin.html`.
+   **Ancora da fare in questa fase**: aggiornare il `.env` del backend sulla
+   VPS, poi assegnare un settore a Birra20Venti con `setSector` (ora
+   possibile dalla UI, vedi Fase 3) prima che possa deployare qualunque
+   nuovo registry (il require aggiunto blocca `deployRegistry` senza settore
+   assegnato — attenzione, vale anche per Birra20Venti se dovesse mai
+   deployarne un secondo).
 3. Fase 2 — backend: arricchire `/api/traceability/registry/:address/entries`
    con `sector`, risolto via `registry.registryAdmin()` → `factory.sectorOf(...)`,
    stesso pattern difensivo try/catch già usato per `documentHash` (§45).
-4. Fase 3 — frontend: da `admin.html`, assegnare il settore a Birra20Venti
-   (`alimentare_bidata`) come primo uso reale di `setSector`; generalizzare
-   `user.html`/`explorer.html` a leggere la config invece delle costanti
-   fisse; clonare la pagina per un nuovo settore solo quando arriva un
-   cliente reale di quel settore.
+   **Non ancora fatta.**
+4. **Fase 3 — frontend (IN CORSO, buona parte fatta in questa sessione)**:
+   - **Fatto**: `user.html` (Birra20Venti) rinominato in
+     `user-alimentare-bidata.html`; `user.html` ora è uno stub di redirect
+     automatico (`window.location.replace`) verso il nuovo nome, per non
+     rompere i bookmark esistenti.
+   - **Fatto**: rinomina "Ricetta"→"Codice" applicata ovunque —
+     `traceability-json-validators.js` (`CONFIG.RECIPE_TRAIT_TYPE`→
+     `CONFIG.CODE_TRAIT_TYPE`, funzioni di validazione/estrazione),
+     `traceability-metadata.js` (commento), `traceability-mint-compose.js`
+     (bugfix: `resolvePhoto(extracted.ricetta)`→`resolvePhoto(extracted.codice)`,
+     era rimasto un riferimento al vecchio nome), `user-alimentare-bidata.html`
+     (label, id, variabili JS, i18n IT/EN). **Non retrocompatibile per
+     scelta**: un JSON batch con ancora `"Ricetta"` non valida più — azione
+     operativa lato Birra20Venti già segnalata.
+   - **Fatto**: `ALLOWED_FACET_KEYS` in `traceability-explorer-ui.js`
+     promossa da costante privata del modulo a parametro opzionale
+     `facetKeys` di `createGalleryInstance({...})` (default
+     `DEFAULT_FACET_KEYS`, backward-compatible — `explorer.html` continua a
+     funzionare senza modifiche).
+   - **Fatto**: create `user-alimentare-monodata.html` e `user-industria.html`,
+     entrambe copiate da `user-alimentare-bidata.html` con l'unica vera
+     differenza strutturale — niente campo/logica "Data Imbottigliamento",
+     una sola data (obbligatoria, non più "almeno una tra due"), e override
+     `TraceabilityValidators.CONFIG.RECOGNIZED_DATE_TRAIT_TYPES_BATCH =
+     ["Data Produzione"]` iniettato subito dopo il caricamento dello script
+     condiviso (nessuna duplicazione di logica di validazione). Tenute come
+     file separati pur essendo oggi identiche, per poterle evolvere in modo
+     indipendente (deciso esplicitamente). Nessun'altra rinomina di
+     terminologia (es. "materie prime") tentata per `industria`: non esiste
+     ancora un cliente reale di quel settore da cui farsi confermare il
+     vocabolario giusto.
+   - **Fatto**: aggiunto ad `admin.html` un form "Assegna settore" —
+     indirizzo azienda + select tra i tre settori noti, pulsanti "Controlla
+     settore attuale" (`factory.sectorOf(...)`) e "Assegna settore"
+     (`factory.setSector(...)`, hash del nome via `ethers.utils.id(...)`,
+     stesso schema di `ENTRY_TYPE_KEY`). Mirror del pattern già esistente
+     per `setMembershipCorporate` in questo stesso file.
+   - **Ancora da fare**: usare il form appena aggiunto per assegnare
+     `alimentare_bidata` a Birra20Venti (operazione VPS, non ancora fatta);
+     generalizzare `explorer.html` a leggere `facetKeys`/config da un
+     meccanismo iniettabile invece delle costanti fisse (oggi funziona solo
+     perché il default coincide col caso Birra20Venti).
 
 ## 39. Punti aperti / TODO
 
