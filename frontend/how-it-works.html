@@ -27,6 +27,15 @@
   .card { background: #fafbfc; border: 1px solid var(--powder-line); border-radius: 8px; padding: 14px 16px; margin: 12px 0; }
   .warn-box { background: var(--amber-bg); border: 1px solid var(--amber); border-radius: 8px; padding: 10px 14px; font-size: 0.92rem; color: #7a4a17; margin: 12px 0; }
   code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #f6f7f9; border: 1px solid var(--powder-line); border-radius: 8px; padding: 12px 14px; font-size: 0.82rem; line-height: 1.45; overflow-x: auto; margin: 8px 0 14px; }
+  pre code { background: none; padding: 0; }
+  .highlight-box { background: #eef2fd; border: 1px solid var(--blueprint); border-radius: 8px; padding: 12px 16px; margin: 12px 0; }
+  .flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+  .flow-step { flex: 1 1 150px; background: #fafbfc; border: 1px solid var(--powder-line); border-radius: 8px; padding: 10px 12px; font-size: 0.9rem; }
+  .flow-step strong { display: block; margin-bottom: 4px; }
+  .lot { white-space: nowrap; font-family: ui-monospace, monospace; font-size: 0.82rem; background: #fff4d6; color: #7a5a00; padding: 1px 6px; border-radius: 4px; }
+  .flow-arrow { align-self: center; color: var(--blueprint); font-size: 1.3rem; }
+  @media (max-width: 560px) { .flow { flex-direction: column; } .flow-step { flex: none; } .flow-arrow { transform: rotate(90deg); } }
 </style>
 </head>
 <body>
@@ -48,10 +57,60 @@
 <p class="lede" data-i18n="hiw.lede">Una guida breve e pratica: cosa fa TraceabilityRegistry, cosa succede davvero quando registri qualcosa, e cosa resta pubblico per sempre.</p>
 
 <h2 data-i18n="hiw.whatH">Di cosa si tratta</h2>
-<p data-i18n="hiw.whatP">TraceabilityRegistry ti permette di registrare in modo permanente e verificabile la tracciabilità dei tuoi prodotti — dalle materie prime in ingresso ai lotti/batch di produzione — sulla blockchain LUKSO. Il tuo registro è tuo: nessun altro può scriverci, nemmeno ChainIntegrate.</p>
+<p data-i18n="hiw.whatP">TraceabilityRegistry ti permette di registrare in modo permanente e verificabile la tracciabilità dei tuoi prodotti — dalle materie prime in ingresso ai lotti/batch di produzione — sulla blockchain LUKSO, con i batch collegati ai lotti usati per produrli. Il tuo registro è tuo: nessun altro può scriverci, nemmeno ChainIntegrate.</p>
 
 <h2 data-i18n="hiw.entriesH">Materie prime e batch</h2>
 <p data-i18n="hiw.entriesP">Ci sono due tipi di voce: un <strong>lotto di materia prima</strong> (qualcosa che acquisti o ricevi) e un <strong>batch di produzione</strong> (qualcosa che produci, che può richiamare uno o più lotti usati). Un batch è identificato da un "Codice" a tua scelta — lo stesso codice guida anche quale foto associare quando lo consulti nell'esploratore.</p>
+
+<h2 data-i18n="hiw.crossH">La tracciabilità incrociata dei lotti</h2>
+<p data-i18n="hiw.crossP1">È il cuore del sistema: ogni batch di produzione resta <strong>collegato in modo verificabile</strong> ai lotti di materia prima usati per farlo, e da ogni lotto si risale a tutti i batch in cui è finito. Il collegamento è il numero di lotto, lo stesso scritto sul documento del fornitore.</p>
+<div class="flow">
+  <div class="flow-step"><strong data-i18n="hiw.flowSupplierT">Fornitore</strong><span data-i18n="hiw.flowSupplierP">Maltificio Rossi, consegna del 12/03</span></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><strong data-i18n="hiw.flowLotT">Lotto materia prima</strong><span data-i18n="hiw.flowLotP">Malto Pilsen, lotto</span> <span class="lot">MP-2026-031</span></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><strong data-i18n="hiw.flowBatchT">Batch di produzione</strong><span data-i18n="hiw.flowBatchP">Birra chiara, batch 45, usa il lotto</span> <span class="lot">MP-2026-031</span></div>
+</div>
+<p data-i18n="hiw.crossP2"><strong>Come si crea il collegamento.</strong> Prima registri l'acquisto con i suoi lotti. Quando poi registri un batch che indica gli stessi numeri di lotto, il sistema li cerca da solo tra quelli già registrati e, prima che tu confermi, ti mostra quali ha trovato e quali no. Quelli trovati diventano un collegamento scritto sulla blockchain insieme al batch: non una semplice nota, ma un riferimento che il registro stesso controlla (il lotto deve esistere, essere una materia prima e non essere stato annullato).</p>
+<p data-i18n="hiw.crossP3"><strong>Come si usa, nei due sensi.</strong></p>
+<ul>
+  <li data-i18n="hiw.crossLi1"><strong>Dal batch ai lotti</strong>: nella scheda del batch trovi l'elenco dei lotti usati, ognuno cliccabile, e da lì fornitore, data di acquisto e scadenza.</li>
+  <li data-i18n="hiw.crossLi2"><strong>Dal lotto ai batch</strong>: nell'esploratore scegli un numero dal filtro "Lotto" (o scrivilo nella ricerca) e vedi insieme l'acquisto e tutti i batch che lo hanno usato.</li>
+</ul>
+<div class="highlight-box" data-i18n="hiw.crossUse"><strong>Esempio concreto: un richiamo.</strong> Il fornitore ti avvisa che il lotto <span class="lot">MP-2026-031</span> ha un problema. Con una ricerca vedi subito in quali batch è finito, invece di ricostruirlo da registri e fogli di calcolo. Lo stesso vale al contrario per un cliente o un ispettore: da un batch risalgono alle materie prime e ai fornitori, verificandolo da soli sulla blockchain.</div>
+<div class="warn-box" data-i18n="hiw.crossWarn">Perché il collegamento funzioni: registra gli acquisti <strong>prima</strong> dei batch che li usano, e scrivi il numero di lotto nel batch esattamente come nell'acquisto. Un lotto non trovato non blocca la registrazione, ma resta solo come testo nei dettagli del batch, senza il collegamento verificabile.</div>
+
+<h2 data-i18n="hiw.importH">File già compilati: integrazione con il tuo gestionale</h2>
+<p data-i18n="hiw.importP1">Acquisti e batch si possono inserire in due modi: compilando il modulo a mano, oppure <strong>caricando un file già pronto</strong> (formato JSON). Il secondo è pensato per chi ha già questi dati altrove: il tuo gestionale, il software di magazzino o di produzione può esportarli nel formato previsto, e tu non devi riscriverli.</p>
+<ul>
+  <li data-i18n="hiw.importLi1"><strong>Niente di automatico alle tue spalle</strong>: il file caricato riempie il modulo, dove puoi controllare e correggere tutto; poi vedi l'anteprima di cosa verrà registrato e solo dopo confermi.</li>
+  <li data-i18n="hiw.importLi2"><strong>Un acquisto con molte materie prime</strong> (anche decine di righe) richiede una sola firma e una sola transazione.</li>
+  <li data-i18n="hiw.importLi3"><strong>Il file viene controllato prima</strong>: se manca un campo obbligatorio (per esempio il fornitore o un numero di lotto) il sistema lo segnala subito, prima di qualunque registrazione.</li>
+</ul>
+<p data-i18n="hiw.importP2">Un esempio di acquisto (i nomi dei campi, come <code>Fornitore</code> o <code>lotto</code>, fanno parte del formato e vanno scritti così; le date sono nel formato GG/MM/AAAA):</p>
+<pre><code>{
+  "name": "Acquisto malto",
+  "description": "Fornitura di malto per la produzione di marzo",
+  "attributes": [
+    { "trait_type": "Fornitore", "value": "Maltificio Rossi" },
+    { "trait_type": "Data Acquisto", "value": "12/03/2026" }
+  ],
+  "materie_prime": [
+    { "nome": "Malto Pilsen", "quantità": "250 kg",
+      "lotto": "MP-2026-031", "data_scadenza": "12/03/2027" }
+  ]
+}</code></pre>
+<p data-i18n="hiw.importP3">E il batch che usa quel lotto: ogni materia prima usata è un campo che inizia con <code>Lotto</code> seguito dal nome, con il numero di lotto come valore. È proprio questo campo che crea il collegamento descritto sopra.</p>
+<pre><code>{
+  "name": "Birra chiara - batch 45",
+  "description": "Cotta del 20 marzo",
+  "attributes": [
+    { "trait_type": "Codice", "value": "CHIARA-01" },
+    { "trait_type": "Data Produzione", "value": "20/03/2026" },
+    { "trait_type": "Lotto Malto Pilsen", "value": "MP-2026-031" }
+  ]
+}</code></pre>
+<p data-i18n="hiw.importP4">Se vuoi collegare il tuo gestionale, contatta ChainIntegrate: ti forniamo la specifica completa del formato e i file di esempio per il tuo settore.</p>
 
 <h2 data-i18n="hiw.onchainH">Cosa viene scritto dove</h2>
 <p data-i18n="hiw.onchainP1">Non tutto finisce nello stesso posto, ed è utile saperlo prima di caricare qualcosa.</p>
@@ -94,9 +153,28 @@
       "hiw.title": "Come funziona",
       "hiw.lede": "Una guida breve e pratica: cosa fa TraceabilityRegistry, cosa succede davvero quando registri qualcosa, e cosa resta pubblico per sempre.",
       "hiw.whatH": "Di cosa si tratta",
-      "hiw.whatP": "TraceabilityRegistry ti permette di registrare in modo permanente e verificabile la tracciabilità dei tuoi prodotti — dalle materie prime in ingresso ai lotti/batch di produzione — sulla blockchain LUKSO. Il tuo registro è tuo: nessun altro può scriverci, nemmeno ChainIntegrate.",
+      "hiw.whatP": "TraceabilityRegistry ti permette di registrare in modo permanente e verificabile la tracciabilità dei tuoi prodotti — dalle materie prime in ingresso ai lotti/batch di produzione — sulla blockchain LUKSO, con i batch collegati ai lotti usati per produrli. Il tuo registro è tuo: nessun altro può scriverci, nemmeno ChainIntegrate.",
       "hiw.entriesH": "Materie prime e batch",
       "hiw.entriesP": "Ci sono due tipi di voce: un <strong>lotto di materia prima</strong> (qualcosa che acquisti o ricevi) e un <strong>batch di produzione</strong> (qualcosa che produci, che può richiamare uno o più lotti usati). Un batch è identificato da un \"Codice\" a tua scelta — lo stesso codice guida anche quale foto associare quando lo consulti nell'esploratore.",
+      "hiw.crossH": "La tracciabilità incrociata dei lotti",
+      "hiw.crossP1": "È il cuore del sistema: ogni batch di produzione resta <strong>collegato in modo verificabile</strong> ai lotti di materia prima usati per farlo, e da ogni lotto si risale a tutti i batch in cui è finito. Il collegamento è il numero di lotto, lo stesso scritto sul documento del fornitore.",
+      "hiw.flowSupplierT": "Fornitore", "hiw.flowSupplierP": "Maltificio Rossi, consegna del 12/03",
+      "hiw.flowLotT": "Lotto materia prima", "hiw.flowLotP": "Malto Pilsen, lotto",
+      "hiw.flowBatchT": "Batch di produzione", "hiw.flowBatchP": "Birra chiara, batch 45, usa il lotto",
+      "hiw.crossP2": "<strong>Come si crea il collegamento.</strong> Prima registri l'acquisto con i suoi lotti. Quando poi registri un batch che indica gli stessi numeri di lotto, il sistema li cerca da solo tra quelli già registrati e, prima che tu confermi, ti mostra quali ha trovato e quali no. Quelli trovati diventano un collegamento scritto sulla blockchain insieme al batch: non una semplice nota, ma un riferimento che il registro stesso controlla (il lotto deve esistere, essere una materia prima e non essere stato annullato).",
+      "hiw.crossP3": "<strong>Come si usa, nei due sensi.</strong>",
+      "hiw.crossLi1": "<strong>Dal batch ai lotti</strong>: nella scheda del batch trovi l'elenco dei lotti usati, ognuno cliccabile, e da lì fornitore, data di acquisto e scadenza.",
+      "hiw.crossLi2": "<strong>Dal lotto ai batch</strong>: nell'esploratore scegli un numero dal filtro \"Lotto\" (o scrivilo nella ricerca) e vedi insieme l'acquisto e tutti i batch che lo hanno usato.",
+      "hiw.crossUse": "<strong>Esempio concreto: un richiamo.</strong> Il fornitore ti avvisa che il lotto <span class=\"lot\">MP-2026-031</span> ha un problema. Con una ricerca vedi subito in quali batch è finito, invece di ricostruirlo da registri e fogli di calcolo. Lo stesso vale al contrario per un cliente o un ispettore: da un batch risalgono alle materie prime e ai fornitori, verificandolo da soli sulla blockchain.",
+      "hiw.crossWarn": "Perché il collegamento funzioni: registra gli acquisti <strong>prima</strong> dei batch che li usano, e scrivi il numero di lotto nel batch esattamente come nell'acquisto. Un lotto non trovato non blocca la registrazione, ma resta solo come testo nei dettagli del batch, senza il collegamento verificabile.",
+      "hiw.importH": "File già compilati: integrazione con il tuo gestionale",
+      "hiw.importP1": "Acquisti e batch si possono inserire in due modi: compilando il modulo a mano, oppure <strong>caricando un file già pronto</strong> (formato JSON). Il secondo è pensato per chi ha già questi dati altrove: il tuo gestionale, il software di magazzino o di produzione può esportarli nel formato previsto, e tu non devi riscriverli.",
+      "hiw.importLi1": "<strong>Niente di automatico alle tue spalle</strong>: il file caricato riempie il modulo, dove puoi controllare e correggere tutto; poi vedi l'anteprima di cosa verrà registrato e solo dopo confermi.",
+      "hiw.importLi2": "<strong>Un acquisto con molte materie prime</strong> (anche decine di righe) richiede una sola firma e una sola transazione.",
+      "hiw.importLi3": "<strong>Il file viene controllato prima</strong>: se manca un campo obbligatorio (per esempio il fornitore o un numero di lotto) il sistema lo segnala subito, prima di qualunque registrazione.",
+      "hiw.importP2": "Un esempio di acquisto (i nomi dei campi, come <code>Fornitore</code> o <code>lotto</code>, fanno parte del formato e vanno scritti così; le date sono nel formato GG/MM/AAAA):",
+      "hiw.importP3": "E il batch che usa quel lotto: ogni materia prima usata è un campo che inizia con <code>Lotto</code> seguito dal nome, con il numero di lotto come valore. È proprio questo campo che crea il collegamento descritto sopra.",
+      "hiw.importP4": "Se vuoi collegare il tuo gestionale, contatta ChainIntegrate: ti forniamo la specifica completa del formato e i file di esempio per il tuo settore.",
       "hiw.onchainH": "Cosa viene scritto dove",
       "hiw.onchainP1": "Non tutto finisce nello stesso posto, ed è utile saperlo prima di caricare qualcosa.",
       "hiw.onchainCardT1": "Sulla blockchain (on-chain)",
@@ -124,9 +202,28 @@
       "hiw.title": "How it works",
       "hiw.lede": "A short, practical guide: what TraceabilityRegistry does, what actually happens when you record something, and what stays public forever.",
       "hiw.whatH": "What this is",
-      "hiw.whatP": "TraceabilityRegistry lets you record your products' traceability — from incoming raw materials to production lots/batches — permanently and verifiably on the LUKSO blockchain. You own your registry: nobody else can write to it, not even ChainIntegrate.",
+      "hiw.whatP": "TraceabilityRegistry lets you record your products' traceability — from incoming raw materials to production lots/batches — permanently and verifiably on the LUKSO blockchain, with each batch linked to the lots used to make it. You own your registry: nobody else can write to it, not even ChainIntegrate.",
       "hiw.entriesH": "Raw materials and batches",
       "hiw.entriesP": "There are two kinds of entries: a <strong>raw material lot</strong> (something you buy or receive) and a <strong>production batch</strong> (something you produce, which can reference one or more lots used). A batch is identified by a \"Code\" of your choosing — the same code also drives which photo gets shown when you look it up in the explorer.",
+      "hiw.crossH": "Cross-traceability of lots",
+      "hiw.crossP1": "This is the heart of the system: every production batch stays <strong>verifiably linked</strong> to the raw material lots used to make it, and from every lot you can trace all the batches it went into. The link is the lot number, the same one printed on the supplier's paperwork.",
+      "hiw.flowSupplierT": "Supplier", "hiw.flowSupplierP": "Maltificio Rossi, delivery of 12/03",
+      "hiw.flowLotT": "Raw material lot", "hiw.flowLotP": "Pilsen malt, lot",
+      "hiw.flowBatchT": "Production batch", "hiw.flowBatchP": "Lager, batch 45, uses lot",
+      "hiw.crossP2": "<strong>How the link is created.</strong> First you record the purchase with its lots. When you later record a batch that lists the same lot numbers, the system looks them up among those already recorded and, before you confirm, shows you which ones it found and which it didn't. The ones found become a link written on the blockchain together with the batch: not just a note, but a reference the registry itself checks (the lot must exist, be a raw material and not have been invalidated).",
+      "hiw.crossP3": "<strong>How to use it, both ways.</strong>",
+      "hiw.crossLi1": "<strong>From batch to lots</strong>: the batch's card lists the lots used, each one clickable, and from there the supplier, purchase date and expiry.",
+      "hiw.crossLi2": "<strong>From lot to batches</strong>: in the explorer, pick a number from the \"Lotto\" (lot) filter, or type it in the search, and you see the purchase together with every batch that used it.",
+      "hiw.crossUse": "<strong>A concrete example: a recall.</strong> Your supplier tells you that lot <span class=\"lot\">MP-2026-031</span> has a problem. One search shows you right away which batches it ended up in, instead of rebuilding it from logbooks and spreadsheets. It works the other way round for a customer or an inspector too: from a batch they trace back to the raw materials and suppliers, verifying it themselves on the blockchain.",
+      "hiw.crossWarn": "For the link to work: record purchases <strong>before</strong> the batches that use them, and write the lot number in the batch exactly as in the purchase. A lot that isn't found doesn't block the registration, but it stays only as text in the batch's details, without the verifiable link.",
+      "hiw.importH": "Ready-made files: integrating with your management software",
+      "hiw.importP1": "Purchases and batches can be entered in two ways: by filling in the form by hand, or by <strong>uploading a ready-made file</strong> (JSON format). The second is meant for anyone who already has this data elsewhere: your ERP, warehouse or production software can export it in the expected format, so you don't have to type it again.",
+      "hiw.importLi1": "<strong>Nothing happens behind your back</strong>: the uploaded file fills in the form, where you can check and fix everything; then you see a preview of what will be recorded, and only then do you confirm.",
+      "hiw.importLi2": "<strong>A purchase with many raw materials</strong> (even dozens of rows) takes a single signature and a single transaction.",
+      "hiw.importLi3": "<strong>The file is checked first</strong>: if a required field is missing (for example the supplier or a lot number), the system tells you straight away, before anything is recorded.",
+      "hiw.importP2": "An example purchase (field names such as <code>Fornitore</code> or <code>lotto</code> are part of the format and must be written exactly like this, in Italian; dates use the DD/MM/YYYY format):",
+      "hiw.importP3": "And the batch that uses that lot: each raw material used is a field starting with <code>Lotto</code> followed by its name, with the lot number as its value. It's exactly this field that creates the link described above.",
+      "hiw.importP4": "If you want to connect your management software, get in touch with ChainIntegrate: we'll provide the full format specification and example files for your sector.",
       "hiw.onchainH": "What gets written where",
       "hiw.onchainP1": "Not everything ends up in the same place, and it's worth knowing that before you upload anything.",
       "hiw.onchainCardT1": "On the blockchain (on-chain)",

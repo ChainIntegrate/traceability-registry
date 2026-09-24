@@ -1670,6 +1670,30 @@ dei metadata disabilitata."; il click handler ha lo stesso controllo
 anticipato degli upload. (On-chain `setRegistryMetadata` resta
 `onlyRegistryAdmin` senza controllo di tier: il blocco è sul pin IPFS.)
 
+## 54. Guida "Come funziona": tracciabilità incrociata e file già compilati
+
+Due capitoli nuovi in `frontend/how-it-works.html` (IT/EN, 50/50 chiavi):
+- **La tracciabilità incrociata dei lotti** — il punto di forza, prima non
+  evidente: schema Fornitore → Lotto → Batch, come nasce il collegamento
+  (matching automatico dei lotti al momento del batch, riferimento on-chain
+  controllato dal contratto: lotto esistente, materia prima, non annullato),
+  uso nei due sensi (card batch → lotti usati; filtro/ricerca "Lotto" →
+  acquisto + tutti i batch), esempio di richiamo, avviso pratico (acquisti
+  prima dei batch, numero di lotto scritto identico, lotto non trovato =
+  solo testo).
+- **File già compilati: integrazione con il gestionale** — upload JSON come
+  canale per l'export da gestionali/magazzino/produzione: il file popola il
+  form (revisione + anteprima prima della conferma), una firma e una
+  transazione anche per decine di righe, validazione immediata. Esempi di
+  acquisto e batch collegati dallo stesso lotto, **verificati col validatore
+  reale** (`traceability-json-validators.js`: entrambi `valid`, lotto estratto
+  dal batch). Rimando a ChainIntegrate per la specifica completa.
+- Frase in "Di cosa si tratta" che anticipa il collegamento batch→lotti.
+- Controllato il layout con Chromium a 1100px e 390px (nessuno scroll
+  orizzontale della pagina; i blocchi di codice scorrono al loro interno).
+- `schemas/production-batch.schema.json`: descrizioni aggiornate da
+  "Ricetta" a "Codice" (erano rimaste indietro rispetto a §48).
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
