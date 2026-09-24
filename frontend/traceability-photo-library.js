@@ -18,26 +18,11 @@
     return ethers;
   }
 
-  // Preambolo comune a TUTTI i messaggi da firmare: italiano, inglese e link
-  // alla guida, ognuno nel suo capoverso (riga vuota in mezzo) perché la UP
-  // extension li mostri separati. Duplicato byte-per-byte tra frontend
-  // (traceability-*.js) e backend (*Routes.js): se cambia qui, va cambiato
-  // in tutti e sei i file, e il backend va riavviato insieme al deploy del
-  // frontend — altrimenti ogni firma viene rifiutata.
-  const SIGN_PREAMBLE =
-    "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-    "\n" +
-    "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-    "\n" +
-    "Come funziona / How it works: https://traceability.chainintegrate.it/how-it-works.html\n" +
-    "\n";
-
   // ATTENZIONE — duplicati intenzionali di backend/photoRoutes.js. Devono
   // restare byte-per-byte identici alle controparti backend, stesso motivo
   // già segnalato per buildSignedMessage in traceability-mint-compose.js.
   function buildPhotoUploadSignedMessage(registryAddress, label, contentHash, timestamp) {
     return (
-      SIGN_PREAMBLE +
       "ChainIntegrate TraceabilityRegistry - Upload photo\n" +
       "Registry: " + registryAddress + "\n" +
       "Label: " + label + "\n" +
@@ -48,7 +33,6 @@
 
   function buildPhotoListSignedMessage(registryAddress, timestamp) {
     return (
-      SIGN_PREAMBLE +
       "ChainIntegrate TraceabilityRegistry - List photos\n" +
       "Registry: " + registryAddress + "\n" +
       "Timestamp: " + timestamp
@@ -57,7 +41,6 @@
 
   function buildPhotoHideSignedMessage(registryAddress, photoId, timestamp) {
     return (
-      SIGN_PREAMBLE +
       "ChainIntegrate TraceabilityRegistry - Hide photo\n" +
       "Registry: " + registryAddress + "\n" +
       "Photo id: " + photoId + "\n" +
@@ -85,7 +68,7 @@
     const signerAddress = await signer.getAddress();
     const timestamp = Math.floor(Date.now() / 1000);
     const message = buildPhotoUploadSignedMessage(registryAddress, label.trim(), contentHash, timestamp);
-    const signature = await signer.signMessage(message); // apre la UP extension
+    const signature = await global.TraceabilitySiwe.signDetails(signer, registryAddress, message, timestamp); // apre la UP extension
 
     const formData = new FormData();
     formData.append("registryAddress", registryAddress);
@@ -136,7 +119,7 @@
     } else {
       timestamp = now;
       const message = buildPhotoListSignedMessage(registryAddress, timestamp);
-      signature = await signer.signMessage(message); // apre la UP extension SOLO se serve davvero
+      signature = await global.TraceabilitySiwe.signDetails(signer, registryAddress, message, timestamp); // apre la UP extension SOLO se serve davvero
       listSignatureCache[cacheKey] = { timestamp, signature };
     }
 
@@ -162,7 +145,7 @@
     const signerAddress = await signer.getAddress();
     const timestamp = Math.floor(Date.now() / 1000);
     const message = buildPhotoHideSignedMessage(registryAddress, photoId, timestamp);
-    const signature = await signer.signMessage(message);
+    const signature = await global.TraceabilitySiwe.signDetails(signer, registryAddress, message, timestamp);
 
     const res = await fetch(backendBaseUrl.replace(/\/$/, "") + "/api/traceability/photos/" + photoId + "/hide", {
       method: "POST",

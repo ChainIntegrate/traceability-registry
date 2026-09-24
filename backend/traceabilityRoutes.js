@@ -3,20 +3,6 @@ const { ethers } = require("ethers");
 const { pinJsonToIpfs } = require("./ipfsClient");
 const { verifySignedRequest } = require("./authGuard");
 
-// Preambolo comune a TUTTI i messaggi da firmare: italiano, inglese e link
-// alla guida, ognuno nel suo capoverso (riga vuota in mezzo) perché la UP
-// extension li mostri separati. Duplicato byte-per-byte tra frontend
-// (traceability-*.js) e backend (*Routes.js): se cambia qui, va cambiato
-// in tutti e sei i file, e il backend va riavviato insieme al deploy del
-// frontend — altrimenti ogni firma viene rifiutata.
-const SIGN_PREAMBLE =
-  "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-  "\n" +
-  "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-  "\n" +
-  "Come funziona / How it works: https://traceability.chainintegrate.it/how-it-works.html\n" +
-  "\n";
-
 /**
  * Messaggio in chiaro che la UP deve firmare (personal_sign). Lega insieme
  * registry + contenuto (via hash, non il JSON intero — il messaggio deve
@@ -27,7 +13,6 @@ const SIGN_PREAMBLE =
 function buildSignedMessage(registryAddress, metadataJsonString, timestamp) {
   const contentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(metadataJsonString));
   return (
-    SIGN_PREAMBLE +
     "ChainIntegrate TraceabilityRegistry - Pin metadata\n" +
     "Registry: " + registryAddress + "\n" +
     "Content hash: " + contentHash + "\n" +
@@ -52,7 +37,6 @@ function computeAggregateHash(contentHashes) {
 
 function buildBatchSignedMessage(registryAddress, aggregateHash, count, timestamp) {
   return (
-    SIGN_PREAMBLE +
     "ChainIntegrate TraceabilityRegistry - Pin metadata batch\n" +
     "Registry: " + registryAddress + "\n" +
     "Count: " + count + "\n" +

@@ -1553,7 +1553,7 @@ firma ora includono anche il link a questa pagina
 (`https://traceability.chainintegrate.it/how-it-works.html`) come terza riga
 del preambolo, prima del blocco tecnico.
 
-## 51. Firme: preambolo in capoversi separati, una lettura foto sola, backend da riavviare
+## 51. Firme in formato SIWE (pill cliccabili), una lettura foto sola, backend da riavviare
 
 **Incidente dopo §50**: aprendo un registro arrivavano tre richieste di firma
 invece di due, e fallivano tutte. Causa: il backend sul VPS non era stato
@@ -1572,11 +1572,38 @@ solo `refreshPhotoLibrary()` che legge una volta e passa la lista a
 anche dopo upload/nascondi foto. In caso di errore: un solo messaggio, nessuna
 firma extra.
 
-**Preambolo leggibile**: il testo comune è ora una costante `SIGN_PREAMBLE`
-(una per file, nei 6 file frontend/backend che costruiscono messaggi), con
-italiano, inglese e link in tre capoversi separati da una riga vuota. Il link
-diventa bilingue: "Come funziona / How it works: https://traceability.chainintegrate.it/how-it-works.html".
-Verificata di nuovo l'identità byte-per-byte frontend/backend.
+**Messaggi di firma in formato SIWE (EIP-4361)** — sostituisce il preambolo
+di §50. Scoperto dal vivo: la UP extension mostra un messaggio di testo
+libero tutto di seguito (a capo e righe vuote ignorati, link non cliccabili),
+mentre riconosce il formato "Sign-In with Ethereum" e lo mostra strutturato:
+badge "SIWE", lo *statement* come testo, e ogni riga di *Resources* come link
+cliccabile (pill). Quindi ora ogni firma è un messaggio SIWE:
+- **Statement**: una riga (vincolo EIP-4361), `[IT] ... [EN] ...` più
+  `[Operazione / Operation: List photos]`. **Solo ASCII**: niente lettere
+  accentate né trattino lungo, altrimenti il parser non riconosce il formato.
+- **Resources** (le pill): `how-it-works.html` e
+  `explorer.html?registry=<indirizzo>` (il registro su cui si sta operando).
+- **Nonce** = keccak256 del vecchio blocco tecnico (Registry/Label/Content
+  hash/Timestamp, le funzioni `buildXSignedMessage` di sempre): i dettagli non
+  sono più mostrati per esteso ma restano coperti dalla firma — se ne cambia
+  anche uno, il nonce ricostruito dal backend è diverso e la firma non verifica.
+- **Domain/URI**: frontend `window.location.host/origin`, backend
+  `ALLOWED_MINT_UI_ORIGIN` (coincidono per forza: è l'unica origin ammessa dal
+  CORS delle route firmate). **Chain ID**: `signer.getChainId()` /
+  `provider.getNetwork()`. **Issued At**: dal timestamp già usato per la
+  freschezza (resta il controllo dei 5 minuti, nessun nonce lato server).
+
+Codice: `backend/siweMessage.js` e `frontend/traceability-siwe.js`
+(`buildSiweMessage`, duplicato byte-per-byte), avvolgimento in un solo punto
+per lato: `TraceabilitySiwe.signDetails()` (8 punti di firma frontend) e
+`verifySignedRequest()` in `authGuard.js` (unico punto di verifica backend).
+`traceability-siwe.js` va incluso prima di mint-compose/photo/document library
+nelle pagine `user-*.html`. **Testato** (Node, EOA al posto della UP): messaggio
+frontend == backend per tutte le 8 operazioni, `verifySignedRequest` accetta
+la firma e rifiuta un blocco tecnico alterato, e il messaggio è accettato dal
+parser ABNF rigoroso della libreria di riferimento `siwe` (e `verify()` ok).
+**Da verificare dal vivo** che la UP extension lo mostri come nello screenshot
+Stakingverse (badge SIWE + pill).
 
 ## 39. Punti aperti / TODO
 

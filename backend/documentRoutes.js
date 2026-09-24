@@ -37,25 +37,10 @@ function handleMulterError(err, req, res, next) {
   next();
 }
 
-// Preambolo comune a TUTTI i messaggi da firmare: italiano, inglese e link
-// alla guida, ognuno nel suo capoverso (riga vuota in mezzo) perché la UP
-// extension li mostri separati. Duplicato byte-per-byte tra frontend
-// (traceability-*.js) e backend (*Routes.js): se cambia qui, va cambiato
-// in tutti e sei i file, e il backend va riavviato insieme al deploy del
-// frontend — altrimenti ogni firma viene rifiutata.
-const SIGN_PREAMBLE =
-  "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-  "\n" +
-  "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-  "\n" +
-  "Come funziona / How it works: https://traceability.chainintegrate.it/how-it-works.html\n" +
-  "\n";
-
 /** ATTENZIONE: se la usi anche lato frontend, deve restare identica lì
  * (stesso principio già segnalato per buildSignedMessage). */
 function buildDocumentUploadSignedMessage(registryAddress, label, contentHash, timestamp) {
   return (
-    SIGN_PREAMBLE +
     "ChainIntegrate TraceabilityRegistry - Upload document\n" +
     "Registry: " + registryAddress + "\n" +
     "Label: " + label + "\n" +
@@ -66,7 +51,6 @@ function buildDocumentUploadSignedMessage(registryAddress, label, contentHash, t
 
 function buildDocumentListSignedMessage(registryAddress, timestamp) {
   return (
-    SIGN_PREAMBLE +
     "ChainIntegrate TraceabilityRegistry - List documents\n" +
     "Registry: " + registryAddress + "\n" +
     "Timestamp: " + timestamp
@@ -75,7 +59,6 @@ function buildDocumentListSignedMessage(registryAddress, timestamp) {
 
 function buildDocumentHideSignedMessage(registryAddress, documentId, timestamp) {
   return (
-    SIGN_PREAMBLE +
     "ChainIntegrate TraceabilityRegistry - Hide document\n" +
     "Registry: " + registryAddress + "\n" +
     "Document id: " + documentId + "\n" +
