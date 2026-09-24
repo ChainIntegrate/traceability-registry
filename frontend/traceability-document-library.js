@@ -23,10 +23,6 @@
   // già segnalato per buildSignedMessage in traceability-mint-compose.js.
   function buildDocumentUploadSignedMessage(registryAddress, label, contentHash, timestamp) {
     return (
-      "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-      "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-      "Come funziona: https://traceability.chainintegrate.it/how-it-works.html\n" +
-      "\n" +
       "ChainIntegrate TraceabilityRegistry - Upload document\n" +
       "Registry: " + registryAddress + "\n" +
       "Label: " + label + "\n" +
@@ -37,10 +33,6 @@
 
   function buildDocumentListSignedMessage(registryAddress, timestamp) {
     return (
-      "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-      "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-      "Come funziona: https://traceability.chainintegrate.it/how-it-works.html\n" +
-      "\n" +
       "ChainIntegrate TraceabilityRegistry - List documents\n" +
       "Registry: " + registryAddress + "\n" +
       "Timestamp: " + timestamp
@@ -49,10 +41,6 @@
 
   function buildDocumentHideSignedMessage(registryAddress, documentId, timestamp) {
     return (
-      "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-      "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-      "Come funziona: https://traceability.chainintegrate.it/how-it-works.html\n" +
-      "\n" +
       "ChainIntegrate TraceabilityRegistry - Hide document\n" +
       "Registry: " + registryAddress + "\n" +
       "Document id: " + documentId + "\n" +
@@ -80,7 +68,7 @@
     const signerAddress = await signer.getAddress();
     const timestamp = Math.floor(Date.now() / 1000);
     const message = buildDocumentUploadSignedMessage(registryAddress, label.trim(), contentHash, timestamp);
-    const signature = await signer.signMessage(message); // apre la UP extension
+    const signature = await global.TraceabilitySiwe.signDetails(signer, registryAddress, message, timestamp); // apre la UP extension
 
     const formData = new FormData();
     formData.append("registryAddress", registryAddress);
@@ -124,7 +112,7 @@
     } else {
       timestamp = now;
       const message = buildDocumentListSignedMessage(registryAddress, timestamp);
-      signature = await signer.signMessage(message); // apre la UP extension SOLO se serve davvero
+      signature = await global.TraceabilitySiwe.signDetails(signer, registryAddress, message, timestamp); // apre la UP extension SOLO se serve davvero
       listSignatureCache[cacheKey] = { timestamp, signature };
     }
 
@@ -148,7 +136,7 @@
     const signerAddress = await signer.getAddress();
     const timestamp = Math.floor(Date.now() / 1000);
     const message = buildDocumentHideSignedMessage(registryAddress, documentId, timestamp);
-    const signature = await signer.signMessage(message);
+    const signature = await global.TraceabilitySiwe.signDetails(signer, registryAddress, message, timestamp);
 
     const res = await fetch(backendBaseUrl.replace(/\/$/, "") + "/api/traceability/documents/" + documentId + "/hide", {
       method: "POST",

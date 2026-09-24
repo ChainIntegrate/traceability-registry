@@ -41,10 +41,6 @@ function handleMulterError(err, req, res, next) {
  * (stesso principio già segnalato per buildSignedMessage). */
 function buildDocumentUploadSignedMessage(registryAddress, label, contentHash, timestamp) {
   return (
-    "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-    "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-    "Come funziona: https://traceability.chainintegrate.it/how-it-works.html\n" +
-    "\n" +
     "ChainIntegrate TraceabilityRegistry - Upload document\n" +
     "Registry: " + registryAddress + "\n" +
     "Label: " + label + "\n" +
@@ -55,10 +51,6 @@ function buildDocumentUploadSignedMessage(registryAddress, label, contentHash, t
 
 function buildDocumentListSignedMessage(registryAddress, timestamp) {
   return (
-    "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-    "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-    "Come funziona: https://traceability.chainintegrate.it/how-it-works.html\n" +
-    "\n" +
     "ChainIntegrate TraceabilityRegistry - List documents\n" +
     "Registry: " + registryAddress + "\n" +
     "Timestamp: " + timestamp
@@ -67,10 +59,6 @@ function buildDocumentListSignedMessage(registryAddress, timestamp) {
 
 function buildDocumentHideSignedMessage(registryAddress, documentId, timestamp) {
   return (
-    "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-    "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-    "Come funziona: https://traceability.chainintegrate.it/how-it-works.html\n" +
-    "\n" +
     "ChainIntegrate TraceabilityRegistry - Hide document\n" +
     "Registry: " + registryAddress + "\n" +
     "Document id: " + documentId + "\n" +

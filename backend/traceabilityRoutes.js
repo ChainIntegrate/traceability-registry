@@ -13,10 +13,6 @@ const { verifySignedRequest } = require("./authGuard");
 function buildSignedMessage(registryAddress, metadataJsonString, timestamp) {
   const contentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(metadataJsonString));
   return (
-    "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-    "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-    "Come funziona: https://traceability.chainintegrate.it/how-it-works.html\n" +
-    "\n" +
     "ChainIntegrate TraceabilityRegistry - Pin metadata\n" +
     "Registry: " + registryAddress + "\n" +
     "Content hash: " + contentHash + "\n" +
@@ -41,10 +37,6 @@ function computeAggregateHash(contentHashes) {
 
 function buildBatchSignedMessage(registryAddress, aggregateHash, count, timestamp) {
   return (
-    "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-    "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-    "Come funziona: https://traceability.chainintegrate.it/how-it-works.html\n" +
-    "\n" +
     "ChainIntegrate TraceabilityRegistry - Pin metadata batch\n" +
     "Registry: " + registryAddress + "\n" +
     "Count: " + count + "\n" +

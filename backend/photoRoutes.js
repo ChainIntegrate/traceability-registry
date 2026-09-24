@@ -37,10 +37,6 @@ function handleMulterError(err, req, res, next) {
  * principio già segnalato per buildSignedMessage in traceability-mint-compose.js). */
 function buildPhotoUploadSignedMessage(registryAddress, label, contentHash, timestamp) {
   return (
-    "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-    "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-    "Come funziona: https://traceability.chainintegrate.it/how-it-works.html\n" +
-    "\n" +
     "ChainIntegrate TraceabilityRegistry - Upload photo\n" +
     "Registry: " + registryAddress + "\n" +
     "Label: " + label + "\n" +
@@ -51,10 +47,6 @@ function buildPhotoUploadSignedMessage(registryAddress, label, contentHash, time
 
 function buildPhotoListSignedMessage(registryAddress, timestamp) {
   return (
-    "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-    "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-    "Come funziona: https://traceability.chainintegrate.it/how-it-works.html\n" +
-    "\n" +
     "ChainIntegrate TraceabilityRegistry - List photos\n" +
     "Registry: " + registryAddress + "\n" +
     "Timestamp: " + timestamp
@@ -63,10 +55,6 @@ function buildPhotoListSignedMessage(registryAddress, timestamp) {
 
 function buildPhotoHideSignedMessage(registryAddress, photoId, timestamp) {
   return (
-    "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-    "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-    "Come funziona: https://traceability.chainintegrate.it/how-it-works.html\n" +
-    "\n" +
     "ChainIntegrate TraceabilityRegistry - Hide photo\n" +
     "Registry: " + registryAddress + "\n" +
     "Photo id: " + photoId + "\n" +

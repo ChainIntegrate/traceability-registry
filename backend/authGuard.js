@@ -1,5 +1,6 @@
 const { ethers } = require("ethers");
 const { verifyErc1271Signature } = require("./erc1271");
+const { buildSiweMessage } = require("./siweMessage");
 const { TRACEABILITY_REGISTRY_MINIMAL_ABI, MEMBERSHIP_CORPORATE_MINIMAL_ABI } = require("./registryAbi");
 
 const MAX_SIGNATURE_AGE_SECONDS = parseInt(process.env.MAX_SIGNATURE_AGE_SECONDS || "300", 10);
@@ -61,9 +62,25 @@ async function verifySignedRequest({ provider, factoryContract, registryAddress,
     return { ok: false, status: 403, error: "registryAddress non riconosciuto (non deployato dalla Factory ChainIntegrate)." };
   }
 
+  // `message` è il blocco tecnico dell'operazione: il testo firmato davvero
+  // è il suo involucro SIWE (backend/siweMessage.js), con dominio/URI della
+  // UI ufficiale — l'unica origin ammessa dal CORS delle route firmate.
+  let siweMessage;
+  try {
+    const uiOrigin = new URL(process.env.ALLOWED_MINT_UI_ORIGIN);
+    const { chainId } = await provider.getNetwork();
+    siweMessage = buildSiweMessage({
+      domain: uiOrigin.host, uri: uiOrigin.origin, address: signerAddress, chainId,
+      registryAddress, details: message, timestamp,
+    });
+  } catch (err) {
+    console.error("verifySignedRequest: impossibile costruire il messaggio SIWE:", err.message);
+    return { ok: false, status: 400, error: "Verifica firma non riuscita." };
+  }
+
   let validSignature;
   try {
-    validSignature = await verifyErc1271Signature(provider, signerAddress, message, signature);
+    validSignature = await verifyErc1271Signature(provider, signerAddress, siweMessage, signature);
   } catch (err) {
     console.error("verifySignedRequest: errore verifica ERC-1271:", err.message);
     return { ok: false, status: 400, error: "Verifica firma non riuscita." };
