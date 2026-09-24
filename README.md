@@ -1631,6 +1631,18 @@ Due cause:
 Testato in Node su tre forme d'errore (ethers estimateGas, solo dati
 revert codificati, errore sconosciuto) più il rifiuto utente.
 
+**Pulsante "Registra hash documento" disattivato se non Gold.** Nuovo
+parametro opzionale `canSetDocumentHash()` di `createGalleryInstance`: se
+ritorna false la card mostra il pulsante disattivato con la nota "Richiede
+membership Gold." e nessuna select (quindi niente caricamento della libreria
+documenti, niente firma, niente transazione destinata al revert). Le pagine
+`user-*.html` lo passano come `activeRegistryTier === null ||
+activeRegistryTier >= GOLD_TIER` (`GOLD_TIER = 3`, come nel contratto): con
+tier non ancora letto resta attivo e decide il contratto. `activeRegistryTier`
+ora viene azzerato a ogni `selectRegistry`, per non ereditare il tier del
+registro aperto prima. Le select documento dei form di mint restano invece
+utilizzabili (etichetta "richiede tier Gold" già presente).
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

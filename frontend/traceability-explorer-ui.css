@@ -53,6 +53,7 @@
 .te-dochash-btn { background: #fff; color: #3454d1; border: 1px solid #3454d1; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; cursor: pointer; }
 .te-dochash-btn:hover { background: #e8ecfc; }
 .te-dochash-btn:disabled { opacity: 0.6; cursor: default; }
+.te-dochash-gate { font-size: 0.72rem; color: #a67c00; }
 .te-err { color: #c33; }
 .te-empty { text-align: center; padding: 40px; color: #999; }
 

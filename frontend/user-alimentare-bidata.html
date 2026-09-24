@@ -272,6 +272,7 @@ const I18N = {
     "card.verifyButton": "Verifica un file", "card.verifyMatch": "✓ Il file corrisponde.",
     "card.verifyMismatch": "✗ Il file NON corrisponde.", "card.verifyError": "Errore verifica: {msg}",
     "card.setDocumentHashNeedSelection": "Seleziona prima un documento dalla libreria.",
+    "card.setDocumentHashNeedsGold": "Richiede membership Gold.",
     "card.documentListError": "Errore caricamento libreria: {msg}",
     "common.loadingDocuments": "Caricamento documenti...",
     "log.invalidating": "Annullamento token {tokenId} in corso...",
@@ -389,6 +390,7 @@ const I18N = {
     "card.verifyButton": "Verify a file", "card.verifyMatch": "✓ The file matches.",
     "card.verifyMismatch": "✗ The file does NOT match.", "card.verifyError": "Verification error: {msg}",
     "card.setDocumentHashNeedSelection": "Select a document from the library first.",
+    "card.setDocumentHashNeedsGold": "Requires a Gold membership.",
     "card.documentListError": "Library load error: {msg}",
     "common.loadingDocuments": "Loading documents...",
     "log.invalidating": "Invalidating token {tokenId}...",
@@ -524,6 +526,7 @@ const MEMBERSHIP_ABI = ["function tierOf(address account) view returns (uint256)
 
 let provider, signer, myAddress, factory, activeRegistryAddress, activeRegistry;
 let activeRegistryTier = null;
+const GOLD_TIER = 3; // come TraceabilityRegistry.sol: 1=Bronze, 2=Silver, 3=Gold
 
 const LOG_MAX_LINES = 5;
 let logLines = [];
@@ -685,6 +688,7 @@ document.getElementById("deployRegistryBtn").addEventListener("click", async () 
 
 async function selectRegistry(address) {
   activeRegistryAddress = address;
+  activeRegistryTier = null; // riletto da refreshTierNote: mai ereditare il tier del registro precedente
   activeRegistry = new ethers.Contract(address, REGISTRY_ABI, signer);
   document.getElementById("activeRegistryAddress").textContent = address;
   document.getElementById("registrySetup").style.display = "none";
@@ -731,10 +735,10 @@ const exploreGallery = TraceabilityExplorerUI.createGalleryInstance({
     const receipt = await tx.wait();
     log(t("log.invalidated", { tx: receipt.transactionHash }));
   },
-  // Gold-only lato contratto (onlyGoldFeature) — nessun filtro di tier qui,
-  // il bottone è sempre visibile: serve proprio a verificare dal vivo che
-  // il contratto accetti la registrazione con tier Gold e la rifiuti
-  // altrimenti (mai testato finora, GOLD_TIER = 3 non ancora esercitato).
+  // Gold-only lato contratto (onlyGoldFeature). Lato UI il pulsante resta
+  // visibile ma disattivato, con la spiegazione, se il tier letto non è Gold
+  // (3). Tier non ancora letto (null) = pulsante attivo: decide il contratto.
+  canSetDocumentHash: () => activeRegistryTier === null || activeRegistryTier >= GOLD_TIER,
   // documentHash arriva già dalla libreria (select in traceability-
   // explorer-ui.js) — MAI più un file scelto a mano qui: un hash calcolato
   // su un file non pinnato da nessuna parte sarebbe verificabile ma

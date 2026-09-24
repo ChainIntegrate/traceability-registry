@@ -152,7 +152,7 @@
     return values;
   }
 
-  function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate, onSetDocumentHash, listDocumentsForSelect, facetKeys, formatError }) {
+  function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate, onSetDocumentHash, listDocumentsForSelect, facetKeys, formatError, canSetDocumentHash }) {
     // Traduzione degli errori in linguaggio comprensibile: le pagine user-*.html
     // passano TraceabilityErrors.friendlyMessage; l'explorer pubblico (che non
     // include traceability-error-messages.js) resta sul messaggio grezzo.
@@ -384,9 +384,8 @@
             "</div></div>";
         }
         // Attestazione hash documento (Gold-only lato contratto —
-        // onlyGoldFeature — non filtrato qui: il bottone compare per
-        // chiunque abbia accesso a questa gallery col callback abilitato,
-        // il contratto stesso rifiuta la tx se il tier non è Gold). Nascosto
+        // onlyGoldFeature; lato UI disattivato se la pagina segnala un tier
+        // non Gold via canSetDocumentHash, vedi sotto). Nascosto
         // se un hash è già presente per non sovrascriverlo per sbaglio — il
         // contratto non impedisce la sostituzione, quindi il gate è qui.
         // Select invece di un file grezzo: l'hash scritto on-chain deve
@@ -394,7 +393,16 @@
         // (su IPFS), altrimenti è verificabile ma irrecuperabile — bug
         // trovato testando la prima versione (file scelto a mano, mai
         // pinnato da nessuna parte).
-        if (onSetDocumentHash && !hasDocumentHash(entry)) {
+        // canSetDocumentHash (opzionale): la pagina sa se il registro è Gold.
+        // Se non lo è, pulsante disattivato con la spiegazione e nessuna
+        // select — così non si carica nemmeno la libreria documenti (niente
+        // firma inutile) e non si arriva a una transazione destinata al revert.
+        if (onSetDocumentHash && !hasDocumentHash(entry) && canSetDocumentHash && !canSetDocumentHash()) {
+          html += "<div class='te-dochash-row'>" +
+            "<button type='button' class='te-dochash-btn' disabled>" + t("card.setDocumentHashButton") + "</button>" +
+            "<span class='te-dochash-gate'>" + t("card.setDocumentHashNeedsGold") + "</span>" +
+            "</div>";
+        } else if (onSetDocumentHash && !hasDocumentHash(entry)) {
           html += "<div class='te-dochash-row'>" +
             "<select class='te-dochash-select' data-dochash-token='" + entry.tokenId + "'><option value=''>" + t("common.loadingDocuments") + "</option></select>" +
             "<button type='button' class='te-dochash-btn' data-dochash-token='" + entry.tokenId + "'>" + t("card.setDocumentHashButton") + "</button>" +
