@@ -10,7 +10,7 @@
     "image": {
       "type": "string",
       "minLength": 1,
-      "description": "Opzionale: se assente, la UI usa la libreria foto per ricetta."
+      "description": "Opzionale: se assente, la UI usa la libreria foto per codice."
     },
     "attributes": {
       "type": "array",
@@ -24,7 +24,7 @@
         },
         "additionalProperties": false
       },
-      "description": "Deve contenere 'Ricetta' e almeno una data riconosciuta (verificato dal validatore JS: le regole 'contiene Ricetta', 'almeno una data tra quelle whitelisted', 'ogni chiave che inizia per Lotto ' non sono esprimibili pulitamente in puro JSON Schema)."
+      "description": "Deve contenere 'Codice' e almeno una data riconosciuta (verificato dal validatore JS: le regole 'contiene Codice', 'almeno una data tra quelle whitelisted', 'ogni chiave che inizia per Lotto ' non sono esprimibili pulitamente in puro JSON Schema)."
     }
   },
   "additionalProperties": false
