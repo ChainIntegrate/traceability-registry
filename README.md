@@ -1605,6 +1605,44 @@ parser ABNF rigoroso della libreria di riferimento `siwe` (e `verify()` ok).
 **Da verificare dal vivo** che la UP extension lo mostri come nello screenshot
 Stakingverse (badge SIWE + pill).
 
+## 52. Errori comprensibili anche nei popup delle card (hash documento, annullamento)
+
+Trovato provando "Registra hash documento" con un account Silver (revert
+atteso, `requires Gold tier`): il popup mostrava ancora l'errore grezzo.
+Due cause:
+- `traceability-explorer-ui.js` (modulo condiviso, card del tab "Esplora")
+  non era stato toccato da §50: i suoi `window.alert` usavano `err.message`.
+  Ora `createGalleryInstance({... formatError })` accetta un traduttore
+  opzionale; le tre pagine `user-*.html` passano
+  `TraceabilityErrors.friendlyMessage(err, currentLang)`. L'explorer pubblico
+  non lo passa e resta sul messaggio grezzo (non include il modulo errori).
+- Anche quando tradotto, il "dettaglio tecnico" tra parentesi era l'intero
+  messaggio ethers (transazione, JSON del provider, codici). Ora
+  `traceability-error-messages.js` isola la sola frase di revert del
+  contratto: da `err.reason`, dal testo "execution reverted: ...", o
+  decodificando i dati grezzi `Error(string)` (0x08c379a0) quando la UP
+  extension restituisce solo quelli; cerca anche negli errori annidati
+  (`err.error`, `err.data`, ...). Se non c'è un revert, prima frase del
+  messaggio, max 160 caratteri. Risultato:
+  > Registrazione dell'hash del documento non riuscita. Questa funzione
+  > richiede una membership Gold. (dettaglio tecnico: TraceabilityRegistry:
+  > requires Gold tier)
+
+Testato in Node su tre forme d'errore (ethers estimateGas, solo dati
+revert codificati, errore sconosciuto) più il rifiuto utente.
+
+**Pulsante "Registra hash documento" disattivato se non Gold.** Nuovo
+parametro opzionale `canSetDocumentHash()` di `createGalleryInstance`: se
+ritorna false la card mostra il pulsante disattivato con la nota "Richiede
+membership Gold." e nessuna select (quindi niente caricamento della libreria
+documenti, niente firma, niente transazione destinata al revert). Le pagine
+`user-*.html` lo passano come `activeRegistryTier === null ||
+activeRegistryTier >= GOLD_TIER` (`GOLD_TIER = 3`, come nel contratto): con
+tier non ancora letto resta attivo e decide il contratto. `activeRegistryTier`
+ora viene azzerato a ogni `selectRegistry`, per non ereditare il tier del
+registro aperto prima. Le select documento dei form di mint restano invece
+utilizzabili (etichetta "richiede tier Gold" già presente).
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

@@ -177,18 +177,51 @@
     );
   }
 
-  /** La stringa require() del contratto compare sempre per intero da
-   * qualche parte in uno di questi campi, a seconda del provider/versione
-   * di ethers che l'ha generato — li concateniamo tutti e cerchiamo lì. */
-  function extractRawDetail(err) {
-    const parts = [
-      err && err.reason,
-      err && err.shortMessage,
-      err && err.error && err.error.message,
-      err && err.data && err.data.message,
-      err && err.message,
-    ].filter(function (v) { return typeof v === "string" && v.length > 0; });
-    return parts.length ? parts.join(" | ") : "";
+  /** Raccoglie i testi utili da err e dai suoi errori annidati (ethers v5
+   * incapsula l'errore del provider in err.error, a volte in err.error.error,
+   * e la UP extension ha la sua forma ancora diversa). Profondità limitata. */
+  function collectStrings(obj, depth, out) {
+    if (!obj || typeof obj !== "object" || depth > 4) return out;
+    ["reason", "shortMessage", "message", "data", "body"].forEach(function (k) {
+      if (typeof obj[k] === "string" && obj[k].length > 0) out.push(obj[k]);
+    });
+    ["error", "data", "info", "cause"].forEach(function (k) {
+      if (obj[k] && typeof obj[k] === "object") collectStrings(obj[k], depth + 1, out);
+    });
+    return out;
+  }
+
+  /** La sola frase di revert del contratto (es. "TraceabilityRegistry:
+   * requires Gold tier"), se si riesce a isolarla: dal campo reason di
+   * ethers, dal testo "execution reverted: ...", o decodificando i dati
+   * grezzi Error(string) (selettore 0x08c379a0) quando arriva solo quelli. */
+  function extractRevertReason(err, strings) {
+    if (err && typeof err.reason === "string" && err.reason.indexOf("TraceabilityRegistry") !== -1) {
+      return err.reason.replace(/^execution reverted:?\s*/, "");
+    }
+    for (let i = 0; i < strings.length; i++) {
+      const m = /reverted(?: with reason string)?:?\s*'?([^"'|\\\n]+)/.exec(strings[i]);
+      if (m && m[1].trim().length > 0) return m[1].trim();
+    }
+    if (typeof ethers !== "undefined") {
+      for (let i = 0; i < strings.length; i++) {
+        const hex = /0x08c379a0[0-9a-fA-F]+/.exec(strings[i]);
+        if (!hex) continue;
+        try {
+          return ethers.utils.defaultAbiCoder.decode(["string"], "0x" + hex[0].slice(10))[0];
+        } catch (e) { /* dati non decodificabili: si prosegue */ }
+      }
+    }
+    return "";
+  }
+
+  /** Dettaglio tecnico da mostrare tra parentesi: breve. Prima il motivo del
+   * revert se c'è, altrimenti la prima frase del messaggio d'errore — mai
+   * l'intero messaggio ethers con transazione e JSON del provider. */
+  function shortDetail(err, strings, revertReason) {
+    if (revertReason) return revertReason;
+    const first = (strings[0] || "").split(" [ See:")[0].split(" (")[0].trim();
+    return first.length > 160 ? first.slice(0, 157) + "..." : first;
   }
 
   /**
@@ -198,7 +231,11 @@
    */
   function friendlyMessage(err, lang) {
     const isIt = lang !== "en";
-    const raw = extractRawDetail(err) || (isIt ? "errore sconosciuto" : "unknown error");
+    const strings = collectStrings(err, 0, []);
+    if (typeof err === "string") strings.push(err);
+    const raw = strings.join(" | ");
+    const revertReason = extractRevertReason(err, strings);
+    const detail = shortDetail(err, strings, revertReason) || (isIt ? "errore sconosciuto" : "unknown error");
 
     if (isUserRejection(err, raw)) {
       return isIt
@@ -208,18 +245,18 @@
 
     for (let i = 0; i < REASON_MAP.length; i++) {
       const entry = REASON_MAP[i];
-      if (raw.indexOf(entry.match) !== -1) {
+      if (raw.indexOf(entry.match) !== -1 || revertReason.indexOf(entry.match) !== -1) {
         return isIt
-          ? entry.it + " (dettaglio tecnico: " + raw + ")"
-          : entry.en + " (technical detail: " + raw + ")";
+          ? entry.it + " (dettaglio tecnico: " + detail + ")"
+          : entry.en + " (technical detail: " + detail + ")";
       }
     }
 
     // Nessuna corrispondenza nota: mai la sola stringa blockchain da sola —
     // un'introduzione onesta e comprensibile, poi il dettaglio tecnico grezzo.
     return isIt
-      ? "Operazione non riuscita. Dettaglio tecnico: " + raw
-      : "The operation failed. Technical detail: " + raw;
+      ? "Operazione non riuscita. Dettaglio tecnico: " + detail
+      : "The operation failed. Technical detail: " + detail;
   }
 
   global.TraceabilityErrors = { friendlyMessage: friendlyMessage };
