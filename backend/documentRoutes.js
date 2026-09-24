@@ -113,6 +113,7 @@ function buildDocumentRouter(provider, factoryContract) {
 
       const verification = await verifySignedRequest({
         provider, factoryContract, registryAddress, signerAddress, message, signature, timestamp,
+        requireActiveTier: true, // §49: aggiunge contenuto a IPFS, non solo lettura/gestione
       });
       if (!verification.ok) {
         return res.status(verification.status).json({ error: verification.error });

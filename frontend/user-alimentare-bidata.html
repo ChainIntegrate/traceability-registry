@@ -191,6 +191,7 @@
       <div class="row"><label data-i18n="documents.label">Etichetta</label><input type="text" id="documentLabel" data-i18n-placeholder="documents.labelPlaceholder" placeholder="es. Certificato spedizione 12/09/2026"></div>
       <div class="row"><label data-i18n="documents.file">File</label><input type="file" id="documentFileInput" accept="application/pdf,image/png,image/jpeg,image/webp"></div>
       <button class="primary" id="uploadDocumentBtn" data-i18n="documents.upload">Carica</button>
+      <p id="documentUploadGateNote" class="muted" style="display:none;" data-i18n="documents.suspendedNote">Membership sospesa: upload disabilitato.</p>
       <div id="documentLibraryList" style="margin-top:14px;"></div>
     </div>
   </section>
@@ -316,6 +317,7 @@ const I18N = {
     "documents.title": "Libreria documenti", "documents.hint": "Certificati, DDT e altri documenti collegabili a materie prime/batch tramite hash on-chain (richiede tier Gold per la registrazione dell'hash al momento del mint).",
     "documents.label": "Etichetta", "documents.labelPlaceholder": "es. Certificato spedizione 12/09/2026",
     "documents.file": "File", "documents.upload": "Carica", "documents.none": "Nessun documento ancora.",
+    "documents.suspendedNote": "Membership sospesa: upload disabilitato.",
     "documents.colLabel": "Etichetta", "documents.colCid": "CID", "documents.colFile": "File originale", "documents.hide": "Nascondi",
     "documents.download": "Scarica",
     "documents.listError": "Impossibile caricare la libreria documenti: {msg}", "documents.uploading": "Upload documento in corso...",
@@ -432,6 +434,7 @@ const I18N = {
     "documents.title": "Document library", "documents.hint": "Certificates, delivery notes and other documents linkable to raw materials/batches via on-chain hash (requires Gold tier to register the hash at mint time).",
     "documents.label": "Label", "documents.labelPlaceholder": "e.g. Shipment certificate 12/09/2026",
     "documents.file": "File", "documents.upload": "Upload", "documents.none": "No documents yet.",
+    "documents.suspendedNote": "Membership suspended: upload disabled.",
     "documents.colLabel": "Label", "documents.colCid": "CID", "documents.colFile": "Original file", "documents.hide": "Hide",
     "documents.download": "Download",
     "documents.listError": "Could not load document library: {msg}", "documents.uploading": "Uploading document...",
@@ -909,10 +912,13 @@ document.getElementById("uploadPhotoBtn").addEventListener("click", async () => 
 });
 
 // -----------------------------------------------------------------------
-// Libreria documenti — mirror della libreria foto; nessun gate di tier
-// lato UI qui (a differenza delle foto) perché il vincolo Gold vero e
-// proprio si applica al momento di collegare l'hash a un mint, non
-// all'upload/lista, coerente con quanto già commentato in documentRoutes.js.
+// Libreria documenti — mirror della libreria foto. Il vincolo Gold vero e
+// proprio resta al momento di collegare l'hash a un mint, non
+// all'upload/lista (coerente con documentRoutes.js). Il gate "sospesa"
+// invece ORA è coerente con quello foto (§49): il backend rifiuta
+// upload-document a tier 0 (evita che un'azienda sospesa usi comunque il
+// nodo IPFS), quindi anche qui disabilitiamo il bottone lato UI — stesso
+// bug trovato testando: prima il gate foto c'era, quello documenti no.
 // -----------------------------------------------------------------------
 async function refreshDocumentLibraryList() {
   try {
@@ -947,6 +953,7 @@ async function hideDocumentRow(documentId) {
 }
 
 document.getElementById("uploadDocumentBtn").addEventListener("click", async () => {
+  if (activeRegistryTier === 0) { alert(t("documents.suspendedNote")); return; }
   try {
     const label = document.getElementById("documentLabel").value.trim();
     const fileInput = document.getElementById("documentFileInput");
@@ -981,16 +988,21 @@ async function refreshTierNote() {
   }
 }
 
-// Gate solo lato UI: nessuna garanzia di sicurezza (l'upload foto non ha
-// alcun controllo di tier lato backend/contratto, a differenza del mint),
-// ma evita che un'azienda sospesa carichi comunque foto nella libreria
-// dall'interfaccia normale. Chiamata dopo ogni lettura del tier.
+// Gate lato UI, ora rispecchiato anche dal backend (§49: requireActiveTier
+// su upload-photo/upload-document/pin-json) — evita che un'azienda sospesa
+// carichi comunque foto/documenti nella libreria dall'interfaccia normale,
+// oltre a intasare inutilmente il nodo IPFS visto che il mint fallirebbe
+// comunque. Chiamata dopo ogni lettura del tier.
 function applyMembershipGate() {
   const suspended = activeRegistryTier === 0;
   const uploadBtn = document.getElementById("uploadPhotoBtn");
   if (uploadBtn) uploadBtn.disabled = suspended;
   const note = document.getElementById("photoUploadGateNote");
   if (note) note.style.display = suspended ? "block" : "none";
+  const uploadDocBtn = document.getElementById("uploadDocumentBtn");
+  if (uploadDocBtn) uploadDocBtn.disabled = suspended;
+  const docNote = document.getElementById("documentUploadGateNote");
+  if (docNote) docNote.style.display = suspended ? "block" : "none";
 }
 
 async function refreshDelegatesList() {

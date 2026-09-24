@@ -75,6 +75,7 @@ function buildTraceabilityRouter(provider, factoryContract) {
       const message = buildSignedMessage(registryAddress, metadataJsonString, timestamp);
       const verification = await verifySignedRequest({
         provider, factoryContract, registryAddress, signerAddress, message, signature, timestamp,
+        requireActiveTier: true, // §49: pin su IPFS, non solo lettura/gestione
       });
       if (!verification.ok) {
         return res.status(verification.status).json({ error: verification.error });
@@ -128,6 +129,7 @@ function buildTraceabilityRouter(provider, factoryContract) {
 
       const verification = await verifySignedRequest({
         provider, factoryContract, registryAddress, signerAddress, message, signature, timestamp,
+        requireActiveTier: true, // §49: pin su IPFS, non solo lettura/gestione
       });
       if (!verification.ok) {
         return res.status(verification.status).json({ error: verification.error });

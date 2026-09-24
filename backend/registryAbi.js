@@ -1,5 +1,16 @@
 const TRACEABILITY_REGISTRY_MINIMAL_ABI = [
   "function isAuthorized(address account) external view returns (bool)",
+  // Aggiunte per il check di tier lato backend sugli upload (§49): serve
+  // risalire a CHI è registryAdmin e a QUALE Membership Corporate rispetto
+  // a un registry qualsiasi, prima di poter chiamare tierOf().
+  "function registryAdmin() view returns (address)",
+  "function membershipCorporate() view returns (address)",
+];
+
+/** Solo tierOf(): stessa interfaccia minima già usata lato frontend
+ * (MEMBERSHIP_ABI in user-*.html) — mai l'ABI completa, non serve altro qui. */
+const MEMBERSHIP_CORPORATE_MINIMAL_ABI = [
+  "function tierOf(address account) view returns (uint256)",
 ];
 
 /**
@@ -25,4 +36,9 @@ const TRACEABILITY_REGISTRY_READ_ABI = [
 
 const LSP4_METADATA_KEY = "0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e";
 
-module.exports = { TRACEABILITY_REGISTRY_MINIMAL_ABI, TRACEABILITY_REGISTRY_READ_ABI, LSP4_METADATA_KEY };
+module.exports = {
+  TRACEABILITY_REGISTRY_MINIMAL_ABI,
+  TRACEABILITY_REGISTRY_READ_ABI,
+  MEMBERSHIP_CORPORATE_MINIMAL_ABI,
+  LSP4_METADATA_KEY,
+};

@@ -1412,12 +1412,67 @@ ogni settore) è `ALLOWED_FACET_KEYS`, oggi costante interna non esposta in
      per `setMembershipCorporate` in questo stesso file.
    - **Fatto**: `alimentare_bidata` assegnato a un'azienda di prova ed
      end-to-end testato su testnet (vedi Fase 1 sopra per il dettaglio).
-   - **Ancora da fare**: test live di `user-alimentare-monodata.html` e
-     `user-industria.html` — create ma mai aperte in un browser reale, zero
-     dati di test sopra; generalizzare `explorer.html` a leggere
+   - **Fatto**: `user-alimentare-monodata.html` testata live con dati di
+     prova (una sola data, matching lotto, explorer) — nessun problema
+     strutturale, solo un falso allarme iniziale dovuto a cache del browser
+     su uno script condiviso (vedi §49). `user-industria.html` non ancora
+     testata direttamente ma è identica strutturalmente a monodata.
+   - **Ancora da fare**: generalizzare `explorer.html` a leggere
      `facetKeys`/config da un meccanismo iniettabile invece delle costanti
      fisse (oggi funziona solo perché il default coincide col caso
      Birra20Venti).
+
+## 49. Tier sospeso (0): verifica completa e nuovo gate backend su IPFS
+
+Ultima verifica prevista prima di mainnet (§30): simulare una Membership
+Corporate portata a tier 0 e controllare cosa succede su ogni funzione
+esposta dalle tre UI di settore.
+
+**Comportamento confermato corretto, senza modifiche**:
+- Mint (materie prime + batch): firma del messaggio raggiunta, ma il mint
+  non prosegue — coerente col fix già fatto in §40 (`onlyAuthorized` ora
+  controlla anche `tierOf(registryAdmin) != 0`).
+- Deleghe: operazione va in revert — richiede Silver, coerente.
+
+**Bug trovato e corretto**: il bottone "Carica documento" restava sempre
+abilitato a tier 0, mentre quello foto si disabilitava correttamente.
+Root cause: `applyMembershipGate()` toccava solo `uploadPhotoBtn`, mai
+`uploadDocumentBtn` — un gate aggiunto a suo tempo solo per le foto e mai
+esteso quando è arrivata la libreria documenti. Deciso di chiudere anche un
+gap più profondo notato nello stesso momento: **nessuna delle due
+route di upload aveva mai avuto un controllo di tier lato backend**
+(gap già noto ed esplicitamente lasciato aperto in §40, perché il mint
+comunque falliva a valle) — ma un'azienda sospesa può comunque intasare il
+nodo IPFS self-hosted con upload inutili, indipendentemente dal fatto che
+il mint non arriverà mai a buon fine. Non vale la pena lasciare aperta
+questa porta solo perché "tanto non serve a niente" — è comunque un modo
+per abusare gratuitamente delle risorse.
+
+**Fix**: un solo punto centrale, `backend/authGuard.js` → `verifySignedRequest`
+prende un nuovo parametro opzionale `requireActiveTier` (default `false`,
+backward-compatible). Se `true`, dopo l'`isAuthorized` legge
+`registryAdmin()`/`membershipCorporate()` dal registry e chiama
+`tierOf(registryAdmin)` sulla Membership Corporate — stesso identico
+pattern già usato per il fix on-chain del mint. Applicato a
+`POST /pin-json`, `POST /pin-json-batch`, `POST /upload-photo`,
+`POST /upload-document` (le uniche route che aggiungono davvero contenuto a
+IPFS). **Lasciate fuori di proposito**: `GET /photos`, `GET /documents`,
+`.../hide` — stessa filosofia già applicata a `invalidateEntry` (§40): un
+account sospeso deve poter sempre gestire/correggere ciò che ha già,
+solo non aggiungerne di nuovo. Testato con un mock di `ethers.Contract`
+(nessun nodo reale coinvolto): tier 0 con `requireActiveTier: true` → 403;
+tier attivo → ok; `requireActiveTier` omesso o `false` → comportamento
+invariato (nessuna regressione sulle route esistenti).
+
+Lato UI, allineato il gate documenti a quello foto su tutte e tre le
+pagine `user-*.html`: bottone disabilitato + nota "Membership sospesa" a
+tier 0, stesso meccanismo (`applyMembershipGate()`), stessa i18n IT/EN.
+
+**Nota per il futuro**: essendo la logica duplicata in tre file HTML
+(nessun meccanismo di config condivisa per questa parte, a differenza del
+validatore JSON), un domani cambio a questo gate andrà applicato a mano in
+tutte e tre — esattamente il rischio già segnalato in §48 per le pagine
+tipizzate.
 
 ## 39. Punti aperti / TODO
 
@@ -1519,18 +1574,20 @@ Bilancio a freddo dopo settimane di test reali su testnet.
 
 **Decisioni da prendere (non blocchi tecnici):**
 - **Convivenza testnet/mainnet**: `traceability.chainintegrate.it` serve
-  oggi solo testnet (`FACTORY_ADDRESS` testnet nel `.env` e cablato nei tre
-  file HTML). Per mainnet serve decidere: nuovo dominio/porta dedicati che
-  convivono col testnet (come `matchpredictor`/`playmatchpredictor`), o si
-  sostituisce la configurazione quando si è pronti a smettere di testare?
-- **Bilinguismo dei metadata on-chain**: i token mintati restano solo in
-  italiano (nome, descrizione, attributi) — diverso dal bilinguismo IT/EN
-  già fatto per l'interfaccia (§19), che traduce solo le etichette della
-  pagina, non il contenuto scritto in chain. Mai deciso se serve.
+  oggi solo testnet (`FACTORY_ADDRESS` testnet nel `.env` e nelle pagine
+  `user-*.html`/`admin.html`). Per mainnet serve decidere: nuovo
+  dominio/porta dedicati che convivono col testnet (come
+  `matchpredictor`/`playmatchpredictor`), o si sostituisce la
+  configurazione quando si è pronti a smettere di testare?
+- ~~Bilinguismo dei metadata on-chain~~ — **deciso** (§19): resta solo il
+  chrome della UI a tradursi, il contenuto della metadata resta nella
+  lingua in cui l'azienda l'ha scritto, nessuna traduzione automatica.
 
 **Verifiche mai fatte sul campo, a basso rischio ma da chiudere:**
-- `tierOf()` per un'azienda sospesa — mai testato (nessuna sospensione
-  durante i test).
+- ~~`tierOf()` per un'azienda sospesa~~ — **fatto** (§49): mint, materie
+  prime, deleghe e upload libreria tutti confermati bloccati/coerenti a
+  tier 0; trovato e corretto un gap reale (upload documenti non era
+  gated né lato UI né lato backend).
 - Funzionalità Gold (`setDocumentHash`, hash fattura privata) — mai
   esercitata nemmeno una volta, a differenza di Silver (deleghe, confermate
   funzionanti sul campo).
@@ -1538,9 +1595,12 @@ Bilancio a freddo dopo settimane di test reali su testnet.
 **Da fare meccanicamente quando si decide di procedere:**
 - `npm run deploy:mainnet` (già pronto, indirizzi Membership Corporate e
   ChainIntegrate owner mainnet già cablati in `scripts/deploy.js`).
-- Aggiornare `CONFIG.FACTORY_ADDRESS` in `user.html`/`admin.html`/`explorer.html`
-  e `FACTORY_ADDRESS`/`LUKSO_RPC_URL` nel `.env` del backend con i valori
-  mainnet (chiave RPC dedicata **nuova**, mai quella testnet).
+- Assegnare il settore a Birra20Venti sul Factory mainnet via `setSector`
+  (§48) — senza, `deployRegistry()` fallisce anche su mainnet.
+- Aggiornare `CONFIG.FACTORY_ADDRESS` in `user-alimentare-bidata.html`/
+  `admin.html`/`explorer.html` e `FACTORY_ADDRESS`/`LUKSO_RPC_URL` nel
+  `.env` del backend con i valori mainnet (chiave RPC dedicata **nuova**,
+  mai quella testnet).
 - Verificare il nuovo contratto su Blockscout mainnet (stesso comando
   `hardhat verify`, rete `luksoMainnet`).
 

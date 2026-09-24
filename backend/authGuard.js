@@ -1,6 +1,6 @@
 const { ethers } = require("ethers");
 const { verifyErc1271Signature } = require("./erc1271");
-const { TRACEABILITY_REGISTRY_MINIMAL_ABI } = require("./registryAbi");
+const { TRACEABILITY_REGISTRY_MINIMAL_ABI, MEMBERSHIP_CORPORATE_MINIMAL_ABI } = require("./registryAbi");
 
 const MAX_SIGNATURE_AGE_SECONDS = parseInt(process.env.MAX_SIGNATURE_AGE_SECONDS || "300", 10);
 
@@ -27,11 +27,21 @@ async function verifyRegistryIsKnown(factoryContract, registryAddress) {
  * diversi — un copia-incolla dimenticato in una copia è già causa del bug
  * (GET /photos partita senza controllo). Ora un solo punto da mantenere.
  *
+ * @param {boolean} [requireActiveTier=false] - se true, dopo l'autorizzazione
+ *        controlla anche `tierOf(registryAdmin)` sulla Membership Corporate
+ *        del registry e rifiuta se sospesa/mai avuta (tier 0). Introdotto in
+ *        §49 per le route che aggiungono davvero contenuto a IPFS
+ *        (pin-json, upload-photo, upload-document) — un'azienda sospesa non
+ *        deve poter usare il nodo IPFS solo perché il mint fallirebbe
+ *        comunque a valle. Le route che NON aggiungono contenuto (list,
+ *        hide) restano volutamente escluse, stessa filosofia già applicata a
+ *        `invalidateEntry`: un'azienda sospesa può sempre gestire/correggere
+ *        quello che ha già, solo non aggiungerne di nuovo.
  * @returns {Promise<{ok: true} | {ok: false, status: number, error: string}>}
  *          L'errore ritornato è sempre un messaggio generico e sicuro da
  *          mostrare al client — il dettaglio va loggato a parte dal chiamante.
  */
-async function verifySignedRequest({ provider, factoryContract, registryAddress, signerAddress, message, signature, timestamp }) {
+async function verifySignedRequest({ provider, factoryContract, registryAddress, signerAddress, message, signature, timestamp, requireActiveTier = false }) {
   const nowSeconds = Math.floor(Date.now() / 1000);
   if (typeof timestamp !== "number" || !Number.isFinite(timestamp)) {
     return { ok: false, status: 400, error: "timestamp mancante o non numerico." };
@@ -72,6 +82,22 @@ async function verifySignedRequest({ provider, factoryContract, registryAddress,
   }
   if (!authorized) {
     return { ok: false, status: 403, error: "Indirizzo non autorizzato (né registryAdmin né delegato) su questo registry." };
+  }
+
+  if (requireActiveTier) {
+    let tier;
+    try {
+      const registryAdmin = await registry.registryAdmin();
+      const membershipAddr = await registry.membershipCorporate();
+      const membership = new ethers.Contract(membershipAddr, MEMBERSHIP_CORPORATE_MINIMAL_ABI, provider);
+      tier = (await membership.tierOf(registryAdmin)).toNumber();
+    } catch (err) {
+      console.error("verifySignedRequest: errore verifica tier:", err.message);
+      return { ok: false, status: 400, error: "Impossibile verificare la membership di questo registry." };
+    }
+    if (tier === 0) {
+      return { ok: false, status: 403, error: "Membership sospesa o mai attiva: upload non consentito." };
+    }
   }
 
   return { ok: true };
