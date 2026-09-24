@@ -694,8 +694,7 @@ async function selectRegistry(address) {
   document.getElementById("activeRegistryAddress").textContent = address;
   document.getElementById("registrySetup").style.display = "none";
   document.getElementById("app").style.display = "block";
-  await refreshPhotoLibrarySelects();
-  await refreshPhotoLibraryList();
+  await refreshPhotoLibrary();
   await refreshDocumentLibraryList();
   await refreshTierNote();
   await refreshDelegatesList();
@@ -810,11 +809,25 @@ document.querySelectorAll(".subtab-btn").forEach((btn) => {
 // -----------------------------------------------------------------------
 // Metadata collezione (square + banner)
 // -----------------------------------------------------------------------
-async function refreshPhotoLibrarySelects() {
+// Legge la libreria foto UNA sola volta e aggiorna sia i menu della
+// collezione sia la tabella: prima ognuno dei due la richiedeva per conto
+// suo, e se la prima lettura falliva la seconda chiedeva una firma in più.
+async function refreshPhotoLibrary() {
+  let photos;
   try {
-    const photos = await TraceabilityPhotoLibrary.listPhotos({
+    photos = await TraceabilityPhotoLibrary.listPhotos({
       backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
     });
+  } catch (err) {
+    log(t("photos.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    return;
+  }
+  renderPhotoLibrarySelects(photos);
+  renderPhotoLibraryList(photos);
+}
+
+function renderPhotoLibrarySelects(photos) {
+  try {
     const squareSel = document.getElementById("collectionSquarePhoto");
     const bannerSel = document.getElementById("collectionBannerPhoto");
     squareSel.innerHTML = "";
@@ -866,11 +879,8 @@ function toLibraryEntry(photoRow) {
 // -----------------------------------------------------------------------
 // Libreria foto
 // -----------------------------------------------------------------------
-async function refreshPhotoLibraryList() {
+function renderPhotoLibraryList(photos) {
   try {
-    const photos = await TraceabilityPhotoLibrary.listPhotos({
-      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
-    });
     const el = document.getElementById("photoLibraryList");
     if (photos.length === 0) { el.innerHTML = "<p class='muted'>" + t("photos.none") + "</p>"; return; }
     let html = "<table><tr><th>" + t("photos.colLabel") + "</th><th>" + t("photos.colCid") + "</th><th>" + t("photos.colDims") + "</th><th></th><th></th></tr>";
@@ -892,8 +902,7 @@ async function hidePhotoRow(photoId) {
     await TraceabilityPhotoLibrary.hidePhoto({
       backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer, photoId,
     });
-    await refreshPhotoLibraryList();
-    await refreshPhotoLibrarySelects();
+    await refreshPhotoLibrary();
   } catch (err) {
     log(t("photos.hideError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
@@ -911,8 +920,7 @@ document.getElementById("uploadPhotoBtn").addEventListener("click", async () => 
       label, fileBlob: fileInput.files[0], fileName: fileInput.files[0].name,
     });
     log(t("photos.uploaded"));
-    await refreshPhotoLibraryList();
-    await refreshPhotoLibrarySelects();
+    await refreshPhotoLibrary();
   } catch (err) {
     log(t("photos.uploadError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }

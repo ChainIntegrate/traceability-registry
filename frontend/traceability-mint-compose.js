@@ -24,6 +24,20 @@
     },
   ];
 
+  // Preambolo comune a TUTTI i messaggi da firmare: italiano, inglese e link
+  // alla guida, ognuno nel suo capoverso (riga vuota in mezzo) perché la UP
+  // extension li mostri separati. Duplicato byte-per-byte tra frontend
+  // (traceability-*.js) e backend (*Routes.js): se cambia qui, va cambiato
+  // in tutti e sei i file, e il backend va riavviato insieme al deploy del
+  // frontend — altrimenti ogni firma viene rifiutata.
+  const SIGN_PREAMBLE =
+    "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
+    "\n" +
+    "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
+    "\n" +
+    "Come funziona / How it works: https://traceability.chainintegrate.it/how-it-works.html\n" +
+    "\n";
+
   // -----------------------------------------------------------------------
   // ATTENZIONE — duplicato intenzionale di backend/traceabilityRoutes.js
   // buildSignedMessage(). Il frontend deve produrre BYTE PER BYTE lo stesso
@@ -35,10 +49,7 @@
     const e = requireEthers();
     const contentHash = e.utils.keccak256(e.utils.toUtf8Bytes(metadataJsonString));
     return (
-      "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-      "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-      "Come funziona: https://traceability.chainintegrate.it/how-it-works.html\n" +
-      "\n" +
+      SIGN_PREAMBLE +
       "ChainIntegrate TraceabilityRegistry - Pin metadata\n" +
       "Registry: " + registryAddress + "\n" +
       "Content hash: " + contentHash + "\n" +
@@ -66,10 +77,7 @@
 
   function buildBatchSignedMessage(registryAddress, aggregateHash, count, timestamp) {
     return (
-      "Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas \u2014 serve solo a dimostrare che sei davvero tu a chiedere questa operazione.\n" +
-      "Signature from your Universal Profile: no on-chain transaction, no gas cost \u2014 this only proves it's really you, asking for this.\n" +
-      "Come funziona: https://traceability.chainintegrate.it/how-it-works.html\n" +
-      "\n" +
+      SIGN_PREAMBLE +
       "ChainIntegrate TraceabilityRegistry - Pin metadata batch\n" +
       "Registry: " + registryAddress + "\n" +
       "Count: " + count + "\n" +

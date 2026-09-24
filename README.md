@@ -1553,6 +1553,31 @@ firma ora includono anche il link a questa pagina
 (`https://traceability.chainintegrate.it/how-it-works.html`) come terza riga
 del preambolo, prima del blocco tecnico.
 
+## 51. Firme: preambolo in capoversi separati, una lettura foto sola, backend da riavviare
+
+**Incidente dopo §50**: aprendo un registro arrivavano tre richieste di firma
+invece di due, e fallivano tutte. Causa: il backend sul VPS non era stato
+riavviato dopo il pull, quindi verificava ancora i messaggi *vecchi* (senza
+preambolo) mentre le pagine firmavano già quelli nuovi → "Firma non valida".
+Risolto con `pm2 restart`. **Regola**: ogni modifica al testo dei messaggi
+firmati richiede di aggiornare frontend e backend insieme **e** di riavviare
+il backend (più Ctrl+Shift+R nel browser, gli script non hanno versione).
+
+**Perché tre firme**: `selectRegistry` leggeva la libreria foto due volte
+(`refreshPhotoLibrarySelects` + `refreshPhotoLibraryList`), riusando la firma
+in cache; ma se la prima lettura falliva la cache veniva svuotata e la
+seconda chiedeva una nuova firma. Ora nelle tre pagine `user-*.html` c'è un
+solo `refreshPhotoLibrary()` che legge una volta e passa la lista a
+`renderPhotoLibrarySelects(photos)` e `renderPhotoLibraryList(photos)` —
+anche dopo upload/nascondi foto. In caso di errore: un solo messaggio, nessuna
+firma extra.
+
+**Preambolo leggibile**: il testo comune è ora una costante `SIGN_PREAMBLE`
+(una per file, nei 6 file frontend/backend che costruiscono messaggi), con
+italiano, inglese e link in tre capoversi separati da una riga vuota. Il link
+diventa bilingue: "Come funziona / How it works: https://traceability.chainintegrate.it/how-it-works.html".
+Verificata di nuovo l'identità byte-per-byte frontend/backend.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
