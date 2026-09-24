@@ -1474,6 +1474,20 @@ validatore JSON), un domani cambio a questo gate andrà applicato a mano in
 tutte e tre — esattamente il rischio già segnalato in §48 per le pagine
 tipizzate.
 
+**Un quarto caso controllato, nessuna modifica necessaria**: "Registra hash
+documento" nell'explorer privato (`setDocumentHash`/`setDocumentHashBatch`)
+resta chiamabile a tier 0 — e va bene così. È una scrittura on-chain diretta
+(`activeRegistry.setDocumentHash(...)`), l'hash è calcolato lato client o
+preso dalla libreria già letta, **nessuna chiamata al backend né a IPFS** —
+il costo di un tentativo a vuoto è solo il gas dell'azienda sospesa, non una
+risorsa nostra. Il contratto la blocca comunque con `onlyGoldFeature`
+(richiede tier Gold). Aggiungere un gate qui sarebbe complessità in più per
+un rischio che non esiste — a differenza degli upload, dove il costo
+ricadeva sul nostro nodo IPFS. **Resta comunque aperto, distinto da questo**:
+il punto in §30 "Funzionalità Gold mai esercitata" — qui si è verificato solo
+il caso tier 0 (revert atteso), non che `setDocumentHash` funzioni davvero
+con un account Gold vero.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
