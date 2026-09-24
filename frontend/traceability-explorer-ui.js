@@ -152,7 +152,11 @@
     return values;
   }
 
-  function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate, onSetDocumentHash, listDocumentsForSelect, facetKeys }) {
+  function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate, onSetDocumentHash, listDocumentsForSelect, facetKeys, formatError }) {
+    // Traduzione degli errori in linguaggio comprensibile: le pagine user-*.html
+    // passano TraceabilityErrors.friendlyMessage; l'explorer pubblico (che non
+    // include traceability-error-messages.js) resta sul messaggio grezzo.
+    const describeError = formatError || function (err) { return err && err.message ? err.message : String(err); };
     const allowedFacetKeys = facetKeys || DEFAULT_FACET_KEYS;
     let currentCardDataById = {};
     let activeFilters = {};
@@ -433,7 +437,7 @@
             } catch (err) {
               btn.disabled = false;
               btn.textContent = t("card.invalidateButton");
-              window.alert(t("card.invalidateError", { msg: err.message }));
+              window.alert(t("card.invalidateError", { msg: describeError(err) }));
             }
           });
         });
@@ -483,7 +487,7 @@
               // l'upload, stessa logica già usata dopo onInvalidate.
               if (lastLoadParams) await load(lastLoadParams.backendBaseUrl, lastLoadParams.registryAddress);
             } catch (err) {
-              window.alert(t("card.setDocumentHashError", { msg: err.message }));
+              window.alert(t("card.setDocumentHashError", { msg: describeError(err) }));
               btn.disabled = false;
               btn.textContent = t("card.setDocumentHashButton");
             }
