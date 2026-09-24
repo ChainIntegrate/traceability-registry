@@ -393,14 +393,17 @@
         // (su IPFS), altrimenti è verificabile ma irrecuperabile — bug
         // trovato testando la prima versione (file scelto a mano, mai
         // pinnato da nessuna parte).
-        // canSetDocumentHash (opzionale): la pagina sa se il registro è Gold.
-        // Se non lo è, pulsante disattivato con la spiegazione e nessuna
+        // canSetDocumentHash (opzionale): la pagina sa se il registro è Gold
+        // (o sospeso). Se non lo è, pulsante disattivato con la spiegazione e nessuna
         // select — così non si carica nemmeno la libreria documenti (niente
         // firma inutile) e non si arriva a una transazione destinata al revert.
-        if (onSetDocumentHash && !hasDocumentHash(entry) && canSetDocumentHash && !canSetDocumentHash()) {
+        // Ritorna true (consentito) oppure la nota da mostrare accanto al
+        // pulsante disattivato (es. "Richiede membership Gold.", "Membership sospesa.").
+        const dochashGate = onSetDocumentHash && !hasDocumentHash(entry) && canSetDocumentHash ? canSetDocumentHash() : true;
+        if (onSetDocumentHash && !hasDocumentHash(entry) && dochashGate !== true) {
           html += "<div class='te-dochash-row'>" +
             "<button type='button' class='te-dochash-btn' disabled>" + t("card.setDocumentHashButton") + "</button>" +
-            "<span class='te-dochash-gate'>" + t("card.setDocumentHashNeedsGold") + "</span>" +
+            "<span class='te-dochash-gate'>" + (typeof dochashGate === "string" ? dochashGate : t("card.setDocumentHashNeedsGold")) + "</span>" +
             "</div>";
         } else if (onSetDocumentHash && !hasDocumentHash(entry)) {
           html += "<div class='te-dochash-row'>" +

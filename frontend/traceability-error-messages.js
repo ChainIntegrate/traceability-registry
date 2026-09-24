@@ -49,11 +49,17 @@
     },
     {
       match: "not allowed to manage delegates",
+      // Il contratto dà questo stesso errore anche a membership sospesa
+      // (tier 0 < soglia): con context.tier === 0 si usa il messaggio "sospesa".
+      alsoWhenSuspended: true,
       it: "Gestire le deleghe richiede una membership almeno Silver.",
       en: "Managing delegates requires at least a Silver membership.",
     },
     {
       match: "requires Gold tier",
+      // Il contratto dà questo stesso errore anche a membership sospesa
+      // (tier 0 < soglia): con context.tier === 0 si usa il messaggio "sospesa".
+      alsoWhenSuspended: true,
       it: "Questa funzione richiede una membership Gold.",
       en: "This feature requires a Gold membership.",
     },
@@ -227,9 +233,16 @@
   /**
    * @param {*} err - l'errore catturato (ethers v5, fetch, o generico)
    * @param {"it"|"en"} lang - lingua corrente della UI
+   * @param {{tier: ?number}} [context] - tier del registro, se noto: a tier 0
+   *        gli errori "serve Gold/Silver" diventano "membership sospesa"
    * @returns {string} messaggio comprensibile, con il dettaglio tecnico in coda
    */
-  function friendlyMessage(err, lang) {
+  const SUSPENDED_MESSAGE = {
+    it: "La membership collegata a questo registro è sospesa: l'operazione non è consentita finché non viene riattivata.",
+    en: "The membership linked to this registry is suspended: this action isn't allowed until it's reactivated.",
+  };
+
+  function friendlyMessage(err, lang, context) {
     const isIt = lang !== "en";
     const strings = collectStrings(err, 0, []);
     if (typeof err === "string") strings.push(err);
@@ -246,6 +259,9 @@
     for (let i = 0; i < REASON_MAP.length; i++) {
       const entry = REASON_MAP[i];
       if (raw.indexOf(entry.match) !== -1 || revertReason.indexOf(entry.match) !== -1) {
+        if (entry.alsoWhenSuspended && context && context.tier === 0) {
+          return (isIt ? SUSPENDED_MESSAGE.it + " (dettaglio tecnico: " : SUSPENDED_MESSAGE.en + " (technical detail: ") + detail + ")";
+        }
         return isIt
           ? entry.it + " (dettaglio tecnico: " + detail + ")"
           : entry.en + " (technical detail: " + detail + ")";
