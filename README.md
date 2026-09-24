@@ -1491,6 +1491,68 @@ il punto in §30 "Funzionalità Gold mai esercitata" — qui si è verificato so
 il caso tier 0 (revert atteso), non che `setDocumentHash` funzioni davvero
 con un account Gold vero.
 
+## 50. Rifiniture UX: errori comprensibili, messaggi di firma più chiari, pagina "How it works"
+
+Con i test ormai ampi (§40-49), tre rifiniture rivolte a chi usa davvero le
+pagine `user-*.html`, non a chi sviluppa:
+
+**1. Errori senza gergo blockchain.** Finora ogni `catch (err)` mostrava
+`err.message` grezzo — cioè l'errore ethers/UP così com'è
+("execution reverted: TraceabilityRegistry: caller is not authorized", JSON
+del provider, ecc.). Nuovo file condiviso
+`frontend/traceability-error-messages.js`
+(`TraceabilityErrors.friendlyMessage(err, lang)`), incluso dalle tre pagine
+`user-*.html`: riconosce le stringhe `require()` note (da
+`TraceabilityRegistry.sol`/`TraceabilityRegistryFactory.sol`) e i casi comuni
+(firma/transazione annullata dall'utente in UP), e restituisce una frase
+comprensibile **nella lingua corrente** — sempre seguita dal dettaglio
+tecnico originale tra parentesi (mai al posto suo: serve a chi deve fare
+supporto o segnalare un bug). Se una stringa non è in mappa, il fallback resta
+onesto ("Operazione non riuscita. Dettaglio tecnico: ...") invece di sparire.
+Tutte le circa 20 occorrenze di `{ msg: err.message }` nelle tre pagine sono
+state sostituite con `{ msg: TraceabilityErrors.friendlyMessage(err,
+currentLang) }`. **Nota di manutenzione**: se cambia (o si aggiunge) una
+stringa `require()` nei contratti, va aggiornata anche la mappa in
+`traceability-error-messages.js`.
+
+**2. Messaggi di firma (`personal_sign`) più comprensibili.** Le 8 funzioni
+`buildXSignedMessage` (pin metadata/batch, upload/list/hide foto,
+upload/list/hide documento — duplicate byte-per-byte tra `frontend/*.js` e
+`backend/*.js`, necessario perché il backend ricostruisce lo stesso messaggio
+per verificare la firma) avevano solo il blocco tecnico
+("Registry: .../Content hash: .../Timestamp: ..."), leggibile solo da chi sa
+già cosa significa. Aggiunte due righe bilingui (IT poi EN, **sempre
+entrambe**, indipendentemente dalla lingua scelta nella UI — necessario:
+se il testo dipendesse dalla lingua della sessione, frontend e backend
+firmerebbero/verificherebbero byte diversi) prima del blocco tecnico, che
+resta invariato:
+> Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun
+> costo di gas — serve solo a dimostrare che sei davvero tu a chiedere questa
+> operazione.
+> Signature from your Universal Profile: no on-chain transaction, no gas
+> cost — this only proves it's really you, asking for this.
+
+Verificata l'identità byte-per-byte tra le 8 coppie frontend/backend dopo la
+modifica (necessaria altrimenti le firme smettono di verificare).
+
+**3. Nuova pagina `frontend/how-it-works.html`.** Guida pratica e non tecnica
+(stesso impianto bilingue IT/EN a toggle delle altre pagine, non lo
+switch-per-lingua-browser usato su Supplier Trust Registry): cosa sono lotti
+e batch, **cosa viene scritto on-chain e cosa viene caricato su IPFS** (col
+taglio di chiarezza già usato su Supplier Trust Registry — permanenza
+on-chain vs. permanenza "di fatto" su IPFS anche in caso di rimozione dal
+nostro nodo, perché chiunque l'abbia scaricato può ripinnarlo altrove),
+avviso esplicito di non caricare foto/documenti con dati sensibili (nessun
+modo di renderli privati o ritirarli), la differenza pratica tra libreria
+documenti (il file finisce su IPFS, pubblico per sempre) e "Registra hash
+documento" (il file non lascia mai il tuo computer, solo l'impronta finisce
+on-chain), l'esploratore, le deleghe, e perché a volte si firma senza pagare
+gas. **Deliberatamente non spiega le categorie di membership/tier**: irrilevante
+per capire come funziona il sistema dal lato di chi lo usa. Le 8 funzioni di
+firma ora includono anche il link a questa pagina
+(`https://traceability.chainintegrate.it/how-it-works.html`) come terza riga
+del preambolo, prima del blocco tecnico.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Come funziona — TraceabilityRegistry</title>
+<link rel="icon" type="image/x-icon" href="./favicon.ico">
+<style>
+  :root { --powder-line: #e2e2e2; --ink-soft: #6b7280; --blueprint: #3454d1; --amber: #a66a1e; --amber-bg: #fdf2e2; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; margin: 0; color: #16232e; line-height: 1.55; }
+  header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--powder-line); padding: 14px 20px; flex-wrap: wrap; gap: 10px; position: sticky; top: 0; background: #fff; z-index: 10; }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .site-logo { height: 44px; width: 44px; object-fit: contain; border-radius: 8px; }
+  .header-left strong { font-size: 1.05rem; }
+  .lang-toggle { display: flex; gap: 4px; }
+  .lang-btn { padding: 4px 10px; border: 1px solid #999; background: #f4f4f4; cursor: pointer; border-radius: 4px; font-size: 0.85rem; }
+  .lang-btn.active { background: #222; color: #fff; }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 20px 90px; }
+  h1 { font-size: 1.7rem; margin: 0 0 6px; }
+  h2 { font-size: 1.15rem; margin: 32px 0 8px; padding-top: 8px; border-top: 1px solid var(--powder-line); }
+  h2:first-of-type { border-top: none; padding-top: 0; margin-top: 18px; }
+  p { margin: 0 0 12px; }
+  ul { margin: 0 0 12px; padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  .lede { color: var(--ink-soft); font-size: 1.05rem; margin-bottom: 4px; }
+  .card { background: #fafbfc; border: 1px solid var(--powder-line); border-radius: 8px; padding: 14px 16px; margin: 12px 0; }
+  .warn-box { background: var(--amber-bg); border: 1px solid var(--amber); border-radius: 8px; padding: 10px 14px; font-size: 0.92rem; color: #7a4a17; margin: 12px 0; }
+  code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <img src="./logo_700x700.png" alt="TraceabilityRegistry" class="site-logo" onerror="this.style.display='none'">
+    <strong>TraceabilityRegistry</strong>
+  </div>
+  <div class="lang-toggle">
+    <button id="langItBtn" class="lang-btn active">IT</button>
+    <button id="langEnBtn" class="lang-btn">EN</button>
+  </div>
+</header>
+
+<main>
+
+<h1 data-i18n="hiw.title">Come funziona</h1>
+<p class="lede" data-i18n="hiw.lede">Una guida breve e pratica: cosa fa TraceabilityRegistry, cosa succede davvero quando registri qualcosa, e cosa resta pubblico per sempre.</p>
+
+<h2 data-i18n="hiw.whatH">Di cosa si tratta</h2>
+<p data-i18n="hiw.whatP">TraceabilityRegistry ti permette di registrare in modo permanente e verificabile la tracciabilità dei tuoi prodotti — dalle materie prime in ingresso ai lotti/batch di produzione — sulla blockchain LUKSO. Il tuo registro è tuo: nessun altro può scriverci, nemmeno ChainIntegrate.</p>
+
+<h2 data-i18n="hiw.entriesH">Materie prime e batch</h2>
+<p data-i18n="hiw.entriesP">Ci sono due tipi di voce: un <strong>lotto di materia prima</strong> (qualcosa che acquisti o ricevi) e un <strong>batch di produzione</strong> (qualcosa che produci, che può richiamare uno o più lotti usati). Un batch è identificato da un "Codice" a tua scelta — lo stesso codice guida anche quale foto associare quando lo consulti nell'esploratore.</p>
+
+<h2 data-i18n="hiw.onchainH">Cosa viene scritto dove</h2>
+<p data-i18n="hiw.onchainP1">Non tutto finisce nello stesso posto, ed è utile saperlo prima di caricare qualcosa.</p>
+<div class="card">
+  <p style="margin-bottom:8px;"><strong data-i18n="hiw.onchainCardT1">Sulla blockchain (on-chain)</strong></p>
+  <p style="margin-bottom:0;" data-i18n="hiw.onchainCardP1">Il token stesso (il lotto o il batch), le date, i riferimenti ai lotti usati, e un puntatore verificabile (hash + indirizzo) al file con i dettagli. Piccolo, permanente, verificabile da chiunque senza fidarsi di nessuno — nemmeno di ChainIntegrate.</p>
+</div>
+<div class="card">
+  <p style="margin-bottom:8px;"><strong data-i18n="hiw.onchainCardT2">Su IPFS</strong></p>
+  <p style="margin-bottom:0;" data-i18n="hiw.onchainCardP2">Il contenuto vero e proprio: il file con nome, descrizione e attributi del lotto/batch, le foto della libreria, e i documenti caricati nella libreria documenti (es. certificati, DDT). IPFS è una rete di file condivisa — non un tuo spazio privato — pensata apposta per contenuti pubblici e permanenti.</p>
+</div>
+
+<h2 data-i18n="hiw.permanenceH">Permanenza — on-chain e su IPFS</h2>
+<p data-i18n="hiw.permanenceP1">Sono due cose diverse, entrambe di fatto permanenti, ma per motivi diversi.</p>
+<p data-i18n="hiw.permanenceP2"><strong>La scrittura sulla blockchain</strong> — registrare un lotto, un batch, un hash di documento — diventa parte permanente della storia della blockchain nel momento in cui viene confermata. Non esiste modo di modificarla o rimuoverla, mai, da parte di nessuno, nemmeno di ChainIntegrate.</p>
+<p data-i18n="hiw.permanenceP3"><strong>Il contenuto caricato su IPFS</strong> è ancora più difficile da far sparire: ChainIntegrate potrebbe, tecnicamente, rimuovere un file dal proprio nodo, ma questo da solo non basta. Nulla impedisce a chiunque lo abbia mai visto o scaricato — un altro servizio, un crawler, un browser — di ripubblicarlo altrove, in qualsiasi momento, del tutto fuori dal controllo di ChainIntegrate. Una volta caricato, considera un file pubblico per sempre.</p>
+<div class="warn-box" data-i18n="hiw.permanenceWarn">Niente di ciò che carichi qui — sulla blockchain o su IPFS — può mai essere garantito come rimosso davvero e in modo permanente. Pensaci bene prima di registrare o caricare qualunque cosa.</div>
+
+<h2 data-i18n="hiw.pinH">Cosa vuol dire "caricare" un file qui</h2>
+<p data-i18n="hiw.pinP">Quando carichi una foto o un documento nella libreria, il file viene messo su IPFS e reso disponibile pubblicamente tramite un indirizzo univoco (il suo hash). Non c'è un elenco di visualizzatore riservato agli operatori: chi conosce l'indirizzo può recuperare il file direttamente.</p>
+<div class="warn-box" data-i18n="hiw.pinWarn">In pratica: non caricare un documento che mostra qualcosa che non vorresti fosse visto da chiunque — ad esempio un certificato o un DDT con dati personali, un indirizzo privato o altre informazioni sensibili. Non c'è modo di rendere privato un file già caricato, né di "ritirarlo". Nel dubbio, oscura i dati sensibili prima di caricare, o non caricare quel documento.</div>
+
+<h2 data-i18n="hiw.hashOnlyH">Registrare l'hash di un documento senza caricarlo</h2>
+<p data-i18n="hiw.hashOnlyP">Per un lotto o un batch puoi anche registrare solo l'<strong>hash</strong> (l'impronta digitale) di un documento, invece di caricare il file stesso nella libreria. In questo caso il documento resta sul tuo computer — non tocca mai IPFS né i server di ChainIntegrate — e sulla blockchain resta solo la prova che, in una certa data, esisteva un file con esattamente quel contenuto. Utile quando vuoi poter dimostrare l'integrità di un documento (che non è stato alterato) senza doverlo mai rendere pubblico.</p>
+
+<h2 data-i18n="hiw.explorerH">L'esploratore</h2>
+<p data-i18n="hiw.explorerP">Chiunque abbia l'indirizzo del tuo registro può sfogliarne la storia — lotti, batch, e i lotti usati in ciascun batch — in modo verificabile, senza doversi fidare di un intermediario: i dati letti dall'esploratore vengono letti direttamente dalla blockchain.</p>
+
+<h2 data-i18n="hiw.delegatesH">Deleghe</h2>
+<p data-i18n="hiw.delegatesP">Se altre persone della tua azienda devono poter registrare lotti o batch, puoi autorizzare il loro indirizzo (la loro Universal Profile) come delegato — operano con la propria identità, senza mai avere bisogno delle tue credenziali.</p>
+
+<h2 data-i18n="hiw.signH">Perché a volte ti viene chiesto di firmare, senza pagare nulla</h2>
+<p data-i18n="hiw.signP">Alcune operazioni (caricare un file nella libreria, consultare le tue foto/documenti, nasconderne uno) chiedono solo una firma dalla tua Universal Profile — non una transazione sulla blockchain. Non costa gas e non sposta nessun fondo: serve solo a dimostrare che sei davvero tu a fare quella richiesta, prima che ChainIntegrate esegua l'operazione lato server.</p>
+
+</main>
+
+<script>
+  const I18N = {
+    it: {
+      "hiw.title": "Come funziona",
+      "hiw.lede": "Una guida breve e pratica: cosa fa TraceabilityRegistry, cosa succede davvero quando registri qualcosa, e cosa resta pubblico per sempre.",
+      "hiw.whatH": "Di cosa si tratta",
+      "hiw.whatP": "TraceabilityRegistry ti permette di registrare in modo permanente e verificabile la tracciabilità dei tuoi prodotti — dalle materie prime in ingresso ai lotti/batch di produzione — sulla blockchain LUKSO. Il tuo registro è tuo: nessun altro può scriverci, nemmeno ChainIntegrate.",
+      "hiw.entriesH": "Materie prime e batch",
+      "hiw.entriesP": "Ci sono due tipi di voce: un <strong>lotto di materia prima</strong> (qualcosa che acquisti o ricevi) e un <strong>batch di produzione</strong> (qualcosa che produci, che può richiamare uno o più lotti usati). Un batch è identificato da un \"Codice\" a tua scelta — lo stesso codice guida anche quale foto associare quando lo consulti nell'esploratore.",
+      "hiw.onchainH": "Cosa viene scritto dove",
+      "hiw.onchainP1": "Non tutto finisce nello stesso posto, ed è utile saperlo prima di caricare qualcosa.",
+      "hiw.onchainCardT1": "Sulla blockchain (on-chain)",
+      "hiw.onchainCardP1": "Il token stesso (il lotto o il batch), le date, i riferimenti ai lotti usati, e un puntatore verificabile (hash + indirizzo) al file con i dettagli. Piccolo, permanente, verificabile da chiunque senza fidarsi di nessuno — nemmeno di ChainIntegrate.",
+      "hiw.onchainCardT2": "Su IPFS",
+      "hiw.onchainCardP2": "Il contenuto vero e proprio: il file con nome, descrizione e attributi del lotto/batch, le foto della libreria, e i documenti caricati nella libreria documenti (es. certificati, DDT). IPFS è una rete di file condivisa — non un tuo spazio privato — pensata apposta per contenuti pubblici e permanenti.",
+      "hiw.permanenceH": "Permanenza — on-chain e su IPFS",
+      "hiw.permanenceP1": "Sono due cose diverse, entrambe di fatto permanenti, ma per motivi diversi.",
+      "hiw.permanenceP2": "<strong>La scrittura sulla blockchain</strong> — registrare un lotto, un batch, un hash di documento — diventa parte permanente della storia della blockchain nel momento in cui viene confermata. Non esiste modo di modificarla o rimuoverla, mai, da parte di nessuno, nemmeno di ChainIntegrate.",
+      "hiw.permanenceP3": "<strong>Il contenuto caricato su IPFS</strong> è ancora più difficile da far sparire: ChainIntegrate potrebbe, tecnicamente, rimuovere un file dal proprio nodo, ma questo da solo non basta. Nulla impedisce a chiunque lo abbia mai visto o scaricato — un altro servizio, un crawler, un browser — di ripubblicarlo altrove, in qualsiasi momento, del tutto fuori dal controllo di ChainIntegrate. Una volta caricato, considera un file pubblico per sempre.",
+      "hiw.permanenceWarn": "Niente di ciò che carichi qui — sulla blockchain o su IPFS — può mai essere garantito come rimosso davvero e in modo permanente. Pensaci bene prima di registrare o caricare qualunque cosa.",
+      "hiw.pinH": "Cosa vuol dire \"caricare\" un file qui",
+      "hiw.pinP": "Quando carichi una foto o un documento nella libreria, il file viene messo su IPFS e reso disponibile pubblicamente tramite un indirizzo univoco (il suo hash). Non c'è un elenco di visualizzatore riservato agli operatori: chi conosce l'indirizzo può recuperare il file direttamente.",
+      "hiw.pinWarn": "In pratica: non caricare un documento che mostra qualcosa che non vorresti fosse visto da chiunque — ad esempio un certificato o un DDT con dati personali, un indirizzo privato o altre informazioni sensibili. Non c'è modo di rendere privato un file già caricato, né di \"ritirarlo\". Nel dubbio, oscura i dati sensibili prima di caricare, o non caricare quel documento.",
+      "hiw.hashOnlyH": "Registrare l'hash di un documento senza caricarlo",
+      "hiw.hashOnlyP": "Per un lotto o un batch puoi anche registrare solo l'<strong>hash</strong> (l'impronta digitale) di un documento, invece di caricare il file stesso nella libreria. In questo caso il documento resta sul tuo computer — non tocca mai IPFS né i server di ChainIntegrate — e sulla blockchain resta solo la prova che, in una certa data, esisteva un file con esattamente quel contenuto. Utile quando vuoi poter dimostrare l'integrità di un documento (che non è stato alterato) senza doverlo mai rendere pubblico.",
+      "hiw.explorerH": "L'esploratore",
+      "hiw.explorerP": "Chiunque abbia l'indirizzo del tuo registro può sfogliarne la storia — lotti, batch, e i lotti usati in ciascun batch — in modo verificabile, senza doversi fidare di un intermediario: i dati letti dall'esploratore vengono letti direttamente dalla blockchain.",
+      "hiw.delegatesH": "Deleghe",
+      "hiw.delegatesP": "Se altre persone della tua azienda devono poter registrare lotti o batch, puoi autorizzare il loro indirizzo (la loro Universal Profile) come delegato — operano con la propria identità, senza mai avere bisogno delle tue credenziali.",
+      "hiw.signH": "Perché a volte ti viene chiesto di firmare, senza pagare nulla",
+      "hiw.signP": "Alcune operazioni (caricare un file nella libreria, consultare le tue foto/documenti, nasconderne uno) chiedono solo una firma dalla tua Universal Profile — non una transazione sulla blockchain. Non costa gas e non sposta nessun fondo: serve solo a dimostrare che sei davvero tu a fare quella richiesta, prima che ChainIntegrate esegua l'operazione lato server.",
+    },
+    en: {
+      "hiw.title": "How it works",
+      "hiw.lede": "A short, practical guide: what TraceabilityRegistry does, what actually happens when you record something, and what stays public forever.",
+      "hiw.whatH": "What this is",
+      "hiw.whatP": "TraceabilityRegistry lets you record your products' traceability — from incoming raw materials to production lots/batches — permanently and verifiably on the LUKSO blockchain. You own your registry: nobody else can write to it, not even ChainIntegrate.",
+      "hiw.entriesH": "Raw materials and batches",
+      "hiw.entriesP": "There are two kinds of entries: a <strong>raw material lot</strong> (something you buy or receive) and a <strong>production batch</strong> (something you produce, which can reference one or more lots used). A batch is identified by a \"Code\" of your choosing — the same code also drives which photo gets shown when you look it up in the explorer.",
+      "hiw.onchainH": "What gets written where",
+      "hiw.onchainP1": "Not everything ends up in the same place, and it's worth knowing that before you upload anything.",
+      "hiw.onchainCardT1": "On the blockchain (on-chain)",
+      "hiw.onchainCardT2": "On IPFS",
+      "hiw.onchainCardP1": "The token itself (the lot or batch), its dates, the referenced lots used, and a verifiable pointer (hash + address) to the file with the details. Small, permanent, verifiable by anyone without trusting anyone — not even ChainIntegrate.",
+      "hiw.onchainCardP2": "The actual content: the file with the lot/batch's name, description and attributes, the library photos, and the documents uploaded to the document library (e.g. certificates, delivery notes). IPFS is a shared file network — not your own private space — built specifically for public, permanent content.",
+      "hiw.permanenceH": "Permanence — on-chain and on IPFS",
+      "hiw.permanenceP1": "These are two different things, both effectively permanent, but for different reasons.",
+      "hiw.permanenceP2": "<strong>The blockchain record itself</strong> — recording a lot, a batch, a document hash — becomes a permanent part of blockchain history the moment it's confirmed. There is no way to edit or remove it, ever, by anyone, including ChainIntegrate.",
+      "hiw.permanenceP3": "<strong>Content uploaded to IPFS</strong> is even harder to make disappear: ChainIntegrate could, technically, remove a file from its own node, but that alone isn't enough. Nothing stops anyone who has ever seen or downloaded it — another service, a crawler, a browser — from re-publishing it elsewhere, at any time, entirely outside ChainIntegrate's control. Once uploaded, consider a file public forever.",
+      "hiw.permanenceWarn": "Nothing you record here — on-chain or on IPFS — can ever be guaranteed to be truly and permanently removed. Think carefully before recording or uploading anything.",
+      "hiw.pinH": "What \"uploading\" a file here actually means",
+      "hiw.pinP": "When you upload a photo or a document to the library, the file is put on IPFS and made publicly available through a unique address (its hash). There's no viewer list reserved for operators: whoever knows the address can retrieve the file directly.",
+      "hiw.pinWarn": "In practice: don't upload a document that shows something you wouldn't want anyone to see — for example a certificate or delivery note with personal data, a private address, or other sensitive information. There's no way to make an already-uploaded file private, or to take it back. If in doubt, redact the sensitive parts before uploading, or simply don't upload that document.",
+      "hiw.hashOnlyH": "Recording a document's hash without uploading it",
+      "hiw.hashOnlyP": "For a lot or a batch, you can also record just a document's <strong>hash</strong> (its digital fingerprint) instead of uploading the file itself to the library. In this case the document stays on your own computer — it never touches IPFS or ChainIntegrate's servers — and the blockchain keeps only the proof that, on a given date, a file with exactly that content existed. Useful when you want to prove a document's integrity (that it hasn't been altered) without ever having to make it public.",
+      "hiw.explorerH": "The explorer",
+      "hiw.explorerP": "Anyone who has your registry's address can browse its history — lots, batches, and the lots used in each batch — verifiably, without needing to trust a middleman: the explorer reads its data straight from the blockchain.",
+      "hiw.delegatesH": "Delegates",
+      "hiw.delegatesP": "If other people at your company need to be able to record lots or batches, you can authorize their own address (their own Universal Profile) as a delegate — they operate under their own identity, never needing your credentials.",
+      "hiw.signH": "Why you're sometimes asked to sign, without paying anything",
+      "hiw.signP": "Some actions (uploading a file to the library, viewing your photos/documents, hiding one) only ask for a signature from your Universal Profile — not a blockchain transaction. It costs no gas and moves no funds: it only proves it's really you making that request, before ChainIntegrate carries out the action server-side.",
+    },
+  };
+
+  let currentLang = localStorage.getItem("traceabilityLang") || "it";
+
+  function applyLanguage() {
+    document.documentElement.lang = currentLang;
+    document.title = currentLang === "it" ? "Come funziona — TraceabilityRegistry" : "How it works — TraceabilityRegistry";
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      const key = el.getAttribute("data-i18n");
+      const dict = I18N[currentLang] || I18N.it;
+      if (dict[key] !== undefined) el.innerHTML = dict[key];
+    });
+    document.getElementById("langItBtn").classList.toggle("active", currentLang === "it");
+    document.getElementById("langEnBtn").classList.toggle("active", currentLang === "en");
+  }
+
+  document.getElementById("langItBtn").addEventListener("click", () => { currentLang = "it"; localStorage.setItem("traceabilityLang", "it"); applyLanguage(); });
+  document.getElementById("langEnBtn").addEventListener("click", () => { currentLang = "en"; localStorage.setItem("traceabilityLang", "en"); applyLanguage(); });
+
+  applyLanguage();
+</script>
+
+</body>
+</html>

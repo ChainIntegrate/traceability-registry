@@ -7,6 +7,7 @@
 <link rel="icon" type="image/x-icon" href="./favicon.ico">
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script src="./traceability-json-validators.js"></script>
+<script src="./traceability-error-messages.js"></script>
 <script src="./traceability-tokenid.js"></script>
 <script src="./traceability-metadata.js"></script>
 <script src="./traceability-mint-compose.js"></script>
@@ -550,7 +551,7 @@ document.getElementById("connectBtn").addEventListener("click", async () => {
   try {
     accounts = await provider.send("eth_requestAccounts", []);
   } catch (err) {
-    alert(t("log.connectRejected", { msg: err.message }));
+    alert(t("log.connectRejected", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
     return;
   }
   if (!accounts || accounts.length === 0) {
@@ -662,7 +663,7 @@ async function loadMyRegistries() {
       t("registries.usage", { used: registries.length, limit: limit.toString(), tier: tier.toString() });
     document.getElementById("deployRegistryBtn").disabled = registries.length >= limit.toNumber();
   } catch (err) {
-    log(t("log.tierReadError", { msg: err.message }));
+    log(t("log.tierReadError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
 }
 
@@ -677,7 +678,7 @@ document.getElementById("deployRegistryBtn").addEventListener("click", async () 
     log(t("log.deployed", { tx: receipt.transactionHash }));
     await loadMyRegistries();
   } catch (err) {
-    log(t("log.deployError", { msg: err.message }));
+    log(t("log.deployError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
 });
 
@@ -708,7 +709,7 @@ async function refreshCurrentCollectionMetadata() {
       emptyEl.style.display = "block";
     }
   } catch (err) {
-    log(t("collection.currentLoadError", { msg: err.message }));
+    log(t("collection.currentLoadError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
 }
 
@@ -768,7 +769,7 @@ document.getElementById("delegateAccessConnectBtn").addEventListener("click", as
       noteEl.textContent = "";
     }
   } catch (err) {
-    noteEl.innerHTML = "<span class='err'>" + t("delegateAccess.invalidRegistry", { msg: err.message }) + "</span>";
+    noteEl.innerHTML = "<span class='err'>" + t("delegateAccess.invalidRegistry", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }) + "</span>";
     return; // non e' un TraceabilityRegistry valido, non ha senso selezionarlo
   }
 
@@ -820,7 +821,7 @@ async function refreshPhotoLibrarySelects() {
       bannerSel.appendChild(opt2);
     });
   } catch (err) {
-    log(t("photos.listError", { msg: err.message }));
+    log(t("photos.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
 }
 
@@ -848,7 +849,7 @@ document.getElementById("saveCollectionMetadataBtn").addEventListener("click", a
     log(t("log.collectionUpdated", { tx: receipt.transactionHash }));
     await refreshCurrentCollectionMetadata();
   } catch (err) {
-    log(t("log.collectionError", { msg: err.message }));
+    log(t("log.collectionError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
 });
 
@@ -876,7 +877,7 @@ async function refreshPhotoLibraryList() {
     html += "</table>";
     el.innerHTML = html;
   } catch (err) {
-    log(t("photos.listError", { msg: err.message }));
+    log(t("photos.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
 }
 
@@ -888,7 +889,7 @@ async function hidePhotoRow(photoId) {
     await refreshPhotoLibraryList();
     await refreshPhotoLibrarySelects();
   } catch (err) {
-    log(t("photos.hideError", { msg: err.message }));
+    log(t("photos.hideError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
 }
 
@@ -907,7 +908,7 @@ document.getElementById("uploadPhotoBtn").addEventListener("click", async () => 
     await refreshPhotoLibraryList();
     await refreshPhotoLibrarySelects();
   } catch (err) {
-    log(t("photos.uploadError", { msg: err.message }));
+    log(t("photos.uploadError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
 });
 
@@ -937,7 +938,7 @@ async function refreshDocumentLibraryList() {
     html += "</table>";
     el.innerHTML = html;
   } catch (err) {
-    log(t("documents.listError", { msg: err.message }));
+    log(t("documents.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
 }
 
@@ -948,7 +949,7 @@ async function hideDocumentRow(documentId) {
     });
     await refreshDocumentLibraryList();
   } catch (err) {
-    log(t("documents.hideError", { msg: err.message }));
+    log(t("documents.hideError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
 }
 
@@ -966,7 +967,7 @@ document.getElementById("uploadDocumentBtn").addEventListener("click", async () 
     log(t("documents.uploaded"));
     await refreshDocumentLibraryList();
   } catch (err) {
-    log(t("documents.uploadError", { msg: err.message }));
+    log(t("documents.uploadError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
 });
 
@@ -984,7 +985,7 @@ async function refreshTierNote() {
     document.getElementById("tierNote").textContent = t("delegates.tierNote", { tier: tier.toString(), status: status });
     applyMembershipGate();
   } catch (err) {
-    log(t("log.tierDelegatesError", { msg: err.message }));
+    log(t("log.tierDelegatesError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
 }
 
@@ -1021,7 +1022,7 @@ async function refreshDelegatesList() {
       el.innerHTML = html;
     }
   } catch (err) {
-    el.innerHTML = "<p class='err'>" + t("delegates.listError", { msg: err.message }) + "</p>";
+    el.innerHTML = "<p class='err'>" + t("delegates.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }) + "</p>";
   }
 }
 
@@ -1034,7 +1035,7 @@ document.getElementById("addDelegateBtn").addEventListener("click", async () => 
     log(t("delegates.added", { tx: receipt.transactionHash }));
     await refreshDelegatesList();
   } catch (err) {
-    log(t("delegates.addError", { msg: err.message }));
+    log(t("delegates.addError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
 });
 
@@ -1047,7 +1048,7 @@ document.getElementById("removeDelegateBtn").addEventListener("click", async () 
     log(t("delegates.removed", { tx: receipt.transactionHash }));
     await refreshDelegatesList();
   } catch (err) {
-    log(t("delegates.removeError", { msg: err.message }));
+    log(t("delegates.removeError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
   }
 });
 
@@ -1149,7 +1150,7 @@ document.getElementById("rawMaterialJsonInput").addEventListener("change", async
     populateRawMaterialForm(extracted);
     switchToSubtab("rm-manual");
   } catch (err) {
-    previewEl.innerHTML = "<p class='err'>" + t("common.readFileError", { msg: err.message }) + "</p>";
+    previewEl.innerHTML = "<p class='err'>" + t("common.readFileError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }) + "</p>";
   }
 });
 
@@ -1218,7 +1219,7 @@ async function processRawMaterialJson(json, previewEl) {
         }
       }
     } catch (err) {
-      log(t("rm.mintError", { msg: err.message }));
+      log(t("rm.mintError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
     }
   });
 }
@@ -1305,7 +1306,7 @@ document.getElementById("batchJsonInput").addEventListener("change", async (e) =
     populateBatchForm(json, extracted);
     switchToSubtab("batch-manual");
   } catch (err) {
-    previewEl.innerHTML = "<p class='err'>" + t("common.readFileError", { msg: err.message }) + "</p>";
+    previewEl.innerHTML = "<p class='err'>" + t("common.readFileError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }) + "</p>";
   }
 });
 
@@ -1342,7 +1343,7 @@ async function processProductionBatchJson(json, previewEl) {
       const lottoAttr = (lotJson.LSP4Metadata.attributes || []).find((a) => a.key === "Lotto");
       decodedLots.push({ tokenId: en.tokenId, lotto: lottoAttr ? lottoAttr.value : null });
     } catch (err) {
-      log("Lot decode error " + en.tokenId + ": " + err.message);
+      log("Lot decode error " + en.tokenId + ": " + TraceabilityErrors.friendlyMessage(err, currentLang));
     }
   }
 
@@ -1417,7 +1418,7 @@ async function processProductionBatchJson(json, previewEl) {
         }
       }
     } catch (err) {
-      log(t("batch.mintError", { msg: err.message }));
+      log(t("batch.mintError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
     }
   });
 }
