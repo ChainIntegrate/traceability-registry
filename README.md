@@ -10,10 +10,13 @@ per essere offerto anche ad altre aziende.
 Stato: **Factory deployata e verificata su testnet**
 ([`0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9`](https://explorer.execution.testnet.lukso.network/address/0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9) —
 sorgente pubblicata su Blockscout, verificabile da chiunque). **Birra20Venti
-ha già un `TraceabilityRegistry` deployato su testnet**, usato per i test
-(mint, esplorazione, hash documento — vedi i §§ successivi) con dati il più
-possibile realistici, ma sempre testnet: nessun uso in produzione, nessun
-deploy su mainnet ancora fatto. Dal Factory attuale, `deployRegistry()`
+non ha alcun `TraceabilityRegistry` proprio, né su testnet né su mainnet**:
+i test fatti finora (mint, esplorazione, hash documento — vedi i §§
+successivi) hanno usato registry di test deployati su testnet durante questo
+lavoro, popolati con i dati reali di Birra20Venti (nomi prodotti, lotti,
+JSON) per avere una verifica il più possibile realistica — nessun registro è
+mai stato deployato specificamente per o intestato a Birra20Venti, nessun
+uso in produzione, nessun deploy su mainnet ancora fatto. Dal Factory attuale, `deployRegistry()`
 richiede anche che ChainIntegrate abbia già assegnato un settore all'azienda
 via `setSector` (§48) — non basta più solo il tier Membership Corporate. Repo:
 [github.com/ChainIntegrate/traceability-registry](https://github.com/ChainIntegrate/traceability-registry)
