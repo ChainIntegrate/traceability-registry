@@ -9,10 +9,13 @@ per essere offerto anche ad altre aziende.
 
 Stato: **Factory deployata e verificata su testnet**
 ([`0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9`](https://explorer.execution.testnet.lukso.network/address/0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9) —
-sorgente pubblicata su Blockscout, verificabile da chiunque). Non ancora
-deployata su mainnet, non ancora deployato nessun `TraceabilityRegistry` di
-singola azienda (serve una UP con Membership Corporate almeno Bronze che
-chiami `Factory.deployRegistry()`). Repo:
+sorgente pubblicata su Blockscout, verificabile da chiunque). **Birra20Venti
+ha già un `TraceabilityRegistry` deployato su testnet**, usato per i test
+(mint, esplorazione, hash documento — vedi i §§ successivi) con dati il più
+possibile realistici, ma sempre testnet: nessun uso in produzione, nessun
+deploy su mainnet ancora fatto. Dal Factory attuale, `deployRegistry()`
+richiede anche che ChainIntegrate abbia già assegnato un settore all'azienda
+via `setSector` (§48) — non basta più solo il tier Membership Corporate. Repo:
 [github.com/ChainIntegrate/traceability-registry](https://github.com/ChainIntegrate/traceability-registry)
 (pubblico, licenza All Rights Reserved — codice visibile per trasparenza,
 nessun permesso di riuso). Questo documento è il riferimento per riprendere
@@ -39,9 +42,11 @@ Un solo contratto, deployato una volta da ChainIntegrate. Compito: deployare
 un `TraceabilityRegistry` dedicato per ogni azienda che lo richiede.
 
 - `deployRegistry(name, symbol)` — chiunque abbia `tierOf(msg.sender) != 0` su
-  Membership Corporate (quindi almeno Bronze) può chiamarla. Deploya il
-  contratto passando `chainIntegrateOwner` (fisso) e `msg.sender` (l'azienda)
-  come `registryAdmin`.
+  Membership Corporate (quindi almeno Bronze) **e un settore già assegnato**
+  (`sectorOf(msg.sender) != bytes32(0)`, vedi §48 — assegnato solo da
+  ChainIntegrate via `setSector`, mai auto-dichiarabile) può chiamarla.
+  Deploya il contratto passando `chainIntegrateOwner` (fisso) e `msg.sender`
+  (l'azienda) come `registryAdmin`.
 - **Limite registri per tier** (stesso schema già in uso sul Supplier Trust
   Registry): Bronze 1, Silver 2, Gold 5 — `maxRegistriesForTier(tier)`,
   controllato live ad ogni deploy. Nessuna retroattività: se un'azienda scende
@@ -115,9 +120,9 @@ su quel registry, che lo scarica e ricalcola l'hash per confrontarlo con
 quello on-chain.
 
 **Foto**: nessuna gestione a contratto — libreria immagini lato UI/backend,
-CID già pinnato riusato per chiave (es. nome ricetta per i batch, fornitore o
-default per le materie prime), niente ri-upload ad ogni mint a meno di scelta
-esplicita.
+CID già pinnato riusato per chiave (es. `Codice` per i batch — rinominato da
+`Ricetta`, vedi §48 — fornitore o default per le materie prime), niente
+ri-upload ad ogni mint a meno di scelta esplicita.
 
 ## 3. Schema JSON (fedele agli originali Birra20Venti)
 
@@ -136,9 +141,13 @@ bene sono nel validatore JS.
 
 ### Batch di produzione
 - `name`, `description` obbligatori.
-- `attributes[]` deve contenere `Ricetta` (chiave per la libreria foto) e
-  almeno una data tra quelle whitelisted (`Data Produzione`,
-  `Data Imbottigliamento`).
+- `attributes[]` deve contenere `Codice` (chiave per la libreria foto —
+  rinominato da `Ricetta`, non più specifico del settore alimentare/birra,
+  vedi §48) e almeno una data tra quelle riconosciute per il settore
+  (`RECOGNIZED_DATE_TRAIT_TYPES_BATCH`, configurabile per pagina/settore —
+  Birra20Venti (`alimentare_bidata`) ne ha due, `Data Produzione` e
+  `Data Imbottigliamento`; gli altri settori attuali (`alimentare_monodata`,
+  `industria`) una sola, `Data Produzione` — vedi §48).
 - Convenzione: **qualunque** `trait_type` che inizia per `"Lotto "` è un
   candidato al matching automatico verso i `RawMaterialLot` già mintati
   (confermato coi dati reali: 8 trovati su Batch #131 senza logica ad hoc).
@@ -150,7 +159,7 @@ dipendenze, stesso stile degli altri frontend ChainIntegrate) espone:
   → `{ valid, errors[], warnings[] }`.
 - `extractRawMaterialPurchaseData(json)` → righe pronte per i tre array
   paralleli del mint batch.
-- `extractProductionBatchData(json)` → ricetta, date candidate
+- `extractProductionBatchData(json)` → codice, date candidate
   (`requiresDateSelection` se >1), riferimenti lotto estratti.
 
 **Nota da un test sui dati reali**: il lotto "Pilsen (2-Row)" nel batch #131
@@ -558,6 +567,17 @@ oltre al caricamento JSON.
   righe vuote scartate correttamente, doppia data richiede scelta, data
   singola no, nessuna data correttamente rifiutata — stessi identici
   risultati che si otterrebbero da un file caricato a mano.
+
+**Decisione (non ancora scritta qui prima)**: l'i18n copre SOLO il chrome
+della UI (etichette, pulsanti, messaggi) — non tocca mai il contenuto della
+metadata (`name`, `description`, `attributes` del JSON caricato/compilato).
+Quel testo resta nella lingua in cui l'azienda l'ha scritto, senza traduzione
+automatica. Scelta deliberata: la lingua di chi scrive un batch/lotto è
+quasi sempre la stessa di chi lo consulterà (stesso mercato locale), e
+tradurre automaticamente introdurrebbe un livello di complessità/rischio
+(traduzione errata di un termine tecnico o di un nome proprio) senza un
+bisogno reale confermato finora. Se in futuro un cliente opera in un mercato
+multilingue, si affronta come eccezione puntuale, non come default.
 
 ## 21. Widget pubblico di visualizzazione (`frontend/explorer.html`)
 
