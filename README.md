@@ -1349,12 +1349,26 @@ ogni settore) è `ALLOWED_FACET_KEYS`, oggi costante interna non esposta in
    **Fatto**: nuovo Factory deployato su testnet e verificato su Blockscout —
    [`0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9`](https://explorer.execution.testnet.lukso.network/address/0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9).
    `FACTORY_ADDRESS` aggiornato in `user-alimentare-bidata.html` e `admin.html`.
-   **Ancora da fare in questa fase**: aggiornare il `.env` del backend sulla
-   VPS, poi assegnare un settore a Birra20Venti con `setSector` (ora
-   possibile dalla UI, vedi Fase 3) prima che possa deployare qualunque
-   nuovo registry (il require aggiunto blocca `deployRegistry` senza settore
-   assegnato — attenzione, vale anche per Birra20Venti se dovesse mai
-   deployarne un secondo).
+   **Fatto**: `.env` del backend sulla VPS aggiornato col nuovo
+   `FACTORY_ADDRESS` e `pm2 restart --update-env` eseguito.
+   **Testato su testnet, con un'azienda di prova**: `deployRegistry()`
+   chiamato SENZA settore assegnato → fallito con l'errore atteso; assegnato
+   `alimentare_bidata` via `setSector` (dalla nuova UI in `admin.html`) →
+   `deployRegistry()` riuscito. Confermato anche che `admin.html` può
+   riassegnare/cambiare il settore di un'azienda già assegnata. Sul nuovo
+   registry: mint di un JSON materie prime e di un JSON batch (con
+   `"Codice"`, non più `"Ricetta"`) con un lotto in comune tra i due →
+   matching lotto→batch corretto e visibile, libreria foto associata via
+   `Codice` funzionante. Explorer privato (`user-alimentare-bidata.html`) e
+   pubblico (`explorer.html`) verificati sui dati appena mintati, entrambi
+   OK. **Confermato indirettamente ma in modo solido che il backend usa il
+   Factory nuovo**: ogni chiamata firmata (pin-json, upload foto) passa da
+   `verifyRegistryIsKnown()` → `factoryContract.isRegistry(registryAddress)`
+   (`backend/authGuard.js`) sulla Factory che il backend ha in memoria — se
+   il backend fosse rimasto sul Factory vecchio, queste chiamate sul
+   registry nuovo sarebbero fallite per registry non riconosciuto. Il mint
+   riuscito è quindi una prova diretta dell'allineamento, non solo un
+   indizio.
 3. Fase 2 — backend: arricchire `/api/traceability/registry/:address/entries`
    con `sector`, risolto via `registry.registryAdmin()` → `factory.sectorOf(...)`,
    stesso pattern difensivo try/catch già usato per `documentHash` (§45).
@@ -1396,11 +1410,14 @@ ogni settore) è `ALLOWED_FACET_KEYS`, oggi costante interna non esposta in
      (`factory.setSector(...)`, hash del nome via `ethers.utils.id(...)`,
      stesso schema di `ENTRY_TYPE_KEY`). Mirror del pattern già esistente
      per `setMembershipCorporate` in questo stesso file.
-   - **Ancora da fare**: usare il form appena aggiunto per assegnare
-     `alimentare_bidata` a Birra20Venti (operazione VPS, non ancora fatta);
-     generalizzare `explorer.html` a leggere `facetKeys`/config da un
-     meccanismo iniettabile invece delle costanti fisse (oggi funziona solo
-     perché il default coincide col caso Birra20Venti).
+   - **Fatto**: `alimentare_bidata` assegnato a un'azienda di prova ed
+     end-to-end testato su testnet (vedi Fase 1 sopra per il dettaglio).
+   - **Ancora da fare**: test live di `user-alimentare-monodata.html` e
+     `user-industria.html` — create ma mai aperte in un browser reale, zero
+     dati di test sopra; generalizzare `explorer.html` a leggere
+     `facetKeys`/config da un meccanismo iniettabile invece delle costanti
+     fisse (oggi funziona solo perché il default coincide col caso
+     Birra20Venti).
 
 ## 39. Punti aperti / TODO
 
