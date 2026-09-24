@@ -1661,6 +1661,15 @@ conosce già:
 - Nota tier nella sezione deleghe: a tier 0 "membership sospesa" invece di
   "serve Silver o superiore".
 
+**Metadata collezione allineati (tier 0).** Il salvataggio dei metadata
+della collezione passa da `pin-json`, già rifiutato dal backend a tier 0
+(§49), ma lato UI il pulsante restava attivo, a differenza di foto e
+documenti. Ora `applyMembershipGate()` disattiva anche
+`saveCollectionMetadataBtn` e mostra la nota "Membership sospesa: modifica
+dei metadata disabilitata."; il click handler ha lo stesso controllo
+anticipato degli upload. (On-chain `setRegistryMetadata` resta
+`onlyRegistryAdmin` senza controllo di tier: il blocco è sul pin IPFS.)
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

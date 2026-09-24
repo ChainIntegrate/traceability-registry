@@ -124,6 +124,7 @@
       <div class="row"><label data-i18n="collection.square">Immagine square (dalla libreria foto)</label><select id="collectionSquarePhoto"></select></div>
       <div class="row"><label data-i18n="collection.banner">Banner (dalla libreria foto, opzionale)</label><select id="collectionBannerPhoto"><option value="" data-i18n="common.none">— nessuno —</option></select></div>
       <button class="primary" id="saveCollectionMetadataBtn" data-i18n="collection.save">Salva metadata collezione</button>
+      <p id="collectionGateNote" class="muted" style="display:none;" data-i18n="collection.suspendedNote">Membership sospesa: modifica dei metadata disabilitata.</p>
     </div>
   </section>
 
@@ -296,6 +297,7 @@ const I18N = {
     "collection.name": "Nome", "collection.desc": "Descrizione",
     "collection.square": "Immagine square (dalla libreria foto)", "collection.banner": "Banner (dalla libreria foto, opzionale)",
     "collection.save": "Salva metadata collezione",
+    "collection.suspendedNote": "Membership sospesa: modifica dei metadata disabilitata.",
     "common.none": "— nessuno —", "common.noneF": "— nessuna —", "common.generatePreview": "Genera anteprima",
     "mode.upload": "Carica JSON", "mode.manual": "Compila manualmente",
     "rm.title": "Acquisto materie prime", "rm.fornitore": "Fornitore", "rm.dataAcquisto": "Data acquisto (GG/MM/AAAA)",
@@ -414,6 +416,7 @@ const I18N = {
     "collection.name": "Name", "collection.desc": "Description",
     "collection.square": "Square image (from photo library)", "collection.banner": "Banner (from photo library, optional)",
     "collection.save": "Save collection metadata",
+    "collection.suspendedNote": "Membership suspended: metadata editing disabled.",
     "common.none": "— none —", "common.noneF": "— none —", "common.generatePreview": "Generate preview",
     "mode.upload": "Upload JSON", "mode.manual": "Fill in manually",
     "rm.title": "Raw material purchase", "rm.fornitore": "Supplier", "rm.dataAcquisto": "Purchase date (DD/MM/YYYY)",
@@ -859,6 +862,7 @@ function renderPhotoLibrarySelects(photos) {
 }
 
 document.getElementById("saveCollectionMetadataBtn").addEventListener("click", async () => {
+  if (activeRegistryTier === 0) { alert(t("collection.suspendedNote")); return; }
   try {
     const name = document.getElementById("collectionName").value.trim();
     const description = document.getElementById("collectionDescription").value.trim();
@@ -1033,6 +1037,12 @@ function applyMembershipGate() {
   if (uploadDocBtn) uploadDocBtn.disabled = suspended;
   const docNote = document.getElementById("documentUploadGateNote");
   if (docNote) docNote.style.display = suspended ? "block" : "none";
+  // Metadata collezione: il salvataggio passa da pin-json (bloccato dal
+  // backend a tier 0, §49) — stesso gate UI di foto e documenti.
+  const saveCollectionBtn = document.getElementById("saveCollectionMetadataBtn");
+  if (saveCollectionBtn) saveCollectionBtn.disabled = suspended;
+  const collectionNote = document.getElementById("collectionGateNote");
+  if (collectionNote) collectionNote.style.display = suspended ? "block" : "none";
 }
 
 async function refreshDelegatesList() {
