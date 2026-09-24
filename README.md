@@ -1643,6 +1643,24 @@ ora viene azzerato a ogni `selectRegistry`, per non ereditare il tier del
 registro aperto prima. Le select documento dei form di mint restano invece
 utilizzabili (etichetta "richiede tier Gold" già presente).
 
+## 53. Membership sospesa (tier 0) scambiata per "serve Gold"
+
+A tier 0 il contratto rifiuta `setDocumentHash` con `requires Gold tier` (e
+`addDelegate` con `not allowed to manage delegates`): la soglia Gold/Silver
+fallisce prima di qualunque controllo esplicito sulla sospensione, quindi il
+messaggio del contratto non distingue i due casi. Il contratto non si tocca
+(servirebbe un redeploy); la distinzione la fa il frontend, che il tier lo
+conosce già:
+- `TraceabilityErrors.friendlyMessage(err, lang, { tier })`: le voci della
+  mappa marcate `alsoWhenSuspended` (Gold, deleghe) a `tier === 0` diventano
+  "La membership collegata a questo registro è sospesa…", sempre col
+  dettaglio tecnico originale. Le pagine `user-*.html` passano
+  `{ tier: activeRegistryTier }` in tutte le chiamate.
+- `canSetDocumentHash()` ora può restituire la nota da mostrare: a tier 0
+  "Membership sospesa." invece di "Richiede membership Gold.".
+- Nota tier nella sezione deleghe: a tier 0 "membership sospesa" invece di
+  "serve Silver o superiore".
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

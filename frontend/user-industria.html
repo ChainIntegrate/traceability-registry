@@ -284,6 +284,7 @@ const I18N = {
     "card.verifyMismatch": "✗ Il file NON corrisponde.", "card.verifyError": "Errore verifica: {msg}",
     "card.setDocumentHashNeedSelection": "Seleziona prima un documento dalla libreria.",
     "card.setDocumentHashNeedsGold": "Richiede membership Gold.",
+    "card.setDocumentHashSuspended": "Membership sospesa.",
     "card.documentListError": "Errore caricamento libreria: {msg}",
     "common.loadingDocuments": "Caricamento documenti...",
     "log.invalidating": "Annullamento token {tokenId} in corso...",
@@ -341,7 +342,7 @@ const I18N = {
     "log.documentHashBatchSet": "Hash documento registrato su {n} lotti ({hash}). Riferimento: {tx}",
     "delegates.title": "Deleghe", "delegates.requirement": "Richiede tier Silver o superiore sulla Membership Corporate.",
     "delegates.tierNote": "Tier registryAdmin: {tier} ({status})", "delegates.enabled": "deleghe abilitate",
-    "delegates.needSilver": "serve Silver o superiore", "delegates.address": "Indirizzo UP",
+    "delegates.needSilver": "serve Silver o superiore", "delegates.suspended": "membership sospesa", "delegates.address": "Indirizzo UP",
     "delegates.add": "Aggiungi delega", "delegates.remove": "Rimuovi delega", "delegates.none": "Nessuna delega attiva.",
     "delegates.colAddress": "Indirizzo delegato", "delegates.listError": "Impossibile caricare le deleghe: {msg}",
     "delegates.invalidAddress": "Indirizzo non valido.", "delegates.added": "Delega aggiunta. Riferimento: {tx}",
@@ -401,6 +402,7 @@ const I18N = {
     "card.verifyMismatch": "✗ The file does NOT match.", "card.verifyError": "Verification error: {msg}",
     "card.setDocumentHashNeedSelection": "Select a document from the library first.",
     "card.setDocumentHashNeedsGold": "Requires a Gold membership.",
+    "card.setDocumentHashSuspended": "Membership suspended.",
     "card.documentListError": "Library load error: {msg}",
     "common.loadingDocuments": "Loading documents...",
     "log.invalidating": "Invalidating token {tokenId}...",
@@ -458,7 +460,7 @@ const I18N = {
     "log.documentHashBatchSet": "Document hash registered on {n} lots ({hash}). Reference: {tx}",
     "delegates.title": "Delegates", "delegates.requirement": "Requires Silver tier or higher on the Membership Corporate.",
     "delegates.tierNote": "registryAdmin tier: {tier} ({status})", "delegates.enabled": "delegation enabled",
-    "delegates.needSilver": "Silver or higher required", "delegates.address": "UP address",
+    "delegates.needSilver": "Silver or higher required", "delegates.suspended": "membership suspended", "delegates.address": "UP address",
     "delegates.add": "Add delegate", "delegates.remove": "Remove delegate", "delegates.none": "No active delegates.",
     "delegates.colAddress": "Delegate address", "delegates.listError": "Could not load delegates: {msg}",
     "delegates.invalidAddress": "Invalid address.", "delegates.added": "Delegate added. Reference: {tx}",
@@ -564,7 +566,7 @@ document.getElementById("connectBtn").addEventListener("click", async () => {
   try {
     accounts = await provider.send("eth_requestAccounts", []);
   } catch (err) {
-    alert(t("log.connectRejected", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    alert(t("log.connectRejected", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
     return;
   }
   if (!accounts || accounts.length === 0) {
@@ -676,7 +678,7 @@ async function loadMyRegistries() {
       t("registries.usage", { used: registries.length, limit: limit.toString(), tier: tier.toString() });
     document.getElementById("deployRegistryBtn").disabled = registries.length >= limit.toNumber();
   } catch (err) {
-    log(t("log.tierReadError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("log.tierReadError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 }
 
@@ -691,7 +693,7 @@ document.getElementById("deployRegistryBtn").addEventListener("click", async () 
     log(t("log.deployed", { tx: receipt.transactionHash }));
     await loadMyRegistries();
   } catch (err) {
-    log(t("log.deployError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("log.deployError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 });
 
@@ -722,7 +724,7 @@ async function refreshCurrentCollectionMetadata() {
       emptyEl.style.display = "block";
     }
   } catch (err) {
-    log(t("collection.currentLoadError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("collection.currentLoadError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 }
 
@@ -737,7 +739,7 @@ const exploreGallery = TraceabilityExplorerUI.createGalleryInstance({
   filtersEl: document.getElementById("exploreFilters"),
   gridEl: document.getElementById("exploreGrid"),
   t: t,
-  formatError: (err) => TraceabilityErrors.friendlyMessage(err, currentLang),
+  formatError: (err) => TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }),
   onInvalidate: async (tokenId, reason) => {
     log(t("log.invalidating", { tokenId: tokenId }));
     const tx = await activeRegistry.invalidateEntry(tokenId, reason || "");
@@ -747,7 +749,10 @@ const exploreGallery = TraceabilityExplorerUI.createGalleryInstance({
   // Gold-only lato contratto (onlyGoldFeature). Lato UI il pulsante resta
   // visibile ma disattivato, con la spiegazione, se il tier letto non è Gold
   // (3). Tier non ancora letto (null) = pulsante attivo: decide il contratto.
-  canSetDocumentHash: () => activeRegistryTier === null || activeRegistryTier >= GOLD_TIER,
+  canSetDocumentHash: () => {
+    if (activeRegistryTier === 0) return t("card.setDocumentHashSuspended");
+    return activeRegistryTier === null || activeRegistryTier >= GOLD_TIER;
+  },
   // documentHash arriva già dalla libreria (select in traceability-
   // explorer-ui.js) — MAI più un file scelto a mano qui: un hash calcolato
   // su un file non pinnato da nessuna parte sarebbe verificabile ma
@@ -783,7 +788,7 @@ document.getElementById("delegateAccessConnectBtn").addEventListener("click", as
       noteEl.textContent = "";
     }
   } catch (err) {
-    noteEl.innerHTML = "<span class='err'>" + t("delegateAccess.invalidRegistry", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }) + "</span>";
+    noteEl.innerHTML = "<span class='err'>" + t("delegateAccess.invalidRegistry", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }) + "</span>";
     return; // non e' un TraceabilityRegistry valido, non ha senso selezionarlo
   }
 
@@ -828,7 +833,7 @@ async function refreshPhotoLibrary() {
       backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
     });
   } catch (err) {
-    log(t("photos.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("photos.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
     return;
   }
   renderPhotoLibrarySelects(photos);
@@ -849,7 +854,7 @@ function renderPhotoLibrarySelects(photos) {
       bannerSel.appendChild(opt2);
     });
   } catch (err) {
-    log(t("photos.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("photos.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 }
 
@@ -877,7 +882,7 @@ document.getElementById("saveCollectionMetadataBtn").addEventListener("click", a
     log(t("log.collectionUpdated", { tx: receipt.transactionHash }));
     await refreshCurrentCollectionMetadata();
   } catch (err) {
-    log(t("log.collectionError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("log.collectionError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 });
 
@@ -902,7 +907,7 @@ function renderPhotoLibraryList(photos) {
     html += "</table>";
     el.innerHTML = html;
   } catch (err) {
-    log(t("photos.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("photos.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 }
 
@@ -913,7 +918,7 @@ async function hidePhotoRow(photoId) {
     });
     await refreshPhotoLibrary();
   } catch (err) {
-    log(t("photos.hideError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("photos.hideError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 }
 
@@ -931,7 +936,7 @@ document.getElementById("uploadPhotoBtn").addEventListener("click", async () => 
     log(t("photos.uploaded"));
     await refreshPhotoLibrary();
   } catch (err) {
-    log(t("photos.uploadError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("photos.uploadError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 });
 
@@ -961,7 +966,7 @@ async function refreshDocumentLibraryList() {
     html += "</table>";
     el.innerHTML = html;
   } catch (err) {
-    log(t("documents.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("documents.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 }
 
@@ -972,7 +977,7 @@ async function hideDocumentRow(documentId) {
     });
     await refreshDocumentLibraryList();
   } catch (err) {
-    log(t("documents.hideError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("documents.hideError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 }
 
@@ -990,7 +995,7 @@ document.getElementById("uploadDocumentBtn").addEventListener("click", async () 
     log(t("documents.uploaded"));
     await refreshDocumentLibraryList();
   } catch (err) {
-    log(t("documents.uploadError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("documents.uploadError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 });
 
@@ -1004,11 +1009,12 @@ async function refreshTierNote() {
     const registryAdmin = await activeRegistry.registryAdmin();
     const tier = await membership.tierOf(registryAdmin);
     activeRegistryTier = tier.toNumber();
-    const status = activeRegistryTier >= 2 ? t("delegates.enabled") : t("delegates.needSilver");
+    const status = activeRegistryTier === 0 ? t("delegates.suspended")
+      : activeRegistryTier >= 2 ? t("delegates.enabled") : t("delegates.needSilver");
     document.getElementById("tierNote").textContent = t("delegates.tierNote", { tier: tier.toString(), status: status });
     applyMembershipGate();
   } catch (err) {
-    log(t("log.tierDelegatesError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("log.tierDelegatesError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 }
 
@@ -1045,7 +1051,7 @@ async function refreshDelegatesList() {
       el.innerHTML = html;
     }
   } catch (err) {
-    el.innerHTML = "<p class='err'>" + t("delegates.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }) + "</p>";
+    el.innerHTML = "<p class='err'>" + t("delegates.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }) + "</p>";
   }
 }
 
@@ -1058,7 +1064,7 @@ document.getElementById("addDelegateBtn").addEventListener("click", async () => 
     log(t("delegates.added", { tx: receipt.transactionHash }));
     await refreshDelegatesList();
   } catch (err) {
-    log(t("delegates.addError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("delegates.addError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 });
 
@@ -1071,7 +1077,7 @@ document.getElementById("removeDelegateBtn").addEventListener("click", async () 
     log(t("delegates.removed", { tx: receipt.transactionHash }));
     await refreshDelegatesList();
   } catch (err) {
-    log(t("delegates.removeError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+    log(t("delegates.removeError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 });
 
@@ -1173,7 +1179,7 @@ document.getElementById("rawMaterialJsonInput").addEventListener("change", async
     populateRawMaterialForm(extracted);
     switchToSubtab("rm-manual");
   } catch (err) {
-    previewEl.innerHTML = "<p class='err'>" + t("common.readFileError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }) + "</p>";
+    previewEl.innerHTML = "<p class='err'>" + t("common.readFileError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }) + "</p>";
   }
 });
 
@@ -1242,7 +1248,7 @@ async function processRawMaterialJson(json, previewEl) {
         }
       }
     } catch (err) {
-      log(t("rm.mintError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+      log(t("rm.mintError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
     }
   });
 }
@@ -1325,7 +1331,7 @@ document.getElementById("batchJsonInput").addEventListener("change", async (e) =
     populateBatchForm(json, extracted);
     switchToSubtab("batch-manual");
   } catch (err) {
-    previewEl.innerHTML = "<p class='err'>" + t("common.readFileError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }) + "</p>";
+    previewEl.innerHTML = "<p class='err'>" + t("common.readFileError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }) + "</p>";
   }
 });
 
@@ -1362,7 +1368,7 @@ async function processProductionBatchJson(json, previewEl) {
       const lottoAttr = (lotJson.LSP4Metadata.attributes || []).find((a) => a.key === "Lotto");
       decodedLots.push({ tokenId: en.tokenId, lotto: lottoAttr ? lottoAttr.value : null });
     } catch (err) {
-      log("Lot decode error " + en.tokenId + ": " + TraceabilityErrors.friendlyMessage(err, currentLang));
+      log("Lot decode error " + en.tokenId + ": " + TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }));
     }
   }
 
@@ -1437,7 +1443,7 @@ async function processProductionBatchJson(json, previewEl) {
         }
       }
     } catch (err) {
-      log(t("batch.mintError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang) }));
+      log(t("batch.mintError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
     }
   });
 }
