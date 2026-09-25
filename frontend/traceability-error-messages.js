@@ -79,9 +79,34 @@
       en: "One of the referenced raw-material lots isn't registered in this registry.",
     },
     {
+      match: "referenced lot is invalidated",
+      it: "Uno dei lotti di materia prima indicati è stato annullato: non può più essere collegato a un nuovo batch.",
+      en: "One of the referenced raw-material lots has been invalidated: it can't be linked to a new batch anymore.",
+    },
+    {
+      match: "referenced token is not a RawMaterialLot",
+      it: "Uno dei riferimenti indicati come lotto non è un lotto di materia prima (per esempio è un batch).",
+      en: "One of the references given as a lot isn't a raw-material lot (for example, it's a batch).",
+    },
+    {
       match: "tokenId does not exist",
       it: "Questa voce non risulta registrata in questo registro.",
       en: "This entry isn't registered in this registry.",
+    },
+    {
+      match: "already invalidated",
+      it: "Questa registrazione risulta già annullata.",
+      en: "This entry has already been invalidated.",
+    },
+    {
+      match: "not authorized to invalidate",
+      it: "Questo indirizzo non può annullare registrazioni su questo registro: può farlo solo il titolare o un delegato.",
+      en: "This address can't invalidate entries on this registry: only the owner or a delegate can.",
+    },
+    {
+      match: "length mismatch",
+      it: "I dati da registrare non sono coerenti tra loro (numero di elementi diverso). Ricarica la pagina e riprova; se il problema resta, contatta ChainIntegrate.",
+      en: "The data to record isn't consistent (different number of items). Reload the page and try again; if it persists, contact ChainIntegrate.",
     },
     {
       match: "tokenId has no EntryType set",
@@ -134,6 +159,11 @@
       match: "no valid membership",
       it: "Nessuna membership valida trovata per questo indirizzo.",
       en: "No valid membership found for this address.",
+    },
+    {
+      match: "registry limit reached for current tier",
+      it: "Hai già raggiunto il numero massimo di registri previsto dalla tua membership. Per crearne altri serve una membership superiore.",
+      en: "You've already reached the maximum number of registries allowed by your membership. Creating more requires a higher membership.",
     },
     {
       match: "caller is not ChainIntegrate",
@@ -201,13 +231,16 @@
    * requires Gold tier"), se si riesce a isolarla: dal campo reason di
    * ethers, dal testo "execution reverted: ...", o decodificando i dati
    * grezzi Error(string) (selettore 0x08c379a0) quando arriva solo quelli. */
+  // Ordine voluto, dal più affidabile al meno: (1) err.reason di ethers,
+  // (2) decodifica esatta dei dati Error(string), (3) solo per ultimo il
+  // testo "execution reverted: <motivo>". Il testo va per ultimo perché
+  // compare anche in forme senza motivo ("reverted, data: 0x...",
+  // "reverted without a reason string", "reverted with custom error ..."):
+  // una regex tollerante lì catturava spazzatura (fino all'intera stringa
+  // esadecimale) e oscurava il motivo vero, decodificabile dai dati.
   function extractRevertReason(err, strings) {
     if (err && typeof err.reason === "string" && err.reason.indexOf("TraceabilityRegistry") !== -1) {
-      return err.reason.replace(/^execution reverted:?\s*/, "");
-    }
-    for (let i = 0; i < strings.length; i++) {
-      const m = /reverted(?: with reason string)?:?\s*'?([^"'|\\\n]+)/.exec(strings[i]);
-      if (m && m[1].trim().length > 0) return m[1].trim();
+      return err.reason.replace(/^execution reverted:\s*/, "").replace(/^["']|["']$/g, "");
     }
     if (typeof ethers !== "undefined") {
       for (let i = 0; i < strings.length; i++) {
@@ -217,6 +250,13 @@
           return ethers.utils.defaultAbiCoder.decode(["string"], "0x" + hex[0].slice(10))[0];
         } catch (e) { /* dati non decodificabili: si prosegue */ }
       }
+    }
+    for (let i = 0; i < strings.length; i++) {
+      // I due punti sono obbligatori: senza, "reverted" seguito da altro
+      // non è un motivo. Accetta il motivo tra apici singoli o doppi.
+      const m = /reverted(?: with reason string)?:\s*["']?([^"'|\\\n]+)/.exec(strings[i]) ||
+                /reverted with reason string\s+["']([^"'|\\\n]+)/.exec(strings[i]);
+      if (m && m[1].trim().length > 0 && m[1].trim().indexOf("0x") !== 0) return m[1].trim();
     }
     return "";
   }
