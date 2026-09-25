@@ -1486,10 +1486,11 @@ il costo di un tentativo a vuoto è solo il gas dell'azienda sospesa, non una
 risorsa nostra. Il contratto la blocca comunque con `onlyGoldFeature`
 (richiede tier Gold). Aggiungere un gate qui sarebbe complessità in più per
 un rischio che non esiste — a differenza degli upload, dove il costo
-ricadeva sul nostro nodo IPFS. **Resta comunque aperto, distinto da questo**:
-il punto in §30 "Funzionalità Gold mai esercitata" — qui si è verificato solo
-il caso tier 0 (revert atteso), non che `setDocumentHash` funzioni davvero
-con un account Gold vero.
+ricadeva sul nostro nodo IPFS. **Aggiornamento (§30)**: qui si era verificato
+solo il caso tier 0 (revert atteso); il caso positivo — un account Gold vero
+che chiama `setDocumentHash`/`setDocumentHashBatch` con successo, sia in fase
+di mint sia successivamente dall'explorer privato — è stato confermato in
+seguito, chiudendo anche quel punto.
 
 ## 50. Rifiniture UX: errori comprensibili, messaggi di firma più chiari, pagina "How it works"
 
@@ -1751,9 +1752,11 @@ codice precedente fallivano 10 controlli, ora passano tutti.
 - [x] `SILVER_TIER = 2` — **confermato indirettamente**: la delega concessa
       con successo durante i test reali richiede che `tierOf(registryAdmin)`
       ritorni davvero `>= 2` per l'account usato, altrimenti `addDelegate`
-      sarebbe stato rifiutato on-chain. `GOLD_TIER = 3` resta **non
-      verificato**: la funzionalità Gold (`setDocumentHash`) non è mai stata
-      esercitata nemmeno una volta.
+      sarebbe stato rifiutato on-chain. `GOLD_TIER = 3` — **confermato**: la
+      funzionalità Gold (`setDocumentHash`/`setDocumentHashBatch`) è stata
+      esercitata con un account Gold vero sia in fase di mint sia
+      successivamente dall'explorer privato, in entrambi i casi con esito
+      corretto.
 - [x] ~~Confermare se un'azienda con più stabilimenti deve poter avere più di
       un registry~~ — risolto: limite per tier, Bronze 1 / Silver 2 / Gold 5
       (§2), stesso schema del Supplier Trust Registry.
@@ -1839,14 +1842,14 @@ Bilancio a freddo dopo settimane di test reali su testnet.
   chrome della UI a tradursi, il contenuto della metadata resta nella
   lingua in cui l'azienda l'ha scritto, nessuna traduzione automatica.
 
-**Verifiche mai fatte sul campo, a basso rischio ma da chiudere:**
+**Verifiche mai fatte sul campo — tutte chiuse:**
 - ~~`tierOf()` per un'azienda sospesa~~ — **fatto** (§49): mint, materie
   prime, deleghe e upload libreria tutti confermati bloccati/coerenti a
   tier 0; trovato e corretto un gap reale (upload documenti non era
   gated né lato UI né lato backend).
-- Funzionalità Gold (`setDocumentHash`, hash fattura privata) — mai
-  esercitata nemmeno una volta, a differenza di Silver (deleghe, confermate
-  funzionanti sul campo).
+- ~~Funzionalità Gold (`setDocumentHash`, hash fattura privata)~~ —
+  **fatto**: esercitata con un account Gold vero sia in fase di mint sia
+  successivamente dall'explorer privato, come già Silver (deleghe).
 
 **Da fare meccanicamente quando si decide di procedere:**
 - `npm run deploy:mainnet` (già pronto, indirizzi Membership Corporate e
