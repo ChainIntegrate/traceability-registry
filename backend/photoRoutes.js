@@ -1,6 +1,6 @@
 const express = require("express");
 const multer = require("multer");
-const sizeOf = require("image-size");
+const { imageSize, disableTypes, types: IMAGE_SIZE_TYPES } = require("image-size");
 const { ethers } = require("ethers");
 const { pinFileToIpfs } = require("./ipfsClient");
 const { verifySignedRequest } = require("./authGuard");
@@ -10,6 +10,14 @@ const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // 8MB, generoso per foto prodotto/ric
 const MAX_LABEL_LENGTH = 200;
 // Niente SVG: può contenere script, rischio se mai mostrato inline in un browser.
 const ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+// image-size riconosce il formato dal contenuto, non dal Content-Type
+// dichiarato dal browser (falsificabile): senza questo, un file JXL/HEIF/ICNS
+// costruito apposta ma dichiarato "image/png" arriverebbe ai parser di quei
+// formati. Qui lasciamo attivi solo i tre formati ammessi; gli altri parser
+// non vengono mai eseguiti (difesa in profondità oltre all'aggiornamento
+// alla 2.x, che corregge i loop infiniti GHSA-5p2g-fcmc-qvqq/GHSA-w3rx-r6r6-pgpr).
+disableTypes(IMAGE_SIZE_TYPES.filter((t) => !["png", "jpg", "webp"].includes(t)));
 
 const upload = multer({
   storage: multer.memoryStorage(), // mai su disco: serve solo il tempo di hashare+pinnare
@@ -116,7 +124,7 @@ function buildPhotoRouter(provider, factoryContract) {
       let width = null;
       let height = null;
       try {
-        const dims = sizeOf(file.buffer);
+        const dims = imageSize(file.buffer);
         width = dims.width || null;
         height = dims.height || null;
       } catch (err) {

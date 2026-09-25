@@ -1694,6 +1694,42 @@ Due capitoli nuovi in `frontend/how-it-works.html` (IT/EN, 50/50 chiavi):
 - `schemas/production-batch.schema.json`: descrizioni aggiornate da
   "Ricetta" a "Codice" (erano rimaste indietro rispetto a §48).
 
+## 55. Audit: revert non tradotti, parsing del dettaglio tecnico, dipendenze backend
+
+**6 revert raggiungibili dalla UI senza traduzione** (cadevano nel messaggio
+generico): `already invalidated`, `not authorized to invalidate`,
+`referenced lot is invalidated`, `referenced token is not a RawMaterialLot`,
+`length mismatch` (TraceabilityRegistry) e `registry limit reached for
+current tier` (Factory). Aggiunti a `REASON_MAP`.
+
+**Bug in `extractRevertReason`**: la regex aveva i due punti dopo "reverted"
+facoltativi, quindi catturava qualunque cosa seguisse. Con
+`"execution reverted, data: 0x08c3…"` restituiva la stringa esadecimale e,
+girando prima della decodifica, oscurava il motivo vero (messaggio tradotto
+perso). Stesso problema con "reverted without a reason string" e "reverted
+with custom error". Ora l'ordine è `err.reason` → decodifica `Error(string)`
+→ testo, e la regex richiede i due punti e accetta apici singoli o doppi.
+
+**Test** (`node scripts/test-error-messages.js`, senza dipendenze oltre a
+ethers in `backend/`): verifica che **ogni** `require()` dei contratti abbia
+una voce in `REASON_MAP` (letti direttamente dai `.sol`: se se ne aggiunge
+uno senza tradurlo il test lo segnala) e le forme d'errore reali sopra. Sul
+codice precedente fallivano 10 controlli, ora passano tutti.
+
+**Dipendenze backend** (`npm audit`):
+- `npm audit fix` non-breaking: express 4.22.3, qs 6.16.0.
+- `image-size` 1.2.1 → **2.0.4** (high: loop infiniti nei parser JXL/HEIF/ICNS
+  = backend bloccato). Il tipo MIME dell'upload è quello dichiarato dal
+  browser, quindi un file costruito apposta arrivava a quei parser. Nuova API
+  `imageSize(buffer)`; in più `disableTypes` lascia attivi solo png/jpg/webp.
+  Verificato su PNG/JPEG/WebP reali (640x480) e rifiuto di gif/icns.
+  Richiede Node >=18, già il minimo dichiarato in `backend/package.json`.
+- **Lasciati aperti, consapevolmente**: `ws` (high) e `ethers`/
+  `@ethersproject/providers` (moderate) + 12 low, tutti dentro ethers v5.
+  `ws` serve solo a `WebSocketProvider`, che il backend non usa (solo
+  `JsonRpcProvider`): non è codice eseguito. L'unica correzione è migrare a
+  ethers v6 (breaking, tutto il backend): da valutare a parte, non per questo.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
