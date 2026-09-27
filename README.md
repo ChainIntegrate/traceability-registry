@@ -1,5 +1,7 @@
 # TraceabilityRegistry
 
+> 🇬🇧 *This README is currently in Italian. An English version will follow once the content is finalized.*
+
 **La filiera dei tuoi prodotti, dal fornitore al cliente, scritta in modo permanente e verificabile da chiunque.**
 
 TraceabilityRegistry è la piattaforma di tracciabilità di [ChainIntegrate](https://chainintegrate.it) basata sulla blockchain [LUKSO](https://lukso.network). Ogni azienda ha il **proprio registro**: vi registra i lotti di materia prima che riceve e i batch che produce, e il sistema li **collega tra loro**. Da un prodotto finito si risale ai fornitori; da un lotto difettoso si trovano in pochi secondi tutti i batch coinvolti. Tutto verificabile pubblicamente, senza dover credere sulla parola a nessuno, nemmeno a ChainIntegrate.
