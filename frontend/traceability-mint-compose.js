@@ -155,7 +155,7 @@
    * pronto per il mint — MAI costruito a mano, sempre via erc725.js.
    */
   async function encodeLsp4MetadataValue(metadataJsonObject, cid) {
-    const { ERC725 } = await import("https://cdn.jsdelivr.net/npm/@erc725/erc725.js/+esm");
+    const { ERC725 } = await import("./vendor/erc725-0.28.2.esm.min.js");
     const encoded = ERC725.encodeData(
       [{ keyName: "LSP4Metadata", value: { json: metadataJsonObject, url: "ipfs://" + cid } }],
       LSP4_METADATA_SCHEMA

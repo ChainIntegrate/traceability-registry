@@ -2,7 +2,7 @@
  * TraceabilityRegistry — calcolo tokenId e parsing date (vanilla JS, no build step).
  * Richiede ethers.js v5 già caricato in pagina (stesso CDN già usato in
  * Batch.html/Materie_Prime.html):
- *   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+ *   <script src="./vendor/ethers-5.7.2.umd.min.js"></script>
  *
  * Include questo script DOPO ethers e DOPO traceability-json-validators.js.
  */
