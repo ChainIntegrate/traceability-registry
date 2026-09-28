@@ -16,7 +16,7 @@ indica gravità, stato e dove è stato risolto.
 | 8 | 🟡 Bassa | Backend | Ricaricare un elemento nascosto non lo rende visibile | ✅ Risolto (PR 2) |
 | 9 | 🟡 Bassa | Backend | Firme delle liste nella query string (log) | ✅ Risolto (PR 2) |
 | 10 | ℹ️ Info | Contratto | Token LSP8 trasferibili dal titolare | ⏳ Da decidere prima del mainnet |
-| 11 | 🟡 Bassa | Frontend | Nessuna intestazione di sicurezza (CSP, clickjacking) | 🟡 Fase 1 (PR 2): CSP in osservazione |
+| 11 | 🟡 Bassa | Frontend | Nessuna intestazione di sicurezza (CSP, clickjacking) | ✅ Risolto: CSP attiva |
 
 ---
 
@@ -219,7 +219,7 @@ nel registro, ma la proprietà del token può spostarsi (anche dopo un
 
 ---
 
-## 11. Intestazioni di sicurezza — 🟡 Bassa — 🟡 Fase 1 (PR 2)
+## 11. Intestazioni di sicurezza — 🟡 Bassa — ✅ Risolto (CSP attiva)
 
 Nessuna intestazione di sicurezza sulle pagine. Ora `nginx/security-headers.conf`
 (da includere nel blocco `server` di traceability):
@@ -236,9 +236,14 @@ Nessuna intestazione di sicurezza sulle pagine. Ora `nginx/security-headers.conf
 UP extension inserisce il proprio codice nella pagina e non si può provare qui.
 Verificato in Chromium con la CSP **bloccante**: nessuna violazione su tutte le
 pagine, esploratore con metadata e immagini IPFS, test XSS e download
-documenti funzionanti. **Fase 2**: dopo la prova con la UP collegata, passare a
-`Content-Security-Policy` (una parola nel file). Configurazione validata con
-`nginx -t` e intestazioni controllate su un nginx locale.
+documenti funzionanti. Configurazione validata con `nginx -t` e intestazioni
+controllate su un nginx locale.
+
+**Fase 2 — attiva dal 28/09/2026.** Provata dal vivo con la UP collegata (pagine
+private, librerie, download, registrazione, esploratore): console pulita, nessuna
+violazione; intestazioni confermate con `curl -sI` sul sito (pagine private
+`SAMEORIGIN` + `frame-ancestors 'self'`, esploratore `frame-ancestors *` senza
+`X-Frame-Options`). La CSP ora blocca davvero.
 
 ## Cosa è già solido
 

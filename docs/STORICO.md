@@ -1776,6 +1776,16 @@ che tornano visibili al ricaricamento, liste della libreria in POST, e
 `scripts/test-backend-hardening.js` (18 controlli). Deploy: riavvio del
 backend e include nginx.
 
+## 59. CSP attiva
+
+Dopo il deploy della PR 2, prova dal vivo con la UP collegata su tutte le
+pagine: nessuna violazione della CSP in console e tutti i flussi funzionanti
+(connessione, due firme SIWE all'apertura, librerie, download documento,
+registrazione subito visibile nell'esploratore grazie alla cache per blocco,
+nascondi/ricarica). La migrazione degli indirizzi all'avvio non ha trovato
+righe da correggere. Passata la CSP da `Report-Only` ad attiva in
+`nginx/security-headers.conf` (audit punto 11 chiuso).
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
