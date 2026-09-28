@@ -35,7 +35,7 @@
   /** Decodifica un valore VerifiableURI (bytes hex) e scarica il JSON dal gateway pubblico. */
   async function decodeMetadataValue(metadataValueHex) {
     if (!metadataValueHex) throw new Error("decodeMetadataValue: metadataValueHex mancante.");
-    const { ERC725 } = await import("./vendor/erc725-0.28.2.esm.min.js");
+    const { ERC725 } = await import("/shared/erc725.js/0.28.2/erc725.min.js");
     const decoded = ERC725.decodeData(
       [{ keyName: "LSP4Metadata", value: metadataValueHex }],
       LSP4_METADATA_SCHEMA

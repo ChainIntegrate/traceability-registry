@@ -1743,8 +1743,9 @@ Rapporto completo, con stato di ogni punto, in [`docs/AUDIT.md`](AUDIT.md).
 In sintesi: 10 punti (2 alti, 4 medi, 3 bassi, 1 informativo). Risolti nella
 prima PR: XSS nell'esploratore pubblico da metadata dei token (4 vettori
 riprodotti in Chromium, zero dopo la correzione), XSS nelle tabelle delle
-librerie e nelle anteprime, librerie servite da `frontend/vendor/` invece che
-da CDN (ERC725 prima senza versione fissata). Aperti: privacy dell'hash
+librerie e nelle anteprime, librerie servite dal repository condiviso
+`shared-assets` (`/shared/…`) invece che da CDN (ERC725 prima senza versione
+fissata; ethers 5.7.2 aggiunto a shared-assets). Aperti: privacy dell'hash
 documento (la promessa "solo hash" non corrisponde al codice), hash
 sovrascrivibile e trasferibilità dei token (da decidere prima del mainnet),
 limiti sugli endpoint pubblici e tre bug minori del backend (PR 2).

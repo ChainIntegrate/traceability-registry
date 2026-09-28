@@ -109,15 +109,27 @@ SRI) ed ERC725.js importato da `cdn.jsdelivr.net/npm/@erc725/erc725.js/+esm`
 **senza versione**: ogni nuova versione, anche compromessa, girava subito su
 pagine collegate alla Universal Profile.
 
-**Correzione.** Librerie servite dallo stesso dominio da `frontend/vendor/`
-(dettagli, checksum e licenze in `frontend/vendor/README.md`):
-`ethers-5.7.2.umd.min.js` (file npm invariato) ed `erc725-0.28.2.esm.min.js`
-(bundle ESM della versione 0.28.2, quella servita dal CDN al momento
-dell'audit). Il bundle produce, in Chromium, la stessa codifica LSP4Metadata
-della libreria in Node. Tutte le pagine si caricano senza errori e senza
-richieste a domini esterni. Nessun font esterno (le pagine usano `system-ui`).
+**Correzione.** Le pagine usano il repository condiviso
+[`ChainIntegrate/shared-assets`](https://github.com/ChainIntegrate/shared-assets),
+servito da nginx sotto `/shared/` sullo stesso dominio (versioni fissate,
+cartelle immutabili, `SHA256SUMS`):
+- `/shared/ethers/5.7.2/ethers.umd.min.js`: aggiunto a shared-assets per questo
+  progetto ([shared-assets#1](https://github.com/ChainIntegrate/shared-assets/pull/1)),
+  file npm invariato. La migrazione a ethers v6 (già presente in shared-assets)
+  è un lavoro a parte: cambia le API in frontend e backend.
+- `/shared/erc725.js/0.28.2/erc725.min.js`: già presente, stessa versione che il
+  CDN serviva al momento dell'audit. Verificato in Chromium: produce la stessa
+  codifica LSP4Metadata della libreria in Node.
 
-**Deploy.** La cartella `frontend/vendor/` va pubblicata insieme alle pagine.
+Con un server che replica la configurazione nginx, tutte le pagine si caricano
+senza errori e senza richieste a domini esterni. Nessun font esterno (le
+pagine usano `system-ui`; i font IBM Plex di shared-assets restano disponibili
+se si vorrà uniformare lo stile agli altri progetti).
+
+**Deploy.** Prima, sul VPS: `git pull` di `/var/www/shared-assets` (con
+ethers 5.7.2) e, nel blocco `server` nginx di traceability, la riga
+`include /var/www/shared-assets/nginx/shared-assets.conf;` (poi `nginx -t` e
+reload). Senza, le pagine non trovano ethers.
 
 ## 7. Indirizzo non normalizzato nel database — 🟡 Bassa — ⏳ PR 2
 
