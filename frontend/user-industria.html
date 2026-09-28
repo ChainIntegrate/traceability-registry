@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TraceabilityRegistry — Pannello Azienda</title>
 <link rel="icon" type="image/x-icon" href="./favicon.ico">
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<script src="/shared/ethers/5.7.2/ethers.umd.min.js"></script>
 <script src="./traceability-json-validators.js"></script>
 <script src="./traceability-error-messages.js"></script>
 <script src="./traceability-tokenid.js"></script>
@@ -539,6 +539,9 @@ const REGISTRY_ABI = [
 const MEMBERSHIP_ABI = ["function tierOf(address account) view returns (uint256)"];
 
 let provider, signer, myAddress, factory, activeRegistryAddress, activeRegistry;
+// Escape HTML per ogni dato non fisso (librerie, file importati, backend):
+// vedi audit §56. Mai concatenare in innerHTML un valore che non passi di qui.
+const esc = TraceabilityDecode.escapeHtml;
 let activeRegistryTier = null;
 const GOLD_TIER = 3; // come TraceabilityRegistry.sol: 1=Bronze, 2=Silver, 3=Gold
 
@@ -904,9 +907,9 @@ function renderPhotoLibraryList(photos) {
     let html = "<table><tr><th>" + t("photos.colLabel") + "</th><th>" + t("photos.colCid") + "</th><th>" + t("photos.colDims") + "</th><th></th><th></th></tr>";
     photos.forEach((p) => {
       const downloadUrl = TraceabilityDecode.ipfsToHttp(p.cid);
-      html += "<tr><td>" + p.label + "</td><td>" + p.cid + "</td><td>" + (p.width || "?") + "x" + (p.height || "?") + "</td>" +
-        "<td><a href='" + downloadUrl + "' target='_blank' rel='noopener'>" + t("photos.download") + "</a></td>" +
-        "<td><button class='danger' onclick='hidePhotoRow(" + p.id + ")'>" + t("photos.hide") + "</button></td></tr>";
+      html += "<tr><td>" + esc(p.label) + "</td><td>" + esc(p.cid) + "</td><td>" + esc(p.width || "?") + "x" + esc(p.height || "?") + "</td>" +
+        "<td>" + (downloadUrl ? "<a href='" + esc(downloadUrl) + "' target='_blank' rel='noopener'>" + t("photos.download") + "</a>" : "") + "</td>" +
+        "<td><button class='danger' onclick='hidePhotoRow(" + Number(p.id) + ")'>" + t("photos.hide") + "</button></td></tr>";
     });
     html += "</table>";
     el.innerHTML = html;
@@ -963,9 +966,9 @@ async function refreshDocumentLibraryList() {
     let html = "<table><tr><th>" + t("documents.colLabel") + "</th><th>" + t("documents.colCid") + "</th><th>" + t("documents.colFile") + "</th><th></th><th></th></tr>";
     documents.forEach((d) => {
       const downloadUrl = TraceabilityDecode.ipfsToHttp(d.cid);
-      html += "<tr><td>" + d.label + "</td><td>" + d.cid + "</td><td>" + (d.original_name || "?") + "</td>" +
-        "<td><a href='" + downloadUrl + "' target='_blank' rel='noopener'>" + t("documents.download") + "</a></td>" +
-        "<td><button class='danger' onclick='hideDocumentRow(" + d.id + ")'>" + t("documents.hide") + "</button></td></tr>";
+      html += "<tr><td>" + esc(d.label) + "</td><td>" + esc(d.cid) + "</td><td>" + esc(d.original_name || "?") + "</td>" +
+        "<td>" + (downloadUrl ? "<a href='" + esc(downloadUrl) + "' target='_blank' rel='noopener'>" + t("documents.download") + "</a>" : "") + "</td>" +
+        "<td><button class='danger' onclick='hideDocumentRow(" + Number(d.id) + ")'>" + t("documents.hide") + "</button></td></tr>";
     });
     html += "</table>";
     el.innerHTML = html;
@@ -1056,7 +1059,7 @@ async function refreshDelegatesList() {
       el.innerHTML = "<p class='muted'>" + t("delegates.none") + "</p>";
     } else {
       let html = "<table><tr><th>" + t("delegates.colAddress") + "</th></tr>";
-      data.delegates.forEach((d) => { html += "<tr><td>" + d + "</td></tr>"; });
+      data.delegates.forEach((d) => { html += "<tr><td>" + esc(d) + "</td></tr>"; });
       html += "</table>";
       el.innerHTML = html;
     }
@@ -1182,7 +1185,7 @@ document.getElementById("rawMaterialJsonInput").addEventListener("change", async
     const json = JSON.parse(text);
     const validation = TraceabilityValidators.validateRawMaterialPurchaseJson(json);
     if (!validation.valid) {
-      previewEl.innerHTML = "<p class='err'>" + t("common.readErrors", { errs: validation.errors.join("; ") }) + "</p>";
+      previewEl.innerHTML = "<p class='err'>" + t("common.readErrors", { errs: esc(validation.errors.join("; ")) }) + "</p>";
       return;
     }
     const extracted = TraceabilityValidators.extractRawMaterialPurchaseData(json);
@@ -1196,15 +1199,15 @@ document.getElementById("rawMaterialJsonInput").addEventListener("change", async
 async function processRawMaterialJson(json, previewEl) {
   const validation = TraceabilityValidators.validateRawMaterialPurchaseJson(json);
   if (!validation.valid) {
-    previewEl.innerHTML = "<p class='err'>" + t("common.readErrors", { errs: validation.errors.join("; ") }) + "</p>";
+    previewEl.innerHTML = "<p class='err'>" + t("common.readErrors", { errs: esc(validation.errors.join("; ")) }) + "</p>";
     return;
   }
   const extracted = TraceabilityValidators.extractRawMaterialPurchaseData(json);
   const indexDate = TraceabilityTokenId.parseItalianDateToUnixSeconds(extracted.dataAcquistoRaw);
 
-  let html = "<p>" + t("rm.summary", { fornitore: extracted.fornitore, data: extracted.dataAcquistoRaw }) + "</p>";
+  let html = "<p>" + t("rm.summary", { fornitore: esc(extracted.fornitore), data: esc(extracted.dataAcquistoRaw) }) + "</p>";
   html += "<table><tr><th>" + t("rm.nome") + "</th><th>" + t("rm.lotto") + "</th><th>" + t("rm.quantita") + "</th></tr>";
-  extracted.lots.forEach((l) => { html += "<tr><td>" + l.nome + "</td><td>" + l.lotto + "</td><td>" + l.quantità + "</td></tr>"; });
+  extracted.lots.forEach((l) => { html += "<tr><td>" + esc(l.nome) + "</td><td>" + esc(l.lotto) + "</td><td>" + esc(l.quantità) + "</td></tr>"; });
   html += "</table>";
   html += "<div class='row'><label>" + t("rm.photoLabel") + "</label><select id='rmPhotoSelect'></select></div>";
   html += "<div class='row'><label>" + t("documents.selectLabel") + "</label><select id='rmDocumentSelect'></select></div>";
@@ -1334,7 +1337,7 @@ document.getElementById("batchJsonInput").addEventListener("change", async (e) =
     const json = JSON.parse(text);
     const validation = TraceabilityValidators.validateProductionBatchJson(json);
     if (!validation.valid) {
-      previewEl.innerHTML = "<p class='err'>" + t("common.readErrors", { errs: validation.errors.join("; ") }) + "</p>";
+      previewEl.innerHTML = "<p class='err'>" + t("common.readErrors", { errs: esc(validation.errors.join("; ")) }) + "</p>";
       return;
     }
     const extracted = TraceabilityValidators.extractProductionBatchData(json);
@@ -1348,18 +1351,18 @@ document.getElementById("batchJsonInput").addEventListener("change", async (e) =
 async function processProductionBatchJson(json, previewEl) {
   const validation = TraceabilityValidators.validateProductionBatchJson(json);
   if (!validation.valid) {
-    previewEl.innerHTML = "<p class='err'>" + t("common.readErrors", { errs: validation.errors.join("; ") }) + "</p>";
+    previewEl.innerHTML = "<p class='err'>" + t("common.readErrors", { errs: esc(validation.errors.join("; ")) }) + "</p>";
     return;
   }
   const extracted = TraceabilityValidators.extractProductionBatchData(json);
 
-  let html = "<p>" + t("batch.summary", { codice: extracted.codice }) + "</p>";
+  let html = "<p>" + t("batch.summary", { codice: esc(extracted.codice) }) + "</p>";
 
   let dateHtml = "";
   if (extracted.requiresDateSelection) {
     dateHtml = "<div class='row'><label>" + t("batch.chooseDate") + "</label>";
     extracted.dateCandidates.forEach((d, i) => {
-      dateHtml += "<label><input type='radio' name='dateChoice' value='" + i + "'" + (i === 0 ? " checked" : "") + "> " + d.trait_type + ": " + d.value + "</label><br>";
+      dateHtml += "<label><input type='radio' name='dateChoice' value='" + i + "'" + (i === 0 ? " checked" : "") + "> " + esc(d.trait_type) + ": " + esc(d.value) + "</label><br>";
     });
     dateHtml += "</div>";
   }
@@ -1391,8 +1394,8 @@ async function processProductionBatchJson(json, previewEl) {
   });
 
   let matchHtml = "<h3>" + t("batch.matchingTitle") + "</h3><table><tr><th>" + t("batch.colIngrediente") + "</th><th>" + t("batch.colLotto") + "</th><th>" + t("batch.colEsito") + "</th></tr>";
-  matched.forEach((m) => { matchHtml += "<tr><td>" + m.ref.ingredienteNome + "</td><td>" + m.ref.lotto + "</td><td class='ok'>" + t("batch.found") + "</td></tr>"; });
-  unmatched.forEach((u) => { matchHtml += "<tr><td>" + u.ingredienteNome + "</td><td>" + u.lotto + "</td><td class='warn'>" + t("batch.notFound") + "</td></tr>"; });
+  matched.forEach((m) => { matchHtml += "<tr><td>" + esc(m.ref.ingredienteNome) + "</td><td>" + esc(m.ref.lotto) + "</td><td class='ok'>" + t("batch.found") + "</td></tr>"; });
+  unmatched.forEach((u) => { matchHtml += "<tr><td>" + esc(u.ingredienteNome) + "</td><td>" + esc(u.lotto) + "</td><td class='warn'>" + t("batch.notFound") + "</td></tr>"; });
   matchHtml += "</table>";
   matchHtml += "<div class='row'><label>" + t("batch.photoLabel") + "</label><select id='batchPhotoSelect'></select></div>";
   matchHtml += "<div class='row'><label>" + t("documents.selectLabel") + "</label><select id='batchDocumentSelect'></select></div>";

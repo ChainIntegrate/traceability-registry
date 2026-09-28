@@ -13,10 +13,12 @@
 (function (global) {
   "use strict";
 
+  // Versione condivisa in traceability-decode.js: escapa anche gli apici.
+  // La precedente (div.textContent → innerHTML) non lo faceva, quindi un
+  // valore dentro un attributo data-value='...' poteva chiuderlo e
+  // aggiungere un gestore di evento (audit §56).
   function escapeHtml(str) {
-    const div = document.createElement("div");
-    div.textContent = str;
-    return div.innerHTML;
+    return global.TraceabilityDecode.escapeHtml(str);
   }
 
   function ipfsToHttp(url) {
@@ -81,9 +83,9 @@
         ? ipfsToHttp(meta.backgroundImage[0].url) : null;
 
       let html = "";
-      if (bannerUrl) html += "<img class='te-banner' src='" + bannerUrl + "' alt=''>";
+      if (bannerUrl) html += "<img class='te-banner' src='" + escapeHtml(bannerUrl) + "' alt=''>";
       html += "<div class='te-collection-body'>";
-      if (iconUrl) html += "<img class='te-collection-icon' src='" + iconUrl + "' alt=''>";
+      if (iconUrl) html += "<img class='te-collection-icon' src='" + escapeHtml(iconUrl) + "' alt=''>";
       html += "<div><h2>" + escapeHtml(meta.name || "") + "</h2>";
       if (meta.description) html += "<p>" + escapeHtml(meta.description) + "</p>";
       html += "</div></div>";
@@ -335,7 +337,7 @@
         const badgeLabel = entry.entryType === 1 ? t("badge.batch") : t("badge.lot");
 
         let html = "";
-        if (cardData.imageUrl) html += "<img src='" + cardData.imageUrl + "' alt=''>";
+        if (cardData.imageUrl) html += "<img src='" + escapeHtml(cardData.imageUrl) + "' alt=''>";
         else html += "<div class='te-noimage'>" + t("card.noImage") + "</div>";
 
         html += "<div class='te-card-body'>";
@@ -356,7 +358,7 @@
           entry.usedLots.forEach((lotTokenId) => {
             const lotData = cardDataById[lotTokenId];
             const label = lotData ? lotData.name : lotTokenId;
-            html += "<a href='#' data-scroll-to='" + lotTokenId + "'>→ " + escapeHtml(label) + "</a>";
+            html += "<a href='#' data-scroll-to='" + escapeHtml(lotTokenId) + "'>→ " + escapeHtml(label) + "</a>";
           });
           html += "</div>";
         }
@@ -364,7 +366,7 @@
         // (mai su explorer.html, pubblica e senza wallet) e solo su entry
         // ancora valide (un token già annullato non si annulla di nuovo).
         if (onInvalidate && entry.status !== 1) {
-          html += "<button type='button' class='te-invalidate-btn' data-invalidate-token='" + entry.tokenId + "'>" + t("card.invalidateButton") + "</button>";
+          html += "<button type='button' class='te-invalidate-btn' data-invalidate-token='" + escapeHtml(entry.tokenId) + "'>" + t("card.invalidateButton") + "</button>";
         }
         // Badge + verifica locale — mostrati su QUALUNQUE gallery (privata o
         // pubblica su explorer.html) quando esiste un hash registrato:
@@ -378,9 +380,9 @@
             "<span class='te-dochash-badge'>" + t("card.documentHashBadge") + "</span> " +
             "<code class='te-dochash-value' title='" + escapeHtml(entry.documentHash) + "'>" + escapeHtml(shortHash(entry.documentHash)) + "</code>" +
             "<div class='te-verify-row'>" +
-            "<input type='file' class='te-verify-input' data-verify-token='" + entry.tokenId + "'>" +
-            "<button type='button' class='te-verify-btn' data-verify-token='" + entry.tokenId + "'>" + t("card.verifyButton") + "</button>" +
-            "<span class='te-verify-result' data-verify-result='" + entry.tokenId + "'></span>" +
+            "<input type='file' class='te-verify-input' data-verify-token='" + escapeHtml(entry.tokenId) + "'>" +
+            "<button type='button' class='te-verify-btn' data-verify-token='" + escapeHtml(entry.tokenId) + "'>" + t("card.verifyButton") + "</button>" +
+            "<span class='te-verify-result' data-verify-result='" + escapeHtml(entry.tokenId) + "'></span>" +
             "</div></div>";
         }
         // Attestazione hash documento (Gold-only lato contratto —
@@ -407,8 +409,8 @@
             "</div>";
         } else if (onSetDocumentHash && !hasDocumentHash(entry)) {
           html += "<div class='te-dochash-row'>" +
-            "<select class='te-dochash-select' data-dochash-token='" + entry.tokenId + "'><option value=''>" + t("common.loadingDocuments") + "</option></select>" +
-            "<button type='button' class='te-dochash-btn' data-dochash-token='" + entry.tokenId + "'>" + t("card.setDocumentHashButton") + "</button>" +
+            "<select class='te-dochash-select' data-dochash-token='" + escapeHtml(entry.tokenId) + "'><option value=''>" + t("common.loadingDocuments") + "</option></select>" +
+            "<button type='button' class='te-dochash-btn' data-dochash-token='" + escapeHtml(entry.tokenId) + "'>" + t("card.setDocumentHashButton") + "</button>" +
             "</div>";
         }
         html += "</div></div>";
@@ -531,7 +533,7 @@
       }
       selects.forEach((sel) => {
         if (loadError) {
-          sel.innerHTML = "<option value=''>" + t("card.documentListError", { msg: loadError.message }) + "</option>";
+          sel.innerHTML = "<option value=''>" + escapeHtml(t("card.documentListError", { msg: loadError.message })) + "</option>";
           return;
         }
         sel.innerHTML = "<option value=''>" + t("common.noneF") + "</option>";
@@ -554,7 +556,7 @@
       try {
         data = await global.TraceabilityDecode.fetchRegistryEntries(backendBaseUrl, registryAddress);
       } catch (err) {
-        if (statusEl) statusEl.innerHTML = "<p class='te-err'>" + t("status.error", { msg: err.message }) + "</p>";
+        if (statusEl) statusEl.innerHTML = "<p class='te-err'>" + escapeHtml(t("status.error", { msg: err.message })) + "</p>";
         return;
       }
 
@@ -579,6 +581,7 @@
 
   global.TraceabilityExplorerUI = {
     createGalleryInstance: createGalleryInstance,
+    escapeHtml: escapeHtml,
     renderCollectionHeader: renderCollectionHeader,
     buildCardDataById: buildCardDataById,
     collectFacets: collectFacets,
