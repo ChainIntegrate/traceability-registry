@@ -190,7 +190,7 @@
   <section class="tab" id="tab-documenti">
     <div class="card">
       <h2 data-i18n="documents.title">Libreria documenti</h2>
-      <p class="muted" data-i18n="documents.hint">Certificati, DDT e altri documenti collegabili a materie prime/batch tramite hash on-chain (richiede tier Gold per la registrazione dell'hash al momento del mint).</p>
+      <p class="muted" data-i18n="documents.hint">Certificati, DDT, fatture e altri documenti da collegare a lotti e batch tramite la loro impronta on-chain (registrazione dell'impronta: tier Gold). I documenti vengono cifrati prima di essere archiviati: sulla rete pubblica finisce solo una versione illeggibile, e il file originale lo possono scaricare solo gli utenti autorizzati di questo registro, con una firma.</p>
       <div class="row"><label data-i18n="documents.label">Etichetta</label><input type="text" id="documentLabel" data-i18n-placeholder="documents.labelPlaceholder" placeholder="es. Certificato spedizione 12/09/2026"></div>
       <div class="row"><label data-i18n="documents.file">File</label><input type="file" id="documentFileInput" accept="application/pdf,image/png,image/jpeg,image/webp"></div>
       <button class="primary" id="uploadDocumentBtn" data-i18n="documents.upload">Carica</button>
@@ -320,12 +320,15 @@ const I18N = {
     "photos.uploaded": "Foto caricata.", "photos.uploadError": "Errore upload foto: {msg}",
     "photos.needBoth": "Etichetta e file obbligatori.", "photos.hideError": "Errore nascondi foto: {msg}",
     "photos.suspendedNote": "Membership sospesa: upload disabilitato.",
-    "documents.title": "Libreria documenti", "documents.hint": "Certificati, DDT e altri documenti collegabili a materie prime/batch tramite hash on-chain (richiede tier Gold per la registrazione dell'hash al momento del mint).",
+    "documents.title": "Libreria documenti", "documents.hint": "Certificati, DDT, fatture e altri documenti da collegare a lotti e batch tramite la loro impronta on-chain (registrazione dell'impronta: tier Gold). I documenti vengono cifrati prima di essere archiviati: sulla rete pubblica finisce solo una versione illeggibile, e il file originale lo possono scaricare solo gli utenti autorizzati di questo registro, con una firma.",
     "documents.label": "Etichetta", "documents.labelPlaceholder": "es. Certificato spedizione 12/09/2026",
     "documents.file": "File", "documents.upload": "Carica", "documents.none": "Nessun documento ancora.",
     "documents.suspendedNote": "Membership sospesa: upload disabilitato.",
     "documents.colLabel": "Etichetta", "documents.colCid": "CID", "documents.colFile": "File originale", "documents.hide": "Nascondi",
     "documents.download": "Scarica",
+    "documents.downloading": "Download del documento in corso (verrà chiesta una firma)...",
+    "documents.downloaded": "Documento scaricato.",
+    "documents.downloadError": "Download del documento non riuscito: {msg}",
     "documents.listError": "Impossibile caricare la libreria documenti: {msg}", "documents.uploading": "Upload documento in corso...",
     "documents.uploaded": "Documento caricato.", "documents.uploadError": "Errore upload documento: {msg}",
     "documents.needBoth": "Etichetta e file obbligatori.", "documents.hideError": "Errore nascondi documento: {msg}",
@@ -440,12 +443,15 @@ const I18N = {
     "photos.uploaded": "Photo uploaded.", "photos.uploadError": "Photo upload error: {msg}",
     "photos.needBoth": "Label and file are required.", "photos.hideError": "Hide photo error: {msg}",
     "photos.suspendedNote": "Membership suspended: upload disabled.",
-    "documents.title": "Document library", "documents.hint": "Certificates, delivery notes and other documents linkable to raw materials/batches via on-chain hash (requires Gold tier to register the hash at mint time).",
+    "documents.title": "Document library", "documents.hint": "Certificates, delivery notes, invoices and other documents to link to lots and batches through their on-chain fingerprint (registering the fingerprint: Gold tier). Documents are encrypted before being stored: only an unreadable version goes on the public network, and the original file can only be downloaded by this registry's authorized users, with a signature.",
     "documents.label": "Label", "documents.labelPlaceholder": "e.g. Shipment certificate 12/09/2026",
     "documents.file": "File", "documents.upload": "Upload", "documents.none": "No documents yet.",
     "documents.suspendedNote": "Membership suspended: upload disabled.",
     "documents.colLabel": "Label", "documents.colCid": "CID", "documents.colFile": "Original file", "documents.hide": "Hide",
     "documents.download": "Download",
+    "documents.downloading": "Downloading the document (a signature will be requested)...",
+    "documents.downloaded": "Document downloaded.",
+    "documents.downloadError": "Document download failed: {msg}",
     "documents.listError": "Could not load document library: {msg}", "documents.uploading": "Uploading document...",
     "documents.uploaded": "Document uploaded.", "documents.uploadError": "Document upload error: {msg}",
     "documents.needBoth": "Label and file are required.", "documents.hideError": "Hide document error: {msg}",
@@ -952,19 +958,43 @@ async function refreshDocumentLibraryList() {
     const documents = await TraceabilityDocumentLibrary.listDocuments({
       backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,
     });
+    lastDocumentList = documents;
     const el = document.getElementById("documentLibraryList");
     if (documents.length === 0) { el.innerHTML = "<p class='muted'>" + t("documents.none") + "</p>"; return; }
     let html = "<table><tr><th>" + t("documents.colLabel") + "</th><th>" + t("documents.colCid") + "</th><th>" + t("documents.colFile") + "</th><th></th><th></th></tr>";
     documents.forEach((d) => {
-      const downloadUrl = TraceabilityDecode.ipfsToHttp(d.cid);
       html += "<tr><td>" + esc(d.label) + "</td><td>" + esc(d.cid) + "</td><td>" + esc(d.original_name || "?") + "</td>" +
-        "<td>" + (downloadUrl ? "<a href='" + esc(downloadUrl) + "' target='_blank' rel='noopener'>" + t("documents.download") + "</a>" : "") + "</td>" +
+        "<td><button type='button' onclick='downloadDocumentRow(" + Number(d.id) + ")'>" + t("documents.download") + "</button></td>" +
         "<td><button class='danger' onclick='hideDocumentRow(" + Number(d.id) + ")'>" + t("documents.hide") + "</button></td></tr>";
     });
     html += "</table>";
     el.innerHTML = html;
   } catch (err) {
     log(t("documents.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
+  }
+}
+
+// Download firmato: su IPFS c'è solo il file cifrato, il backend lo
+// decifra e lo restituisce dopo aver verificato firma e autorizzazione.
+let lastDocumentList = []; // ultima lista caricata: serve il nome originale del file al download
+async function downloadDocumentRow(documentId) {
+  try {
+    log(t("documents.downloading"));
+    const row = (lastDocumentList || []).find((d) => Number(d.id) === Number(documentId));
+    const blob = await TraceabilityDocumentLibrary.downloadDocument({
+      backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer, documentId,
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = (row && row.original_name) || ("documento-" + documentId);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    log(t("documents.downloaded"));
+  } catch (err) {
+    log(t("documents.downloadError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
   }
 }
 
