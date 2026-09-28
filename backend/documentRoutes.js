@@ -4,7 +4,7 @@ const { ethers } = require("ethers");
 const { pinFileToIpfs, catFromIpfs } = require("./ipfsClient");
 const { loadMasterKey, encryptDocument, decryptDocument, HEADER_LENGTH } = require("./documentCrypto");
 const { verifySignedRequest } = require("./authGuard");
-const { insertDocument, listDocumentsByRegistry, hideDocument, getDocumentById } = require("./db");
+const { insertDocument, listDocumentsByRegistry, hideDocument, getDocumentById , normalizeRegistryAddress } = require("./db");
 
 const MAX_UPLOAD_BYTES = 16 * 1024 * 1024; // 16MB — certificati/DDT scansionati possono pesare più di una foto
 const MAX_LABEL_LENGTH = 200;
@@ -173,19 +173,24 @@ function buildDocumentRouter(provider, factoryContract) {
   });
 
   /** Non pubblica, stesso motivo della libreria foto. */
-  router.get("/documents", async (req, res) => {
+  /** Lista della libreria: firma richiesta, riusata dal client per 5 minuti.
+   * POST /documents/list (firma nel corpo) è quella usata dalle pagine: una
+   * firma nella query string finisce nei log di accesso di nginx e resta
+   * riutilizzabile finché è valida (audit §56 punto 9). GET resta solo per
+   * compatibilità con pagine ancora in cache nel browser; da togliere. */
+  async function listDocuments(req, res, source) {
     try {
-      const { registryAddress, signerAddress, signature } = req.query;
-      const timestamp = Number(req.query.timestamp);
+      const { registryAddress, signerAddress, signature } = source;
+      const timestamp = Number(source.timestamp);
 
       if (!registryAddress || !ethers.utils.isAddress(String(registryAddress))) {
-        return res.status(400).json({ error: "registryAddress mancante o non valido (query string)." });
+        return res.status(400).json({ error: "registryAddress mancante o non valido." });
       }
       if (!signerAddress || !ethers.utils.isAddress(String(signerAddress))) {
-        return res.status(400).json({ error: "signerAddress mancante o non valido (query string)." });
+        return res.status(400).json({ error: "signerAddress mancante o non valido." });
       }
       if (!signature || typeof signature !== "string") {
-        return res.status(400).json({ error: "signature mancante (query string)." });
+        return res.status(400).json({ error: "signature mancante." });
       }
 
       const message = buildDocumentListSignedMessage(registryAddress, timestamp);
@@ -199,10 +204,12 @@ function buildDocumentRouter(provider, factoryContract) {
       const documents = listDocumentsByRegistry(registryAddress);
       return res.json({ documents });
     } catch (err) {
-      console.error("GET /api/traceability/documents errore:", err);
+      console.error("GET/POST /api/traceability/documents errore:", err);
       return res.status(500).json({ error: "Errore interno." });
     }
-  });
+  }
+  router.post("/documents/list", (req, res) => listDocuments(req, res, req.body || {}));
+  router.get("/documents", (req, res) => listDocuments(req, res, req.query));
 
   /** Mai una vera cancellazione — stessa filosofia della libreria foto. */
   router.post("/documents/:id/hide", async (req, res) => {
@@ -225,7 +232,7 @@ function buildDocumentRouter(provider, factoryContract) {
       }
 
       const existing = getDocumentById(documentId);
-      if (!existing || existing.registry_address !== registryAddress) {
+      if (!existing || existing.registry_address !== normalizeRegistryAddress(registryAddress)) {
         return res.status(404).json({ error: "Documento non trovato su questo registry." });
       }
 
@@ -274,7 +281,7 @@ function buildDocumentRouter(provider, factoryContract) {
       }
 
       const existing = getDocumentById(documentId);
-      if (!existing || existing.registry_address !== registryAddress) {
+      if (!existing || existing.registry_address !== normalizeRegistryAddress(registryAddress)) {
         return res.status(404).json({ error: "Documento non trovato su questo registry." });
       }
 

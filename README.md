@@ -184,6 +184,7 @@ contracts/     TraceabilityRegistryFactory.sol, TraceabilityRegistry.sol
 scripts/       deploy.js, test-error-messages.js
 backend/       API Express (firme, IPFS, librerie, lettura on-chain)
 frontend/      pagine per settore, explorer.html, admin.html, how-it-works.html
+nginx/         intestazioni di sicurezza da includere nel blocco server di nginx
 schemas/       JSON Schema dei file di importazione
 docs/          STORICO.md, il diario di sviluppo
 ```
@@ -207,6 +208,7 @@ npm start                   # in produzione con pm2
 ```bash
 node scripts/test-error-messages.js      # traduzione di ogni revert dei contratti + parsing degli errori
 node scripts/test-document-encryption.js # cifratura dei documenti e percorso upload → IPFS → download
+node scripts/test-backend-hardening.js   # limiti per IP, cache per blocco, indirizzi, liste in POST
 ```
 
 > 🔑 **Chiave madre dei documenti.** Il backend cifra i documenti con `DOCUMENT_MASTER_KEY`: se va persa, i documenti cifrati non sono più recuperabili. Generazione, custodia, backup e recupero: [docs/CHIAVE-DOCUMENTI.md](docs/CHIAVE-DOCUMENTI.md).

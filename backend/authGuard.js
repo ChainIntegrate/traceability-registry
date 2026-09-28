@@ -13,12 +13,23 @@ const MAX_SIGNATURE_AGE_SECONDS = parseInt(process.env.MAX_SIGNATURE_AGE_SECONDS
  * quella di sola lettura pubblica (chainReadRoutes) — il rischio di abuso
  * del nodo RPC esiste comunque anche senza firma.
  */
+// Un registro deployato dalla Factory lo resta per sempre: la risposta
+// positiva si può tenere in memoria senza scadenza, e risparmia una chiamata
+// RPC a ogni richiesta (audit §56 punto 5). Le risposte negative NON si
+// tengono: un indirizzo può diventare registro più tardi.
+const knownRegistries = new Set();
+
 async function verifyRegistryIsKnown(factoryContract, registryAddress) {
+  const key = String(registryAddress).toLowerCase();
+  if (knownRegistries.has(key)) return true;
+  let known;
   try {
-    return await factoryContract.isRegistry(registryAddress);
+    known = await factoryContract.isRegistry(registryAddress);
   } catch (err) {
     throw new Error("Impossibile verificare la legittimità del registry presso la Factory: " + err.message);
   }
+  if (known) knownRegistries.add(key);
+  return known;
 }
 
 /**

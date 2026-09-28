@@ -125,8 +125,13 @@
       listSignatureCache[cacheKey] = { timestamp, signature };
     }
 
-    const params = new URLSearchParams({ registryAddress, signerAddress, signature, timestamp: String(timestamp) });
-    const res = await fetch(backendBaseUrl.replace(/\/$/, "") + "/api/traceability/documents?" + params.toString());
+    // Firma nel corpo di una POST, non nella query string: un URL finisce nei
+    // log di accesso del server (audit §56 punto 9).
+    const res = await fetch(backendBaseUrl.replace(/\/$/, "") + "/api/traceability/documents/list", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ registryAddress, signerAddress, signature, timestamp }),
+    });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       delete listSignatureCache[cacheKey];

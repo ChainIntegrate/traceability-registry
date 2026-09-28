@@ -7,7 +7,9 @@ const cache = require("./chainReadCache");
 const { computeActiveDelegates } = require("./delegateEvents");
 
 const MAX_BLOCK_RANGE = parseInt(process.env.MAX_BLOCK_RANGE_PER_CALL || "10000", 10);
-const CACHE_TTL_SECONDS = parseInt(process.env.CHAIN_READ_CACHE_TTL_SECONDS || "0", 10); // 0 = disattivata di default
+// Registro non valido (deployedAtBlock illeggibile): distinto dagli altri
+// errori per rispondere 400 invece di 500.
+class InvalidRegistryError extends Error {}
 
 /**
  * Logica pura (nessuna chiamata di rete) di combinazione e ordinamento —
@@ -80,22 +82,36 @@ function buildChainReadRouter(provider, factoryContract) {
         return res.status(403).json({ error: "registryAddress non riconosciuto (non deployato dalla Factory ChainIntegrate)." });
       }
 
-      const cacheKey = "entries:" + registryAddress.toLowerCase();
-      const cached = cache.get(cacheKey);
-      if (cached) {
-        return res.json(cached);
+      const latestBlock = await cache.latestBlockNumber(provider);
+      let responseBody;
+      try {
+        responseBody = await cache.getForBlock("entries:" + registryAddress.toLowerCase(), latestBlock, () =>
+          computeEntries(registryAddress, latestBlock));
+      } catch (err) {
+        if (err instanceof InvalidRegistryError) {
+          return res.status(400).json({ error: "Indirizzo non corrisponde a un TraceabilityRegistry valido." });
+        }
+        throw err;
       }
+      return res.json(responseBody);
+    } catch (err) {
+      console.error("GET /api/traceability/registry/:address/entries errore:", err);
+      return res.status(500).json({ error: "Errore interno." });
+    }
+  });
 
+  /** Calcolo completo delle entry di un registro, aggiornato a `latestBlock`
+   * (chiamato al massimo una volta per blocco e registro, vedi cache). */
+  async function computeEntries(registryAddress, latestBlock) {
       const registry = new ethers.Contract(registryAddress, TRACEABILITY_REGISTRY_READ_ABI, provider);
 
       let deployedAtBlockBN;
       try {
         deployedAtBlockBN = await registry.deployedAtBlock();
       } catch (err) {
-        return res.status(400).json({ error: "Indirizzo non corrisponde a un TraceabilityRegistry valido." });
+        throw new InvalidRegistryError();
       }
       const fromBlock = deployedAtBlockBN.toNumber();
-      const latestBlock = await provider.getBlockNumber();
 
       // Enumerazione via eventi, non tokenIdsOf/loop su contatore — i
       // tokenId sono hash, non sequenziali. Suddivisa in chunk: molti
@@ -144,16 +160,10 @@ function buildChainReadRouter(provider, factoryContract) {
         collectionMetadataValue = null; // registry senza metadata di collezione ancora impostata: non blocca la risposta
       }
 
-      const responseBody = { registryAddress, deployedAtBlock: fromBlock, collectionMetadataValue, entries: entriesWithMetadata };
-      cache.set(cacheKey, responseBody, CACHE_TTL_SECONDS);
+      return { registryAddress, deployedAtBlock: fromBlock, collectionMetadataValue, entries: entriesWithMetadata };
+  }
 
-      return res.json(responseBody);
-    } catch (err) {
-      console.error("GET /api/traceability/registry/:address/entries errore:", err);
-      return res.status(500).json({ error: "Errore interno." });
-    }
-  });
-
+  
   /**
    * Deleghe attualmente attive — pubblica come registryAdmin (già leggibile
    * on-chain da chiunque), non richiede firma. Calcolata scansionando
@@ -178,22 +188,30 @@ function buildChainReadRouter(provider, factoryContract) {
         return res.status(403).json({ error: "registryAddress non riconosciuto (non deployato dalla Factory ChainIntegrate)." });
       }
 
-      const registry = new ethers.Contract(registryAddress, TRACEABILITY_REGISTRY_READ_ABI, provider);
-      let deployedAtBlockBN;
+      const latestBlock = await cache.latestBlockNumber(provider);
+      let delegates;
       try {
-        deployedAtBlockBN = await registry.deployedAtBlock();
+        delegates = await cache.getForBlock("delegates:" + registryAddress.toLowerCase(), latestBlock, async () => {
+          const registry = new ethers.Contract(registryAddress, TRACEABILITY_REGISTRY_READ_ABI, provider);
+          let deployedAtBlockBN;
+          try {
+            deployedAtBlockBN = await registry.deployedAtBlock();
+          } catch (err) {
+            throw new InvalidRegistryError();
+          }
+          const fromBlock = deployedAtBlockBN.toNumber();
+          const [addedEvents, removedEvents] = await Promise.all([
+            chunkedQueryFilter(registry, registry.filters.DelegateAdded(), fromBlock, latestBlock, MAX_BLOCK_RANGE),
+            chunkedQueryFilter(registry, registry.filters.DelegateRemoved(), fromBlock, latestBlock, MAX_BLOCK_RANGE),
+          ]);
+          return computeActiveDelegates(addedEvents, removedEvents);
+        });
       } catch (err) {
-        return res.status(400).json({ error: "Indirizzo non corrisponde a un TraceabilityRegistry valido." });
+        if (err instanceof InvalidRegistryError) {
+          return res.status(400).json({ error: "Indirizzo non corrisponde a un TraceabilityRegistry valido." });
+        }
+        throw err;
       }
-      const fromBlock = deployedAtBlockBN.toNumber();
-      const latestBlock = await provider.getBlockNumber();
-
-      const [addedEvents, removedEvents] = await Promise.all([
-        chunkedQueryFilter(registry, registry.filters.DelegateAdded(), fromBlock, latestBlock, MAX_BLOCK_RANGE),
-        chunkedQueryFilter(registry, registry.filters.DelegateRemoved(), fromBlock, latestBlock, MAX_BLOCK_RANGE),
-      ]);
-
-      const delegates = computeActiveDelegates(addedEvents, removedEvents);
       return res.json({ registryAddress, delegates });
     } catch (err) {
       console.error("GET /api/traceability/registry/:address/delegates errore:", err);

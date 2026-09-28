@@ -7,6 +7,7 @@ const { buildPhotoRouter } = require("./photoRoutes");
 const { buildDocumentRouter } = require("./documentRoutes");
 const { buildChainReadRouter } = require("./chainReadRoutes");
 const { TRACEABILITY_FACTORY_MINIMAL_ABI } = require("./factoryAbi");
+const { createRateLimiter } = require("./rateLimit");
 
 const PORT = process.env.PORT || 3014; // TODO: confermare porta libera sul VPS Aruba
 const RPC_URL = process.env.LUKSO_RPC_URL;
@@ -39,6 +40,28 @@ const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
 const factoryContract = new ethers.Contract(FACTORY_ADDRESS, TRACEABILITY_FACTORY_MINIMAL_ABI, provider);
 
 const app = express();
+// Il backend è raggiungibile solo da nginx sulla stessa macchina: req.ip deve
+// essere l'IP del client (X-Forwarded-For), non 127.0.0.1, altrimenti il
+// limite di richieste sotto varrebbe per tutti insieme.
+app.set("trust proxy", "loopback");
+
+// Limite di richieste per IP (audit §56 punto 5), prima del parsing del corpo.
+// Lettura pubblica più generosa (l'esploratore può essere incorporato in siti
+// terzi); route firmate più strette, perché ogni tentativo — anche con firma
+// non valida — costa verifiche on-chain. 0 = disattivato.
+const publicReadLimit = createRateLimiter({
+  name: "lettura pubblica",
+  maxPerMinute: parseInt(process.env.PUBLIC_RATE_LIMIT_PER_MINUTE || "120", 10),
+});
+const signedLimit = createRateLimiter({
+  name: "route firmate",
+  maxPerMinute: parseInt(process.env.SIGNED_RATE_LIMIT_PER_MINUTE || "60", 10),
+});
+app.use("/api/traceability/registry", publicReadLimit);
+app.use("/api/traceability", (req, res, next) =>
+  req.path.startsWith("/registry/") ? next() : signedLimit(req, res, next)
+);
+
 app.use(express.json({ limit: "2mb" }));
 
 // Due politiche CORS diverse per due gruppi di endpoint:

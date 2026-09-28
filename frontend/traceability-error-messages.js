@@ -186,6 +186,12 @@
       it: "Questo indirizzo non è autorizzato su questo registro: non è né il titolare né un delegato.",
       en: "This address isn't authorized on this registry: it's neither the owner nor a delegate.",
     },
+    // --- Limite di richieste del backend (audit §56 punto 5) ---
+    {
+      match: "Troppe richieste",
+      it: "Il server ha ricevuto troppe richieste in poco tempo: attendi qualche secondo e riprova.",
+      en: "The server received too many requests in a short time: wait a few seconds and try again.",
+    },
     // --- Errori tipici del provider RPC/UP extension ---
     {
       match: "insufficient funds",

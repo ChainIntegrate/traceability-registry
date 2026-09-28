@@ -1,5 +1,6 @@
 const path = require("path");
 const Database = require("better-sqlite3");
+const { ethers } = require("ethers");
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, "traceability.db");
 const db = new Database(DB_PATH);
@@ -52,16 +53,76 @@ if (!documentColumns.includes("encrypted")) {
 }
 
 /**
+ * Forma canonica dell'indirizzo di un registro (checksum EIP-55). Audit §56
+ * punto 7: prima l'indirizzo era salvato come arrivava dal client, quindi un
+ * delegato che lo scriveva in minuscolo vedeva la libreria vuota, caricava in
+ * un "archivio" separato e "nascondi" rispondeva 404. Ora tutte le funzioni
+ * qui sotto normalizzano da sole: nessun chiamante può sbagliare.
+ */
+function normalizeRegistryAddress(address) {
+  return ethers.utils.getAddress(String(address));
+}
+
+// Migrazione: porta alla forma canonica le righe già salvate. Se due righe
+// diventano uguali (stesso registro, stesso file), ne tiene una sola: quella
+// cifrata se c'è (documenti), altrimenti la più vecchia; resta visibile se
+// almeno una delle due lo era. Idempotente: alla seconda esecuzione non trova
+// più niente da fare.
+function normalizeRegistryColumn(table) {
+  const hasEncrypted = db.prepare("PRAGMA table_info(" + table + ")").all().some((c) => c.name === "encrypted");
+  const rows = db.prepare("SELECT * FROM " + table + " ORDER BY id").all();
+  let fixed = 0;
+  let merged = 0;
+  db.transaction(() => {
+    for (const r of rows) {
+      let canonical;
+      try { canonical = normalizeRegistryAddress(r.registry_address); } catch (e) { continue; }
+      if (canonical === r.registry_address) continue;
+      const current = db.prepare("SELECT * FROM " + table + " WHERE id = ?").get(r.id);
+      if (!current) continue; // già unita a un'altra riga
+      const twin = db.prepare("SELECT * FROM " + table + " WHERE registry_address = ? AND keccak256_hash = ?")
+        .get(canonical, current.keccak256_hash);
+      if (!twin) {
+        db.prepare("UPDATE " + table + " SET registry_address = ? WHERE id = ?").run(canonical, current.id);
+        fixed++;
+        continue;
+      }
+      let keep = twin.id < current.id ? twin : current;
+      if (hasEncrypted && twin.encrypted !== current.encrypted) keep = twin.encrypted ? twin : current;
+      const drop = keep.id === twin.id ? current : twin;
+      db.prepare("DELETE FROM " + table + " WHERE id = ?").run(drop.id);
+      db.prepare("UPDATE " + table + " SET registry_address = ?, hidden = ? WHERE id = ?")
+        .run(canonical, keep.hidden && drop.hidden ? 1 : 0, keep.id);
+      merged++;
+    }
+  })();
+  if (fixed || merged) {
+    console.log("db: indirizzi registro normalizzati in " + table + ": " + fixed + " aggiornati, " + merged + " doppioni uniti.");
+  }
+}
+normalizeRegistryColumn("photos");
+normalizeRegistryColumn("documents");
+
+/**
  * Idempotente: se la stessa immagine (stesso hash) è già stata caricata su
  * questo registry, ritorna il record esistente invece di crearne un
  * duplicato — copre il caso doppio-click / retry di rete dopo un timeout,
  * che prima creava righe identiche nel database.
  */
 function insertPhoto({ registryAddress, label, cid, keccak256Hash, width, height, mimeType, uploadedBy }) {
+  registryAddress = normalizeRegistryAddress(registryAddress);
   const existing = db
     .prepare("SELECT * FROM photos WHERE registry_address = ? AND keccak256_hash = ?")
     .get(registryAddress, keccak256Hash);
-  if (existing) return existing;
+  if (existing) {
+    // Ricaricare una foto nascosta la rende di nuovo visibile (audit §56
+    // punto 8): prima rispondeva "caricata" ma restava nascosta.
+    if (existing.hidden) {
+      db.prepare("UPDATE photos SET hidden = 0 WHERE id = ?").run(existing.id);
+      return getPhotoById(existing.id);
+    }
+    return existing;
+  }
 
   const createdAt = Math.floor(Date.now() / 1000);
   const stmt = db.prepare(`
@@ -93,6 +154,7 @@ function getPhotoById(id) {
  * default le foto marcate 'hidden' (mai cancellate, stessa filosofia di
  * invalidazione già adottata on-chain per lotti/batch). */
 function listPhotosByRegistry(registryAddress, { includeHidden = false } = {}) {
+  registryAddress = normalizeRegistryAddress(registryAddress);
   const query = includeHidden
     ? "SELECT * FROM photos WHERE registry_address = ? ORDER BY created_at DESC, id DESC"
     : "SELECT * FROM photos WHERE registry_address = ? AND hidden = 0 ORDER BY created_at DESC, id DESC";
@@ -107,6 +169,7 @@ function hidePhoto(id) {
 
 /** Idempotente come insertPhoto — stesso motivo (doppio-click/retry di rete). */
 function insertDocument({ registryAddress, label, cid, keccak256Hash, mimeType, originalName, uploadedBy, encrypted = false }) {
+  registryAddress = normalizeRegistryAddress(registryAddress);
   const existing = db
     .prepare("SELECT * FROM documents WHERE registry_address = ? AND keccak256_hash = ?")
     .get(registryAddress, keccak256Hash);
@@ -116,7 +179,12 @@ function insertDocument({ registryAddress, label, cid, keccak256Hash, mimeType, 
     // cifrata. È il modo per mettere al sicuro i documenti vecchi; il CID in
     // chiaro va poi tolto dal nodo (docs/CHIAVE-DOCUMENTI.md).
     if (encrypted && !existing.encrypted) {
-      db.prepare("UPDATE documents SET cid = ?, encrypted = 1 WHERE id = ?").run(cid, existing.id);
+      db.prepare("UPDATE documents SET cid = ?, encrypted = 1, hidden = 0 WHERE id = ?").run(cid, existing.id);
+      return getDocumentById(existing.id);
+    }
+    // Ricaricare un documento nascosto lo rende di nuovo visibile (punto 8).
+    if (existing.hidden) {
+      db.prepare("UPDATE documents SET hidden = 0 WHERE id = ?").run(existing.id);
       return getDocumentById(existing.id);
     }
     return existing;
@@ -146,6 +214,7 @@ function getDocumentById(id) {
 }
 
 function listDocumentsByRegistry(registryAddress, { includeHidden = false } = {}) {
+  registryAddress = normalizeRegistryAddress(registryAddress);
   const query = includeHidden
     ? "SELECT * FROM documents WHERE registry_address = ? ORDER BY created_at DESC, id DESC"
     : "SELECT * FROM documents WHERE registry_address = ? AND hidden = 0 ORDER BY created_at DESC, id DESC";
@@ -160,4 +229,5 @@ function hideDocument(id) {
 module.exports = {
   insertPhoto, listPhotosByRegistry, getPhotoById, hidePhoto,
   insertDocument, listDocumentsByRegistry, getDocumentById, hideDocument,
+  normalizeRegistryAddress,
 };
