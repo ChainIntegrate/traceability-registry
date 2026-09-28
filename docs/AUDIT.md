@@ -7,7 +7,7 @@ indica gravità, stato e dove è stato risolto.
 | # | Gravità | Area | Problema | Stato |
 |---|---|---|---|---|
 | 1 | 🔴 Alta | Frontend | XSS nell'esploratore pubblico da metadata dei token | ✅ Risolto (PR 1) |
-| 2 | 🔴 Alta | Privacy | "Solo hash, il file resta privato" promesso ma non esistente | ⏳ Da decidere |
+| 2 | 🔴 Alta | Privacy | Documenti riservati in chiaro su IPFS ("il file resta privato" non vero) | ✅ Risolto: documenti cifrati |
 | 3 | 🟠 Media | Frontend | XSS nelle tabelle libreria foto/documenti (delegato → titolare) | ✅ Risolto (PR 1) |
 | 4 | 🟠 Media | Contratto | Hash documento sovrascrivibile | ⏳ Da decidere prima del mainnet |
 | 5 | 🟠 Media | Backend | Endpoint pubblici senza limiti, cache disattivata | ⏳ PR 2 |
@@ -52,7 +52,7 @@ su ogni elemento. Prima della correzione eseguivano codice 4 vettori distinti
 (immagine della collezione, immagine della card, pillola "Lotto", attributo); dopo, nessuno.
 Le card vengono comunque mostrate, con il testo malevolo come testo semplice.
 
-## 2. Privacy dell'hash documento — 🔴 Alta — ⏳ Da decidere
+## 2. Privacy dell'hash documento — 🔴 Alta — ✅ Risolto (documenti cifrati)
 
 **Problema.** La guida (`how-it-works.html`, "Registrare l'hash di un documento
 senza caricarlo") e il README promettono che per i documenti riservati si
@@ -67,9 +67,43 @@ registra l'hash di una fattura credendola privata l'ha in realtà pubblicata
 dalla libreria, per evitare hash "verificabili ma irrecuperabili"; i testi
 rivolti all'utente non sono stati aggiornati.
 
-**Opzioni.** (a) correggere guida e README; (b) aggiungere un vero percorso
-"solo hash" (impronta calcolata nel browser, il file non esce mai dal
-computer), mantenendo la libreria per i documenti da pubblicare.
+**Valutazione con il titolare del progetto.** La libreria esiste per un
+motivo valido: l'impronta on-chain riguarda i byte esatti del file (un PDF
+riesportato ha un'impronta diversa), quindi il file originale va conservato.
+Il download era già solo lato privato e il CID non compare mai pubblicamente.
+Il punto debole era la sola segretezza del CID: circola tra i delegati e nei
+link, il nodo lo annuncia alla rete, e il gateway pubblico serve il file a
+chiunque lo abbia; una volta uscito non si ritira.
+
+**Correzione: documenti cifrati su IPFS** (`backend/documentCrypto.js`).
+- All'upload il backend calcola l'impronta del file originale (come prima) e
+  lo **cifra** prima del pin: AES-256-GCM con una chiave per documento, chiusa
+  con una chiave madre (`DOCUMENT_MASTER_KEY`) e salvata dentro il file cifrato.
+  Su IPFS c'è solo una versione illeggibile.
+- Download solo con firma, dalla pagina privata (`POST /documents/:id/download`):
+  il backend rilegge il file dal proprio nodo, lo decifra, **verifica che
+  l'impronta coincida con quella registrata** e restituisce il PDF originale
+  byte per byte. Non richiede membership attiva (un'azienda sospesa recupera i
+  propri documenti). La firma viaggia nel corpo, non nell'URL.
+- Senza chiave madre configurata gli upload di documenti vengono rifiutati: mai
+  un ripiego silenzioso sul caricamento in chiaro.
+- Documenti vecchi (in chiaro): ancora scaricabili; ricaricarli li sostituisce
+  con la versione cifrata; `scripts/list-plaintext-documents.js` li elenca per
+  toglierli dal nodo.
+- Recupero senza database con la sola chiave madre
+  (`scripts/decrypt-document.js`); backup del database (`scripts/backup-db.js`).
+  Custodia della chiave e procedure: [`CHIAVE-DOCUMENTI.md`](CHIAVE-DOCUMENTI.md).
+- Guida e README riscritti: foto pubbliche per scelta, documenti cifrati, e
+  detto chiaramente che la cifratura protegge dagli estranei, non da
+  ChainIntegrate (che custodisce la chiave).
+
+**Verifica.** `scripts/test-document-encryption.js`, 14 controlli: round-trip
+su file da 0 byte a 5 MB, alterazione di un byte in qualunque punto rilevata,
+chiave sbagliata rifiutata, messaggio firmato identico tra frontend e backend;
+percorso completo sulle route vere con un nodo IPFS simulato (su IPFS solo
+dati cifrati, download identico byte per byte con nome e tipo, registro
+sbagliato 404, file alterato rifiutato, documento vecchio scaricabile e
+migrato al ricaricamento, senza chiave nessun upload in chiaro).
 
 ## 3. XSS nelle tabelle delle librerie — 🟠 Media — ✅ Risolto
 

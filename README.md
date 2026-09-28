@@ -53,7 +53,7 @@ flowchart LR
 |---|---|
 | **Richiami in secondi** | Dal lotto sospetto a tutti i batch coinvolti con una ricerca. |
 | **Fiducia dimostrabile** | Una pagina pubblica per ogni registro, verificabile da chiunque senza intermediari. |
-| **Integrità dei documenti** | L'impronta digitale di certificati e fatture registrata sulla blockchain: si prova che un documento non è stato alterato, senza doverlo pubblicare. |
+| **Integrità dei documenti** | L'impronta digitale di certificati e fatture registrata sulla blockchain: si prova che un documento non è stato alterato. Il file resta cifrato, accessibile solo a chi è autorizzato. |
 | **Nessuna doppia digitazione** | I dati si importano da file esportati dal gestionale che già usi. |
 | **Nessun costo nascosto per consultare** | Consultare librerie, caricare file e verificare l'identità richiede solo firme gratuite, senza gas. |
 | **Visibilità nell'ecosistema LUKSO** | Il registro è una collezione LSP8 standard, visibile su [universaleverything.io](https://universaleverything.io) con nome, descrizione e immagini dell'azienda. |
@@ -72,7 +72,7 @@ flowchart LR
 
 **Documenti e immagini**
 - Libreria foto e libreria documenti per registro, riutilizzabili tra le registrazioni.
-- **Hash di documento**: si registra solo l'impronta di un file (per esempio una fattura), il file resta privato. Chiunque abbia il file può verificarne l'integrità confrontandolo con quella sulla blockchain.
+- **Documenti cifrati e hash sulla blockchain**: fatture, DDT e certificati vengono cifrati prima di essere archiviati; su IPFS c'è solo una versione illeggibile e il file originale si scarica solo dal registro, con firma. Sulla blockchain si registra la sua impronta: chiunque abbia il file può verificarne l'integrità, nel proprio browser.
 
 **Gestione**
 - **Deleghe**: altri collaboratori operano con la propria identità, senza mai condividere credenziali.
@@ -127,7 +127,7 @@ Ogni campo `Lotto <materia prima>` crea automaticamente il collegamento al lotto
 - **Chi possiede non è chi opera.** ChainIntegrate firma la collezione e interviene solo in emergenza; le registrazioni le fa l'azienda o i suoi delegati.
 - **Permessi verificati dal contratto.** Membership, deleghe e funzioni Gold vengono controllate on-chain a ogni chiamata, non solo nell'interfaccia.
 - **Firme trasparenti.** Le operazioni che non scrivono sulla blockchain chiedono una firma in formato standard [SIWE (EIP-4361)](https://eips.ethereum.org/EIPS/eip-4361): testo leggibile, link cliccabili, nessun costo. Il backend la verifica con ERC-1271 sulla Universal Profile e accetta solo registri deployati dalla Factory.
-- **Dati sensibili fuori dalla catena.** Per i documenti riservati si registra solo l'hash. Contenuti e foto pubblicati su IPFS sono di fatto permanenti: l'interfaccia e la guida lo dicono chiaramente prima di ogni caricamento.
+- **Documenti riservati cifrati.** Sulla blockchain va solo l'impronta; su IPFS solo il file cifrato (AES-256-GCM, una chiave per documento custodita da una chiave madre). Il download dell'originale passa dal backend, con firma e controllo dell'impronta. Foto e metadata dei prodotti restano pubblici per scelta, e la guida lo dice chiaramente.
 - **Codice sorgente pubblico.** I contratti sono verificati su Blockscout e il codice è consultabile in questo repository.
 
 ## Architettura
@@ -198,15 +198,18 @@ npm run deploy:testnet      # oppure deploy:mainnet
 **Backend**
 ```bash
 cd backend
-cp .env.example .env        # LUKSO_RPC_URL, FACTORY_ADDRESS, ALLOWED_MINT_UI_ORIGIN, IPFS_API_URL, ...
+cp .env.example .env        # LUKSO_RPC_URL, FACTORY_ADDRESS, ALLOWED_MINT_UI_ORIGIN, IPFS_API_URL, DOCUMENT_MASTER_KEY, ...
 npm ci
 npm start                   # in produzione con pm2
 ```
 
 **Test**
 ```bash
-node scripts/test-error-messages.js   # traduzione di ogni revert dei contratti + parsing degli errori
+node scripts/test-error-messages.js      # traduzione di ogni revert dei contratti + parsing degli errori
+node scripts/test-document-encryption.js # cifratura dei documenti e percorso upload → IPFS → download
 ```
+
+> 🔑 **Chiave madre dei documenti.** Il backend cifra i documenti con `DOCUMENT_MASTER_KEY`: se va persa, i documenti cifrati non sono più recuperabili. Generazione, custodia, backup e recupero: [docs/CHIAVE-DOCUMENTI.md](docs/CHIAVE-DOCUMENTI.md).
 
 > ⚠️ **Firme: frontend e backend vanno aggiornati insieme.** Il testo dei messaggi firmati è costruito in modo identico in `frontend/traceability-siwe.js` e `backend/siweMessage.js`. Ogni modifica richiede il riavvio del backend (`pm2 restart … --update-env`), altrimenti tutte le firme vengono rifiutate.
 
