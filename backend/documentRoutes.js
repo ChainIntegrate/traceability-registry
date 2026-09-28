@@ -1,7 +1,8 @@
 const express = require("express");
 const multer = require("multer");
 const { ethers } = require("ethers");
-const { pinFileToIpfs } = require("./ipfsClient");
+const { pinFileToIpfs, catFromIpfs } = require("./ipfsClient");
+const { loadMasterKey, encryptDocument, decryptDocument, HEADER_LENGTH } = require("./documentCrypto");
 const { verifySignedRequest } = require("./authGuard");
 const { insertDocument, listDocumentsByRegistry, hideDocument, getDocumentById } = require("./db");
 
@@ -66,6 +67,23 @@ function buildDocumentHideSignedMessage(registryAddress, documentId, timestamp) 
   );
 }
 
+function buildDocumentDownloadSignedMessage(registryAddress, documentId, timestamp) {
+  return (
+    "ChainIntegrate TraceabilityRegistry - Download document\n" +
+    "Registry: " + registryAddress + "\n" +
+    "Document id: " + documentId + "\n" +
+    "Timestamp: " + timestamp
+  );
+}
+
+/** Nome file sicuro per l'header Content-Disposition: solo caratteri ASCII
+ * innocui nella versione semplice, nome completo codificato in filename*. */
+function contentDisposition(originalName) {
+  const name = String(originalName || "documento").slice(0, 200);
+  const ascii = name.replace(/[^A-Za-z0-9._ -]/g, "_") || "documento";
+  return "attachment; filename=\"" + ascii + "\"; filename*=UTF-8''" + encodeURIComponent(name);
+}
+
 /**
  * @param {ethers.providers.Provider} provider
  * @param {ethers.Contract} factoryContract - per verificare che registryAddress
@@ -73,6 +91,15 @@ function buildDocumentHideSignedMessage(registryAddress, documentId, timestamp) 
  */
 function buildDocumentRouter(provider, factoryContract) {
   const router = express.Router();
+
+  // Chiave madre per la cifratura dei documenti (documentCrypto.js). Letta
+  // una volta all'avvio: se è configurata male il backend si ferma subito
+  // (loadMasterKey lancia), se manca gli upload di documenti vengono
+  // rifiutati — mai un ripiego silenzioso sul caricamento in chiaro.
+  const masterKey = loadMasterKey();
+  if (!masterKey) {
+    console.warn("DOCUMENT_MASTER_KEY non impostata: upload e download di documenti cifrati disattivati (vedi docs/CHIAVE-DOCUMENTI.md).");
+  }
 
   router.post("/upload-document", upload.single("file"), handleMulterError, async (req, res) => {
     try {
@@ -104,6 +131,9 @@ function buildDocumentRouter(provider, factoryContract) {
           error: "Tipo di file non consentito (" + file.mimetype + "). Ammessi: " + Array.from(ALLOWED_MIME_TYPES).join(", ") + ".",
         });
       }
+      if (!masterKey) {
+        return res.status(503).json({ error: "Cifratura dei documenti non configurata sul server: upload non disponibile." });
+      }
 
       // Hash ricalcolato SERVER-SIDE dai byte ricevuti, mai da un campo
       // dichiarato dal client — è questo hash che finirà su
@@ -119,7 +149,10 @@ function buildDocumentRouter(provider, factoryContract) {
         return res.status(verification.status).json({ error: verification.error });
       }
 
-      const cid = await pinFileToIpfs(file.buffer, file.originalname || "document", file.mimetype);
+      // Su IPFS va solo il file cifrato; l'impronta (contentHash, sopra) resta
+      // quella del file originale ed è quella che finisce on-chain.
+      const encryptedBlob = encryptDocument(file.buffer, masterKey);
+      const cid = await pinFileToIpfs(encryptedBlob, "document.trdoc", "application/octet-stream");
 
       const record = insertDocument({
         registryAddress,
@@ -129,6 +162,7 @@ function buildDocumentRouter(provider, factoryContract) {
         mimeType: file.mimetype,
         originalName: file.originalname || null,
         uploadedBy: signerAddress,
+        encrypted: true,
       });
 
       return res.json({ document: record });
@@ -211,6 +245,73 @@ function buildDocumentRouter(provider, factoryContract) {
     }
   });
 
+  /**
+   * Download del documento originale, solo per chi è autorizzato sul registro
+   * (firma SIWE). Il backend rilegge il file dal proprio nodo IPFS, lo
+   * decifra e controlla che la sua impronta coincida con quella registrata:
+   * così si restituisce esattamente il file la cui impronta è on-chain.
+   * Non richiede una membership attiva: un'azienda sospesa deve poter
+   * recuperare i propri documenti (stessa filosofia di list/hide).
+   * POST e non GET: la firma viaggia nel corpo, non finisce nei log degli URL.
+   */
+  router.post("/documents/:id/download", async (req, res) => {
+    try {
+      const documentId = Number(req.params.id);
+      const { registryAddress, signerAddress, signature } = req.body || {};
+      const timestamp = Number((req.body || {}).timestamp);
+
+      if (!Number.isInteger(documentId)) {
+        return res.status(400).json({ error: "id documento non valido." });
+      }
+      if (!registryAddress || !ethers.utils.isAddress(registryAddress)) {
+        return res.status(400).json({ error: "registryAddress mancante o non valido." });
+      }
+      if (!signerAddress || !ethers.utils.isAddress(signerAddress)) {
+        return res.status(400).json({ error: "signerAddress mancante o non valido." });
+      }
+      if (!signature || typeof signature !== "string") {
+        return res.status(400).json({ error: "signature mancante." });
+      }
+
+      const existing = getDocumentById(documentId);
+      if (!existing || existing.registry_address !== registryAddress) {
+        return res.status(404).json({ error: "Documento non trovato su questo registry." });
+      }
+
+      const message = buildDocumentDownloadSignedMessage(registryAddress, documentId, timestamp);
+      const verification = await verifySignedRequest({
+        provider, factoryContract, registryAddress, signerAddress, message, signature, timestamp,
+      });
+      if (!verification.ok) {
+        return res.status(verification.status).json({ error: verification.error });
+      }
+
+      if (existing.encrypted && !masterKey) {
+        return res.status(503).json({ error: "Cifratura dei documenti non configurata sul server: download non disponibile." });
+      }
+
+      const stored = await catFromIpfs(existing.cid, MAX_UPLOAD_BYTES + HEADER_LENGTH);
+      const original = existing.encrypted ? decryptDocument(stored, masterKey) : stored;
+
+      if (ethers.utils.keccak256(original).toLowerCase() !== String(existing.keccak256_hash).toLowerCase()) {
+        console.error("download documento " + documentId + ": impronta del file diversa da quella registrata.");
+        return res.status(500).json({ error: "Il file recuperato non corrisponde all'impronta registrata." });
+      }
+
+      res.set({
+        "Content-Type": ALLOWED_MIME_TYPES.has(existing.mime_type) ? existing.mime_type : "application/octet-stream",
+        "Content-Disposition": contentDisposition(existing.original_name),
+        "Content-Length": String(original.length),
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+      });
+      return res.send(original);
+    } catch (err) {
+      console.error("POST /api/traceability/documents/:id/download errore:", err);
+      return res.status(500).json({ error: "Errore interno." });
+    }
+  });
+
   return router;
 }
 
@@ -219,4 +320,5 @@ module.exports = {
   buildDocumentUploadSignedMessage,
   buildDocumentListSignedMessage,
   buildDocumentHideSignedMessage,
+  buildDocumentDownloadSignedMessage,
 };

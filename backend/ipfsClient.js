@@ -58,5 +58,45 @@ async function pinJsonToIpfs(jsonString, filename) {
   return pinBufferToIpfs(buffer, filename || "metadata.json", "application/json");
 }
 
-module.exports = { pinJsonToIpfs, pinFileToIpfs: pinBufferToIpfs };
+/**
+ * Legge un file dal nodo IPFS (API `cat`, sempre il nostro nodo, mai un
+ * gateway pubblico). Usata per il download firmato dei documenti: il file
+ * cifrato viene riletto, decifrato dal backend e restituito all'utente
+ * autorizzato. `maxBytes` evita di caricare in memoria file più grandi del
+ * previsto (i documenti sono limitati a 16 MB all'upload).
+ */
+async function catFromIpfs(cid, maxBytes) {
+  if (!cid || !/^[A-Za-z0-9]{46,100}$/.test(cid)) {
+    throw new Error("catFromIpfs: CID non valido.");
+  }
+  const ipfsApiUrl = (process.env.IPFS_API_URL || "http://127.0.0.1:5001").replace(/\/$/, "");
+  // length = limite + 1: se il nodo restituisce più del limite, il file è
+  // troppo grande e lo scartiamo senza scaricarlo tutto.
+  const url = ipfsApiUrl + "/api/v0/cat?arg=" + encodeURIComponent(cid) + (maxBytes ? "&length=" + (maxBytes + 1) : "");
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), IPFS_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch(url, { method: "POST", signal: controller.signal });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error("catFromIpfs: IPFS cat fallito, HTTP " + res.status + " " + text);
+    }
+    const buffer = Buffer.from(await res.arrayBuffer());
+    if (maxBytes && buffer.length > maxBytes) {
+      throw new Error("catFromIpfs: file più grande del limite (" + maxBytes + " byte).");
+    }
+    return buffer;
+  } catch (err) {
+    if (err.name === "AbortError") {
+      throw new Error("catFromIpfs: timeout dopo " + IPFS_TIMEOUT_MS + "ms contattando il nodo IPFS.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+module.exports = { pinJsonToIpfs, pinFileToIpfs: pinBufferToIpfs, catFromIpfs };
 

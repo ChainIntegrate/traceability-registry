@@ -42,6 +42,15 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_documents_registry ON documents(registry_address);
 `);
 
+// Migrazione: colonna `encrypted` sui documenti (audit §56, punto 2).
+// 1 = su IPFS c'è il file cifrato (documentCrypto.js), 0 = documento
+// caricato prima della cifratura, ancora in chiaro su IPFS. Idempotente:
+// aggiunge la colonna solo se manca, i documenti esistenti restano a 0.
+const documentColumns = db.prepare("PRAGMA table_info(documents)").all().map((c) => c.name);
+if (!documentColumns.includes("encrypted")) {
+  db.exec("ALTER TABLE documents ADD COLUMN encrypted INTEGER NOT NULL DEFAULT 0");
+}
+
 /**
  * Idempotente: se la stessa immagine (stesso hash) è già stata caricata su
  * questo registry, ritorna il record esistente invece di crearne un
@@ -97,16 +106,26 @@ function hidePhoto(id) {
 }
 
 /** Idempotente come insertPhoto — stesso motivo (doppio-click/retry di rete). */
-function insertDocument({ registryAddress, label, cid, keccak256Hash, mimeType, originalName, uploadedBy }) {
+function insertDocument({ registryAddress, label, cid, keccak256Hash, mimeType, originalName, uploadedBy, encrypted = false }) {
   const existing = db
     .prepare("SELECT * FROM documents WHERE registry_address = ? AND keccak256_hash = ?")
     .get(registryAddress, keccak256Hash);
-  if (existing) return existing;
+  if (existing) {
+    // Stesso documento già in libreria ma caricato prima della cifratura
+    // (in chiaro su IPFS): ricaricarlo lo sostituisce con la versione
+    // cifrata. È il modo per mettere al sicuro i documenti vecchi; il CID in
+    // chiaro va poi tolto dal nodo (docs/CHIAVE-DOCUMENTI.md).
+    if (encrypted && !existing.encrypted) {
+      db.prepare("UPDATE documents SET cid = ?, encrypted = 1 WHERE id = ?").run(cid, existing.id);
+      return getDocumentById(existing.id);
+    }
+    return existing;
+  }
 
   const createdAt = Math.floor(Date.now() / 1000);
   const stmt = db.prepare(`
-    INSERT INTO documents (registry_address, label, cid, keccak256_hash, mime_type, original_name, uploaded_by, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO documents (registry_address, label, cid, keccak256_hash, mime_type, original_name, uploaded_by, created_at, encrypted)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const info = stmt.run(
     registryAddress,
@@ -116,7 +135,8 @@ function insertDocument({ registryAddress, label, cid, keccak256Hash, mimeType, 
     mimeType || null,
     originalName || null,
     uploadedBy,
-    createdAt
+    createdAt,
+    encrypted ? 1 : 0
   );
   return getDocumentById(info.lastInsertRowid);
 }

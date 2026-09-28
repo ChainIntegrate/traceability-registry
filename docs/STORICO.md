@@ -1750,6 +1750,20 @@ documento (la promessa "solo hash" non corrisponde al codice), hash
 sovrascrivibile e trasferibilità dei token (da decidere prima del mainnet),
 limiti sugli endpoint pubblici e tre bug minori del backend (PR 2).
 
+## 57. Documenti della libreria cifrati su IPFS (audit §56, punto 2)
+
+Discusso con il titolare: la libreria documenti conserva il file esatto perché
+l'impronta on-chain vale solo per quei byte (un PDF riesportato cambia
+impronta), e il download era già solo privato. Il limite era affidare la
+riservatezza alla sola segretezza del CID. Ora il backend cifra ogni documento
+prima del pin (AES-256-GCM, chiave per documento chiusa con
+`DOCUMENT_MASTER_KEY` e salvata nel file stesso), e il download passa da
+`POST /documents/:id/download` con firma, decifratura e controllo
+dell'impronta. Foto invariate (pubbliche per scelta). Dettagli, test e
+procedure in [`AUDIT.md`](AUDIT.md) e [`CHIAVE-DOCUMENTI.md`](CHIAVE-DOCUMENTI.md).
+Deploy: generare la chiave madre, custodirla fuori dal server, riavviare il
+backend; poi ricaricare i documenti vecchi e togliere dal nodo i CID in chiaro.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

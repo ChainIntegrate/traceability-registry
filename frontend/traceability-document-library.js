@@ -47,6 +47,15 @@
       "Timestamp: " + timestamp
     );
   }
+  function buildDocumentDownloadSignedMessage(registryAddress, documentId, timestamp) {
+    return (
+      "ChainIntegrate TraceabilityRegistry - Download document\n" +
+      "Registry: " + registryAddress + "\n" +
+      "Document id: " + documentId + "\n" +
+      "Timestamp: " + timestamp
+    );
+  }
+
 
   /**
    * Carica un documento (File/Blob) sulla libreria del registro. Ritorna il
@@ -150,10 +159,41 @@
     return data.document;
   }
 
+  /**
+   * Scarica il documento originale. Su IPFS c'è solo la versione cifrata:
+   * il backend la decifra e la restituisce solo a chi firma ed è autorizzato
+   * sul registro, dopo aver verificato che l'impronta coincida con quella
+   * registrata. Ritorna un Blob (il file originale, byte per byte).
+   */
+  async function downloadDocument({ backendBaseUrl, registryAddress, signer, documentId }) {
+    if (!backendBaseUrl) throw new Error("downloadDocument: backendBaseUrl mancante.");
+    if (!registryAddress) throw new Error("downloadDocument: registryAddress mancante.");
+    if (!signer) throw new Error("downloadDocument: signer mancante (UP non connessa?).");
+    if (!documentId) throw new Error("downloadDocument: documentId mancante.");
+
+    const signerAddress = await signer.getAddress();
+    const timestamp = Math.floor(Date.now() / 1000);
+    const message = buildDocumentDownloadSignedMessage(registryAddress, documentId, timestamp);
+    const signature = await global.TraceabilitySiwe.signDetails(signer, registryAddress, message, timestamp);
+
+    const res = await fetch(backendBaseUrl.replace(/\/$/, "") + "/api/traceability/documents/" + documentId + "/download", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ registryAddress, signerAddress, signature, timestamp }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error("downloadDocument: backend ha risposto " + res.status + " — " + (data.error || "errore sconosciuto"));
+    }
+    return res.blob();
+  }
+
   global.TraceabilityDocumentLibrary = {
     buildDocumentUploadSignedMessage: buildDocumentUploadSignedMessage,
     buildDocumentListSignedMessage: buildDocumentListSignedMessage,
     buildDocumentHideSignedMessage: buildDocumentHideSignedMessage,
+    buildDocumentDownloadSignedMessage: buildDocumentDownloadSignedMessage,
+    downloadDocument: downloadDocument,
     uploadDocument: uploadDocument,
     listDocuments: listDocuments,
     hideDocument: hideDocument,
