@@ -1737,6 +1737,18 @@ codice precedente fallivano 10 controlli, ora passano tutti.
   `JsonRpcProvider`): non è codice eseguito. L'unica correzione è migrare a
   ethers v6 (breaking, tutto il backend): da valutare a parte, non per questo.
 
+## 56. Audit privacy, sicurezza e bug (settembre 2026)
+
+Rapporto completo, con stato di ogni punto, in [`docs/AUDIT.md`](AUDIT.md).
+In sintesi: 10 punti (2 alti, 4 medi, 3 bassi, 1 informativo). Risolti nella
+prima PR: XSS nell'esploratore pubblico da metadata dei token (4 vettori
+riprodotti in Chromium, zero dopo la correzione), XSS nelle tabelle delle
+librerie e nelle anteprime, librerie servite da `frontend/vendor/` invece che
+da CDN (ERC725 prima senza versione fissata). Aperti: privacy dell'hash
+documento (la promessa "solo hash" non corrisponde al codice), hash
+sovrascrivibile e trasferibilità dei token (da decidere prima del mainnet),
+limiti sugli endpoint pubblici e tre bug minori del backend (PR 2).
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
