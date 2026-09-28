@@ -4,7 +4,7 @@ const { imageSize, disableTypes, types: IMAGE_SIZE_TYPES } = require("image-size
 const { ethers } = require("ethers");
 const { pinFileToIpfs } = require("./ipfsClient");
 const { verifySignedRequest } = require("./authGuard");
-const { insertPhoto, listPhotosByRegistry, hidePhoto, getPhotoById } = require("./db");
+const { insertPhoto, listPhotosByRegistry, hidePhoto, getPhotoById , normalizeRegistryAddress } = require("./db");
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // 8MB, generoso per foto prodotto/ricetta
 const MAX_LABEL_LENGTH = 200;
@@ -154,19 +154,24 @@ function buildPhotoRouter(provider, factoryContract) {
   /** Non pubblica: la libreria può contenere immagini non ancora usate in
    * nessun mint pubblico — diverso dai dati già mintati (quelli sì restano
    * pubblici per design). */
-  router.get("/photos", async (req, res) => {
+  /** Lista della libreria: firma richiesta, riusata dal client per 5 minuti.
+   * POST /photos/list (firma nel corpo) è quella usata dalle pagine: una
+   * firma nella query string finisce nei log di accesso di nginx e resta
+   * riutilizzabile finché è valida (audit §56 punto 9). GET resta solo per
+   * compatibilità con pagine ancora in cache nel browser; da togliere. */
+  async function listPhotos(req, res, source) {
     try {
-      const { registryAddress, signerAddress, signature } = req.query;
-      const timestamp = Number(req.query.timestamp);
+      const { registryAddress, signerAddress, signature } = source;
+      const timestamp = Number(source.timestamp);
 
       if (!registryAddress || !ethers.utils.isAddress(String(registryAddress))) {
-        return res.status(400).json({ error: "registryAddress mancante o non valido (query string)." });
+        return res.status(400).json({ error: "registryAddress mancante o non valido." });
       }
       if (!signerAddress || !ethers.utils.isAddress(String(signerAddress))) {
-        return res.status(400).json({ error: "signerAddress mancante o non valido (query string)." });
+        return res.status(400).json({ error: "signerAddress mancante o non valido." });
       }
       if (!signature || typeof signature !== "string") {
-        return res.status(400).json({ error: "signature mancante (query string)." });
+        return res.status(400).json({ error: "signature mancante." });
       }
 
       const message = buildPhotoListSignedMessage(registryAddress, timestamp);
@@ -180,10 +185,12 @@ function buildPhotoRouter(provider, factoryContract) {
       const photos = listPhotosByRegistry(registryAddress);
       return res.json({ photos });
     } catch (err) {
-      console.error("GET /api/traceability/photos errore:", err);
+      console.error("GET/POST /api/traceability/photos errore:", err);
       return res.status(500).json({ error: "Errore interno." });
     }
-  });
+  }
+  router.post("/photos/list", (req, res) => listPhotos(req, res, req.body || {}));
+  router.get("/photos", (req, res) => listPhotos(req, res, req.query));
 
   /** Mai una vera cancellazione — stessa filosofia di invalidateEntry on-chain:
    * una foto caricata per errore si nasconde, non sparisce. */
@@ -207,7 +214,7 @@ function buildPhotoRouter(provider, factoryContract) {
       }
 
       const existing = getPhotoById(photoId);
-      if (!existing || existing.registry_address !== registryAddress) {
+      if (!existing || existing.registry_address !== normalizeRegistryAddress(registryAddress)) {
         return res.status(404).json({ error: "Foto non trovata su questo registry." });
       }
 

@@ -701,6 +701,9 @@ document.getElementById("deployRegistryBtn").addEventListener("click", async () 
 });
 
 async function selectRegistry(address) {
+  // Forma standard (checksum) qualunque sia il modo in cui è stato scritto
+  // l'indirizzo, per esempio tutto minuscolo da un delegato (audit §56 punto 7).
+  address = ethers.utils.getAddress(address);
   activeRegistryAddress = address;
   activeRegistryTier = null; // riletto da refreshTierNote: mai ereditare il tier del registro precedente
   activeRegistry = new ethers.Contract(address, REGISTRY_ABI, signer);
