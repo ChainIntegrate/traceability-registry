@@ -10,12 +10,13 @@ indica gravità, stato e dove è stato risolto.
 | 2 | 🔴 Alta | Privacy | Documenti riservati in chiaro su IPFS ("il file resta privato" non vero) | ✅ Risolto: documenti cifrati |
 | 3 | 🟠 Media | Frontend | XSS nelle tabelle libreria foto/documenti (delegato → titolare) | ✅ Risolto (PR 1) |
 | 4 | 🟠 Media | Contratto | Hash documento sovrascrivibile | ⏳ Da decidere prima del mainnet |
-| 5 | 🟠 Media | Backend | Endpoint pubblici senza limiti, cache disattivata | ⏳ PR 2 |
+| 5 | 🟠 Media | Backend | Endpoint pubblici senza limiti, cache disattivata | ✅ Risolto (PR 2) |
 | 6 | 🟠 Media | Frontend | Librerie da CDN, ERC725 senza versione fissata | ✅ Risolto (PR 1) |
-| 7 | 🟡 Bassa | Backend | Indirizzo del registro non normalizzato nel database | ⏳ PR 2 |
-| 8 | 🟡 Bassa | Backend | Ricaricare un elemento nascosto non lo rende visibile | ⏳ PR 2 |
-| 9 | 🟡 Bassa | Backend | Firme delle liste nella query string (log) | ⏳ PR 2 |
+| 7 | 🟡 Bassa | Backend | Indirizzo del registro non normalizzato nel database | ✅ Risolto (PR 2) |
+| 8 | 🟡 Bassa | Backend | Ricaricare un elemento nascosto non lo rende visibile | ✅ Risolto (PR 2) |
+| 9 | 🟡 Bassa | Backend | Firme delle liste nella query string (log) | ✅ Risolto (PR 2) |
 | 10 | ℹ️ Info | Contratto | Token LSP8 trasferibili dal titolare | ⏳ Da decidere prima del mainnet |
+| 11 | 🟡 Bassa | Frontend | Nessuna intestazione di sicurezza (CSP, clickjacking) | 🟡 Fase 1 (PR 2): CSP in osservazione |
 
 ---
 
@@ -97,6 +98,13 @@ chiunque lo abbia; una volta uscito non si ritira.
   detto chiaramente che la cifratura protegge dagli estranei, non da
   ChainIntegrate (che custodisce la chiave).
 
+**Dati già caricati.** I documenti rimasti in chiaro su IPFS dal periodo
+precedente sono **dati di prova su testnet, con contenuti non reali** (per
+esempio un certificato d'esempio): nessun dato riservato è stato esposto. La
+loro migrazione (`scripts/list-plaintext-documents.js`, ricarica, `ipfs pin rm`)
+è facoltativa. Verificato dal vivo il 28/09/2026 che un documento nuovo è
+illeggibile dal gateway pubblico e recuperabile con la sola chiave madre.
+
 **Verifica.** `scripts/test-document-encryption.js`, 14 controlli: round-trip
 su file da 0 byte a 5 MB, alterazione di un byte in qualunque punto rilevata,
 chiave sbagliata rifiutata, messaggio firmato identico tra frontend e backend;
@@ -127,14 +135,27 @@ l'esploratore mostra solo l'ultimo valore (lo storico resta negli eventi
 contratto (o mostrare lo storico). È una modifica al contratto: va fatta
 **prima del deploy su mainnet**, dopo non è più possibile.
 
-## 5. Endpoint pubblici senza limiti — 🟠 Media — ⏳ PR 2
+## 5. Endpoint pubblici senza limiti — 🟠 Media — ✅ Risolto (PR 2)
 
-`/registry/:address/entries` e `/delegates` sono pubblici (per progetto) ma non
-hanno limiti di frequenza, e `CHAIN_READ_CACHE_TTL_SECONDS` vale 0 di default:
-ogni richiesta rilegge tutti gli eventi del registro dal nodo RPC più una lettura
-per token. Chiunque, senza firma, può esaurire la quota della chiave RPC
-dedicata. Proposta: cache attiva (es. 30 s) e limite per IP (express o nginx
-`limit_req`).
+**Problema.** `/registry/:address/entries` e `/delegates` sono pubblici (per
+progetto) ma non avevano limiti, e la cache era disattivata di default: ogni
+richiesta rileggeva tutti gli eventi del registro dal nodo RPC più una lettura
+per token. Chiunque, senza firma, poteva esaurire la quota della chiave RPC.
+
+**Correzione.**
+- **Cache legata al blocco** (`chainReadCache.getForBlock`): il risultato vale
+  finché non arriva un blocco nuovo. Una cache a tempo avrebbe mostrato dati
+  vecchi subito dopo una registrazione; così invece i dati sono sempre
+  aggiornati all'ultimo blocco e la scansione si fa al massimo una volta per
+  blocco e registro. Richieste contemporanee condividono lo stesso calcolo; il
+  numero di blocco si rilegge al massimo ogni 2 secondi.
+- **Verifica "registro della Factory" ricordata**: una risposta positiva vale per
+  sempre (un registro resta tale), e risparmia una chiamata RPC a ogni
+  richiesta, firmate comprese.
+- **Limite per IP** (`rateLimit.js`): 120 richieste/minuto per la lettura
+  pubblica, 60 per le route firmate (anche una firma non valida costa verifiche
+  on-chain); configurabili, 429 con `Retry-After`. `trust proxy` su loopback
+  perché l'IP sia quello del client dietro nginx. Messaggio 429 tradotto.
 
 ## 6. Librerie da CDN — 🟠 Media — ✅ Risolto
 
@@ -165,24 +186,30 @@ ethers 5.7.2) e, nel blocco `server` nginx di traceability, la riga
 `include /var/www/shared-assets/nginx/shared-assets.conf;` (poi `nginx -t` e
 reload). Senza, le pagine non trovano ethers.
 
-## 7. Indirizzo non normalizzato nel database — 🟡 Bassa — ⏳ PR 2
+## 7. Indirizzo non normalizzato nel database — 🟡 Bassa — ✅ Risolto (PR 2)
 
-`registry_address` è salvato come arriva dal client. Un delegato che scrive
-l'indirizzo in minuscolo vede la libreria vuota, carica in un archivio separato
-e "nascondi" risponde 404 (confronto esatto). Proposta: normalizzare
-(checksum) nel backend e migrare le righe esistenti.
+`registry_address` era salvato come arrivava dal client: un delegato che
+scriveva l'indirizzo in minuscolo vedeva la libreria vuota, caricava in un
+archivio separato e "nascondi" rispondeva 404. Ora tutte le funzioni di
+`db.js` usano la forma canonica (checksum) da sole, i confronti nelle route
+pure, e la pagina normalizza l'indirizzo quando si sceglie il registro. Una
+migrazione automatica all'avvio sistema le righe esistenti; se due righe
+diventano uguali tiene quella cifrata (documenti) o la più vecchia, e resta
+visibile se almeno una lo era.
 
-## 8. Elemento nascosto e poi ricaricato — 🟡 Bassa — ⏳ PR 2
+## 8. Elemento nascosto e poi ricaricato — 🟡 Bassa — ✅ Risolto (PR 2)
 
-`insertPhoto`/`insertDocument` restituiscono il record esistente anche se
-nascosto: l'utente vede "caricato" ma l'elemento non compare. Proposta:
-renderlo di nuovo visibile al ricaricamento.
+`insertPhoto`/`insertDocument` restituivano il record esistente anche se
+nascosto: l'utente vedeva "caricato" ma l'elemento non compariva. Ora
+ricaricarlo lo rende di nuovo visibile.
 
-## 9. Firme nella query string — 🟡 Bassa — ⏳ PR 2
+## 9. Firme nella query string — 🟡 Bassa — ✅ Risolto (PR 2)
 
-Le liste (`GET /photos`, `GET /documents`) passano firma e timestamp nell'URL:
-finiscono nei log di accesso e restano riutilizzabili per 5 minuti.
-Proposta: POST con firma nel corpo.
+Le liste passavano firma e timestamp nell'URL (`GET /photos`, `GET /documents`),
+che finisce nei log di accesso e resta riutilizzabile per 5 minuti. Ora le
+pagine usano `POST /photos/list` e `POST /documents/list` con la firma nel
+corpo. I GET restano temporaneamente per le pagine ancora in cache nel
+browser: **da togliere** in una prossima versione.
 
 ## 10. Token trasferibili — ℹ️ Info — ⏳ Prima del mainnet
 
@@ -191,6 +218,27 @@ nel registro, ma la proprietà del token può spostarsi (anche dopo un
 `setRegistryAdmin`). Decidere la regola prima del mainnet.
 
 ---
+
+## 11. Intestazioni di sicurezza — 🟡 Bassa — 🟡 Fase 1 (PR 2)
+
+Nessuna intestazione di sicurezza sulle pagine. Ora `nginx/security-headers.conf`
+(da includere nel blocco `server` di traceability):
+- **Incorporamento**: l'esploratore resta incorporabile ovunque (è pensato per
+  un `<iframe>` sui siti dei clienti); pagine private, admin e guida solo dal
+  nostro dominio (`X-Frame-Options` + `frame-ancestors`).
+- `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`.
+- **Content-Security-Policy**: script solo dal nostro dominio, e soprattutto
+  `connect-src` limitato a backend e gateway IPFS nostri (un codice iniettato
+  non può spedire dati altrove). `'unsafe-inline'` resta necessario finché le
+  pagine hanno script e `onclick` nel codice HTML.
+
+**Fase 1 = `Report-Only`**: la CSP non blocca, segnala nella console. Motivo: la
+UP extension inserisce il proprio codice nella pagina e non si può provare qui.
+Verificato in Chromium con la CSP **bloccante**: nessuna violazione su tutte le
+pagine, esploratore con metadata e immagini IPFS, test XSS e download
+documenti funzionanti. **Fase 2**: dopo la prova con la UP collegata, passare a
+`Content-Security-Policy` (una parola nel file). Configurazione validata con
+`nginx -t` e intestazioni controllate su un nginx locale.
 
 ## Cosa è già solido
 

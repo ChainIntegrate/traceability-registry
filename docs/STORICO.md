@@ -1764,6 +1764,18 @@ procedure in [`AUDIT.md`](AUDIT.md) e [`CHIAVE-DOCUMENTI.md`](CHIAVE-DOCUMENTI.m
 Deploy: generare la chiave madre, custodirla fuori dal server, riavviare il
 backend; poi ricaricare i documenti vecchi e togliere dal nodo i CID in chiaro.
 
+## 58. Irrobustimento del backend e intestazioni di sicurezza (audit §56, PR 2)
+
+Chiusi i punti 5, 7, 8, 9 dell'audit e avviato l'11 (dettagli in
+[`AUDIT.md`](AUDIT.md)): cache delle letture pubbliche legata al blocco (sempre
+aggiornata, una scansione per blocco), verifica Factory ricordata, limite di
+richieste per IP (120/min lettura pubblica, 60/min firmate), indirizzi dei
+registri normalizzati nel database con migrazione automatica, elementi nascosti
+che tornano visibili al ricaricamento, liste della libreria in POST, e
+`nginx/security-headers.conf` con CSP in osservazione (Report-Only). Test in
+`scripts/test-backend-hardening.js` (18 controlli). Deploy: riavvio del
+backend e include nginx.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
