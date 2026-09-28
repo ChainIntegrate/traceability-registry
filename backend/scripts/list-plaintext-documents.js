@@ -4,7 +4,7 @@
  *   1. ricaricare lo stesso file dalla pagina privata del registro: il
  *      backend lo sostituisce con la versione cifrata (stessa impronta);
  *   2. togliere dal nodo IPFS il vecchio CID in chiaro:
- *        ipfs pin rm <CID>  e poi  ipfs repo gc
+ *        ipfs pin rm <CID>  e poi  ipfs repo gc   (sul server del nodo IPFS)
  * Il passo 2 impedisce al nostro nodo di continuare a servirlo; non può però
  * cancellare copie che qualcuno avesse già scaricato.
  *

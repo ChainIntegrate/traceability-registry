@@ -18,7 +18,7 @@ Questa pagina spiega cosa custodire, dove, e come recuperare un documento.
 |---|---|
 | il **database** | si perde l'indice. I file restano recuperabili: con la chiave madre si riapre qualunque file cifrato presente su IPFS (`scripts/decrypt-document.js`). |
 | la **chiave madre** | **nessun documento cifrato è più recuperabile**, da nessuno. È l'unica cosa davvero da non perdere. |
-| il **nodo IPFS** (disco del VPS) | si perdono i file, cifrati e non, se non esiste un'altra copia. Coperto dal backup del VPS (vedi sotto). |
+| il **nodo IPFS** (è su un **server separato** dal backend) | si perdono i file, cifrati e non, se non esiste un'altra copia. Serve il backup **del server del nodo** (vedi sotto). |
 
 ## 1. Generare la chiave madre (una volta sola)
 
@@ -70,13 +70,22 @@ Automatico ogni notte con cron (`crontab -e` dell'utente che gestisce il backend
 15 3 * * * cd /var/www/traceability-registry/backend && /usr/bin/node scripts/backup-db.js >> backups/backup.log 2>&1
 ```
 
-Una copia che resta sullo stesso server non protegge da un guasto del server:
-il **backup automatico del VPS (Contabo Auto Backup)** deve essere attivo e
-includere il disco con `backend/backups/` e il repository del nodo IPFS. Il
-database è comodo da avere, ma non vitale: senza, i documenti si recuperano
-comunque con la chiave madre.
+Una copia che resta sullo stesso server non protegge da un guasto del server.
+Backend e nodo IPFS sono su **due server diversi**, quindi servono due backup:
+
+| Server | Cosa protegge il suo backup automatico (es. Contabo Auto Backup) |
+|---|---|
+| **backend** (`/var/www/traceability-registry`) | database e sue copie in `backend/backups/`, `.env` (compresa la chiave madre: una copia in più, oltre a quelle fuori dai server) |
+| **nodo IPFS** | i file: foto, metadata dei token, documenti cifrati. Senza, un guasto del nodo lascia i token on-chain senza nomi e immagini e i documenti irrecuperabili |
+
+Il database è comodo da avere, ma non vitale: senza, i documenti si recuperano
+comunque con la chiave madre, **purché i file esistano ancora sul nodo IPFS**.
 
 ## 4. Recuperare un documento senza database
+
+Verificato dal vivo il 28/09/2026: documento cifrato illeggibile dal gateway
+pubblico, intestazione `TRDOC1` sul nodo, recuperato con la sola chiave madre.
+
 
 ```bash
 cd /var/www/traceability-registry/backend
@@ -85,8 +94,17 @@ node scripts/decrypt-document.js <CID> fattura.pdf
 node scripts/decrypt-document.js <CID> fattura.pdf 0x…impronta…
 ```
 
-Per trovare i CID senza database: `ipfs pin ls --type=recursive` elenca tutti i
-file conservati dal nodo. Quelli cifrati iniziano con i byte `TRDOC1`.
+Lo script va lanciato **dal server del backend** (ha la chiave madre e l'accesso
+all'API del nodo IPFS tramite `IPFS_API_URL`). Il comando `ipfs` invece esiste
+solo sul server del nodo; dal backend si può interrogare il nodo con la sua API:
+
+```bash
+IPFS=$(grep '^IPFS_API_URL=' .env | cut -d= -f2-)
+curl -s -X POST "$IPFS/api/v0/cat?arg=<CID>" | head -c 6; echo   # "TRDOC1" = cifrato
+```
+
+Per trovare i CID senza database: sul server del nodo, `ipfs pin ls --type=recursive`
+elenca tutti i file conservati. Quelli cifrati iniziano con i byte `TRDOC1`.
 
 ## 5. Mettere al sicuro i documenti caricati prima della cifratura
 
@@ -102,11 +120,14 @@ Per ciascuno:
 1. dalla pagina privata del registro, **ricarica lo stesso file** nella
    libreria documenti: il backend lo sostituisce con la versione cifrata
    (stessa impronta, stesso record);
-2. togli dal nodo il vecchio CID in chiaro:
+2. togli dal nodo il vecchio CID in chiaro, **sul server del nodo IPFS**:
    ```bash
    ipfs pin rm <CID-vecchio>
    ipfs repo gc
    ```
+   Solo dopo aver ricaricato il file in **tutti** i registri in cui compare
+   (lo stesso file caricato in più registri ha lo stesso CID in chiaro):
+   altrimenti quei registri non riescono più a scaricarlo.
 
 Il passo 2 impedisce al nostro nodo di continuare a servirlo; non può
 cancellare copie che qualcuno avesse già scaricato.
