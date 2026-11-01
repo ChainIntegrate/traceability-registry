@@ -368,7 +368,7 @@ const I18N = {
     "delegates.tierNote": "Membership del titolare: {tier} ({status})", "delegates.enabled": "deleghe abilitate",
     "delegates.needSilver": "serve Silver o superiore", "delegates.suspended": "membership sospesa", "delegates.address": "Indirizzo UP",
     "delegates.add": "Aggiungi delega", "delegates.remove": "Rimuovi delega", "delegates.none": "Nessuna delega attiva.",
-    "delegates.colAddress": "Indirizzo delegato", "delegates.listError": "Impossibile caricare le deleghe: {msg}",
+    "delegates.colAddress": "Indirizzo delegato", "delegates.colName": "Profilo", "delegates.listError": "Impossibile caricare le deleghe: {msg}",
     "delegates.invalidAddress": "Indirizzo non valido.", "delegates.added": "Delega aggiunta. Riferimento: {tx}",
     "delegates.removed": "Delega rimossa. Riferimento: {tx}", "delegates.addError": "Errore aggiunta delega: {msg}",
     "delegates.removeError": "Errore rimozione delega: {msg}",
@@ -510,7 +510,7 @@ const I18N = {
     "delegates.tierNote": "Holder's membership: {tier} ({status})", "delegates.enabled": "delegation enabled",
     "delegates.needSilver": "Silver or higher required", "delegates.suspended": "membership suspended", "delegates.address": "UP address",
     "delegates.add": "Add delegate", "delegates.remove": "Remove delegate", "delegates.none": "No active delegates.",
-    "delegates.colAddress": "Delegate address", "delegates.listError": "Could not load delegates: {msg}",
+    "delegates.colAddress": "Delegate address", "delegates.colName": "Profile", "delegates.listError": "Could not load delegates: {msg}",
     "delegates.invalidAddress": "Invalid address.", "delegates.added": "Delegate added. Reference: {tx}",
     "delegates.removed": "Delegate removed. Reference: {tx}", "delegates.addError": "Add delegate error: {msg}",
     "delegates.removeError": "Remove delegate error: {msg}",
@@ -668,7 +668,9 @@ async function connectWith(injected) {
     return;
   }
 
-  document.getElementById("connectedAddress").textContent = myAddress;
+  // Nome del profilo al posto dell'indirizzo (l'indirizzo resta nel
+  // suggerimento al passaggio del mouse).
+  showConnectedProfile(myAddress);
   connectBtnConnected = true;
   document.getElementById("connectBtn").textContent = t("connect.connected");
   document.getElementById("connectBtn").style.display = "none";
@@ -698,6 +700,7 @@ document.getElementById("disconnectBtn").addEventListener("click", () => {
   connectBtnConnected = false;
 
   document.getElementById("connectedAddress").textContent = "";
+  document.getElementById("connectedAddress").title = "";
   document.getElementById("connectBtn").textContent = t("connect.button");
   document.getElementById("connectBtn").style.display = "inline-block";
   if (CONFIG.WALLETCONNECT_PROJECT_ID) document.getElementById("connectUpWalletBtn").style.display = "inline-block";
@@ -705,6 +708,14 @@ document.getElementById("disconnectBtn").addEventListener("click", () => {
   document.getElementById("registrySetup").style.display = "none";
   document.getElementById("app").style.display = "none";
 });
+
+async function showConnectedProfile(address) {
+  const el = document.getElementById("connectedAddress");
+  el.title = address;
+  el.textContent = TraceabilityDecode.profileLabel(null, address);
+  const name = await TraceabilityDecode.fetchProfileName(provider, address);
+  if (myAddress === address) el.textContent = TraceabilityDecode.profileLabel(name, address);
+}
 
 async function loadMyRegistries() {
   const registries = await factory.getRegistries(myAddress);
@@ -1191,10 +1202,15 @@ async function refreshDelegatesList() {
     if (data.delegates.length === 0) {
       el.innerHTML = "<p class='muted'>" + t("delegates.none") + "</p>";
     } else {
-      let html = "<table><tr><th>" + t("delegates.colAddress") + "</th></tr>";
-      data.delegates.forEach((d) => { html += "<tr><td>" + esc(d) + "</td></tr>"; });
+      let html = "<table><tr><th>" + t("delegates.colName") + "</th><th>" + t("delegates.colAddress") + "</th></tr>";
+      data.delegates.forEach((d) => { html += "<tr><td data-delegate-name='" + esc(d) + "'>" + esc(TraceabilityDecode.profileLabel(null, d)) + "</td><td>" + esc(d) + "</td></tr>"; });
       html += "</table>";
       el.innerHTML = html;
+      data.delegates.forEach(async (d) => {
+        const name = await TraceabilityDecode.fetchProfileName(provider, d);
+        const cell = el.querySelector("[data-delegate-name='" + d + "']");
+        if (cell && name) cell.textContent = TraceabilityDecode.profileLabel(name, d);
+      });
     }
   } catch (err) {
     el.innerHTML = "<p class='err'>" + t("delegates.listError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }) + "</p>";

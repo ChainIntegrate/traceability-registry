@@ -61,6 +61,70 @@
     return data; // { registryAddress, deployedAtBlock, entries: [...] }
   }
 
+  // Nome del profilo (LSP3) di una Universal Profile, da mostrare al posto
+  // dell'indirizzo. Letto dalla UP (chiave LSP3Profile, VerifiableURI) e dal
+  // JSON su IPFS tramite il nostro gateway. null se l'indirizzo non è una UP,
+  // se il profilo non ha un nome o se non è raggiungibile: chi chiama mostra
+  // allora l'indirizzo abbreviato. Il nome è testo del profilo, non fidato:
+  // ripulito qui (una riga, niente caratteri di controllo, max 64 caratteri) e
+  // comunque da inserire nella pagina come testo o con escapeHtml.
+  const LSP3_PROFILE_SCHEMA = [
+    {
+      name: "LSP3Profile",
+      key: "0x5ef83ad9559033e6e941db7d7c495acdce616347d28e90c7ce47cbfcfcad3bc5",
+      keyType: "Singleton",
+      valueType: "bytes",
+      valueContent: "VerifiableURI",
+    },
+  ];
+  const profileNameCache = new Map();
+
+  function cleanProfileName(name) {
+    if (typeof name !== "string") return null;
+    const clean = name.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2066-\u2069]/g, "").trim().slice(0, 64);
+    return clean || null;
+  }
+
+  async function readProfileName(provider, address) {
+    if ((await provider.getCode(address)) === "0x") return null; // non è un contratto: niente profilo
+    const up = new global.ethers.Contract(address, ["function getData(bytes32 dataKey) view returns (bytes)"], provider);
+    const value = await up.getData(LSP3_PROFILE_SCHEMA[0].key);
+    if (!value || value === "0x") return null;
+    const { ERC725 } = await import("/shared/erc725.js/0.28.2/erc725.min.js");
+    const decoded = ERC725.decodeData([{ keyName: "LSP3Profile", value: value }], LSP3_PROFILE_SCHEMA);
+    const gatewayUrl = ipfsUrlToGatewayUrl(decoded[0].value && decoded[0].value.url);
+    if (!gatewayUrl) return null;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const res = await fetch(gatewayUrl, { signal: ctrl.signal });
+      if (!res.ok) return null;
+      const json = await res.json();
+      return cleanProfileName(json && json.LSP3Profile && json.LSP3Profile.name);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /** @returns {Promise<string|null>} nome del profilo, o null */
+  function fetchProfileName(provider, address) {
+    const key = String(address).toLowerCase();
+    if (!profileNameCache.has(key)) {
+      profileNameCache.set(key, readProfileName(provider, address).catch(() => {
+        profileNameCache.delete(key); // errore di rete: si riprova la prossima volta
+        return null;
+      }));
+    }
+    return profileNameCache.get(key);
+  }
+
+  /** Come LUKSO: "nome#4be6" (le prime 4 cifre dell'indirizzo distinguono due
+   * profili con lo stesso nome); senza nome, l'indirizzo abbreviato. */
+  function profileLabel(name, address) {
+    const a = global.ethers.utils.getAddress(address);
+    return name ? name + "#" + a.slice(2, 6).toLowerCase() : a.slice(0, 6) + "…" + a.slice(-4);
+  }
+
   function ipfsToHttp(ipfsUrl) {
     return ipfsUrlToGatewayUrl(ipfsUrl);
   }
@@ -83,6 +147,8 @@
     decodeMetadataValue: decodeMetadataValue,
     fetchRegistryEntries: fetchRegistryEntries,
     ipfsToHttp: ipfsToHttp,
+    fetchProfileName: fetchProfileName,
+    profileLabel: profileLabel,
     IPFS_GATEWAY_BASE: IPFS_GATEWAY_BASE,
   };
 })(typeof window !== "undefined" ? window : globalThis);
