@@ -436,6 +436,14 @@
             "<input type='text' class='te-dochash-reason' maxlength='300' data-dochash-token='" + escapeHtml(entry.tokenId) + "' placeholder='" + escapeHtml(t("card.correctReasonPlaceholder")) + "'>" +
             "<button type='button' class='te-dochash-btn te-dochash-correct-btn' data-dochash-token='" + escapeHtml(entry.tokenId) + "'>" + t("card.correctDocumentHashButton") + "</button>" +
             "</div>";
+        } else if (onCorrectDocumentHash && hasDocumentHash(entry) && currentCapabilities.documentHashCorrection) {
+          // Tier non Gold (o sospeso): pulsante visibile ma disattivato con la
+          // spiegazione — se sparisse, non si capirebbe perché non si può
+          // correggere.
+          html += "<div class='te-dochash-row te-dochash-correct-row'>" +
+            "<button type='button' class='te-dochash-btn te-dochash-correct-btn' disabled>" + t("card.correctDocumentHashButton") + "</button>" +
+            "<span class='te-dochash-gate'>" + (typeof dochashGate === "string" ? escapeHtml(dochashGate) : t("card.setDocumentHashNeedsGold")) + "</span>" +
+            "</div>";
         }
         if (onSetDocumentHash && !hasDocumentHash(entry) && dochashGate !== true) {
           html += "<div class='te-dochash-row'>" +
