@@ -38,6 +38,11 @@
     return hash.slice(0, 10) + "…" + hash.slice(-6);
   }
 
+  /** Data leggibile da un timestamp Unix (secondi); "?" se manca. */
+  function formatDate(timestamp) {
+    return timestamp ? new Date(timestamp * 1000).toLocaleDateString() : "?";
+  }
+
   /** Richiede ethers (keccak256) già caricato in pagina — sia user.html che
    * explorer.html lo includono per questo. Calcolo interamente lato client:
    * nessun byte del file scelto per la verifica lascia il browser. */
@@ -154,7 +159,7 @@
     return values;
   }
 
-  function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate, onSetDocumentHash, listDocumentsForSelect, facetKeys, formatError, canSetDocumentHash }) {
+  function createGalleryInstance({ headerEl, statusEl, filtersEl, gridEl, t, onInvalidate, onSetDocumentHash, listDocumentsForSelect, facetKeys, formatError, canSetDocumentHash, onCorrectDocumentHash }) {
     // Traduzione degli errori in linguaggio comprensibile: le pagine user-*.html
     // passano TraceabilityErrors.friendlyMessage; l'explorer pubblico (che non
     // include traceability-error-messages.js) resta sul messaggio grezzo.
@@ -164,6 +169,9 @@
     let activeFilters = {};
     let lotSearchText = "";
     let lastLoadParams = null;
+    // Funzioni disponibili nel registro caricato, dette dal backend in base
+    // alla versione del contratto (i registri vecchi non hanno la correzione).
+    let currentCapabilities = {};
 
     /** Chiude ogni chip aperta di QUESTA istanza — serve a più gallerie
      * indipendenti sulla stessa pagina senza interferire tra loro. */
@@ -325,6 +333,21 @@
       if (statusEl) statusEl.textContent = visibleCount === 0 ? t("status.noMatch") : "";
     }
 
+    /** Storico delle correzioni d'impronta di un token: per ognuna data,
+     * motivo (testo dell'utente: sempre con escape) e impronta sostituita. */
+    function renderDocumentHashHistory(entry) {
+      const history = entry.documentHashHistory || [];
+      if (history.length === 0) return "";
+      let html = "<div class='te-dochash-history'>";
+      history.slice().reverse().forEach((c) => {
+        html += "<div class='te-dochash-correction'>" +
+          t("card.documentHashCorrectedOn", { date: escapeHtml(formatDate(c.timestamp)), reason: escapeHtml(c.reason) }) + " " +
+          "<code class='te-dochash-value' title='" + escapeHtml(c.previousHash) + "'>" + escapeHtml(shortHash(c.previousHash)) + "</code>" +
+          "</div>";
+      });
+      return html + "</div>";
+    }
+
     function renderGrid(entries, cardDataById) {
       gridEl.innerHTML = "";
       entries.forEach((entry) => {
@@ -379,6 +402,7 @@
           html += "<div class='te-dochash-info'>" +
             "<span class='te-dochash-badge'>" + t("card.documentHashBadge") + "</span> " +
             "<code class='te-dochash-value' title='" + escapeHtml(entry.documentHash) + "'>" + escapeHtml(shortHash(entry.documentHash)) + "</code>" +
+            renderDocumentHashHistory(entry) +
             "<div class='te-verify-row'>" +
             "<input type='file' class='te-verify-input' data-verify-token='" + escapeHtml(entry.tokenId) + "'>" +
             "<button type='button' class='te-verify-btn' data-verify-token='" + escapeHtml(entry.tokenId) + "'>" + t("card.verifyButton") + "</button>" +
@@ -388,8 +412,9 @@
         // Attestazione hash documento (Gold-only lato contratto —
         // onlyGoldFeature; lato UI disattivato se la pagina segnala un tier
         // non Gold via canSetDocumentHash, vedi sotto). Nascosto
-        // se un hash è già presente per non sovrascriverlo per sbaglio — il
-        // contratto non impedisce la sostituzione, quindi il gate è qui.
+        // se un hash è già presente: sui registri nuovi il contratto rifiuta
+        // la sovrascrittura (si usa la correzione, sopra); sui registri
+        // vecchi il contratto non lo impedisce, quindi il gate resta qui.
         // Select invece di un file grezzo: l'hash scritto on-chain deve
         // sempre corrispondere a un documento REALMENTE salvato in libreria
         // (su IPFS), altrimenti è verificabile ma irrecuperabile — bug
@@ -401,7 +426,17 @@
         // firma inutile) e non si arriva a una transazione destinata al revert.
         // Ritorna true (consentito) oppure la nota da mostrare accanto al
         // pulsante disattivato (es. "Richiede membership Gold.", "Membership sospesa.").
-        const dochashGate = onSetDocumentHash && !hasDocumentHash(entry) && canSetDocumentHash ? canSetDocumentHash() : true;
+        const dochashGate = onSetDocumentHash && canSetDocumentHash ? canSetDocumentHash() : true;
+        // Correzione di un'impronta già registrata: solo nelle pagine private,
+        // solo sui registri che la supportano, con gli stessi permessi della
+        // registrazione. Motivo obbligatorio, pubblico e permanente.
+        if (onCorrectDocumentHash && hasDocumentHash(entry) && currentCapabilities.documentHashCorrection && dochashGate === true) {
+          html += "<div class='te-dochash-row te-dochash-correct-row'>" +
+            "<select class='te-dochash-select' data-dochash-token='" + escapeHtml(entry.tokenId) + "'><option value=''>" + t("common.loadingDocuments") + "</option></select>" +
+            "<input type='text' class='te-dochash-reason' maxlength='300' data-dochash-token='" + escapeHtml(entry.tokenId) + "' placeholder='" + escapeHtml(t("card.correctReasonPlaceholder")) + "'>" +
+            "<button type='button' class='te-dochash-btn te-dochash-correct-btn' data-dochash-token='" + escapeHtml(entry.tokenId) + "'>" + t("card.correctDocumentHashButton") + "</button>" +
+            "</div>";
+        }
         if (onSetDocumentHash && !hasDocumentHash(entry) && dochashGate !== true) {
           html += "<div class='te-dochash-row'>" +
             "<button type='button' class='te-dochash-btn' disabled>" + t("card.setDocumentHashButton") + "</button>" +
@@ -468,11 +503,22 @@
           const file = input && input.files[0];
           if (!file) { window.alert(t("card.setDocumentHashNeedFile")); return; }
           try {
-            const computedHash = await computeFileKeccak256(file);
-            const expectedHash = currentCardDataById[tokenId].entry.documentHash;
-            const matches = computedHash.toLowerCase() === String(expectedHash).toLowerCase();
-            resultEl.textContent = matches ? t("card.verifyMatch") : t("card.verifyMismatch");
-            resultEl.className = "te-verify-result " + (matches ? "te-verify-ok" : "te-verify-fail");
+            const computedHash = (await computeFileKeccak256(file)).toLowerCase();
+            const entry = currentCardDataById[tokenId].entry;
+            // Tre esiti: impronta valida, impronta sostituita da una
+            // correzione (file autentico ma non più di riferimento), nessuna.
+            const superseded = (entry.documentHashHistory || [])
+              .find((c) => String(c.previousHash).toLowerCase() === computedHash);
+            if (computedHash === String(entry.documentHash).toLowerCase()) {
+              resultEl.textContent = t("card.verifyMatch");
+              resultEl.className = "te-verify-result te-verify-ok";
+            } else if (superseded) {
+              resultEl.textContent = t("card.verifySuperseded", { date: formatDate(superseded.timestamp) });
+              resultEl.className = "te-verify-result te-verify-warn";
+            } else {
+              resultEl.textContent = t("card.verifyMismatch");
+              resultEl.className = "te-verify-result te-verify-fail";
+            }
           } catch (err) {
             resultEl.textContent = t("card.verifyError", { msg: err.message });
             resultEl.className = "te-verify-result te-verify-fail";
@@ -481,7 +527,7 @@
       });
 
       if (onSetDocumentHash) {
-        gridEl.querySelectorAll(".te-dochash-btn").forEach((btn) => {
+        gridEl.querySelectorAll(".te-dochash-btn:not(.te-dochash-correct-btn)").forEach((btn) => {
           btn.addEventListener("click", async (e) => {
             e.stopPropagation();
             const tokenId = btn.dataset.dochashToken;
@@ -507,12 +553,42 @@
           });
         });
 
-        // Popolate una volta sola per tutte le card di questo load — la
-        // libreria documenti è la stessa per l'intero registry, non cambia
-        // da un token all'altro.
-        if (listDocumentsForSelect) {
-          populateDocumentSelects();
-        }
+      }
+
+      if (onCorrectDocumentHash) {
+        gridEl.querySelectorAll(".te-dochash-correct-btn").forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            e.stopPropagation();
+            const tokenId = btn.dataset.dochashToken;
+            const select = gridEl.querySelector(".te-dochash-correct-row .te-dochash-select[data-dochash-token='" + tokenId + "']");
+            const reasonInput = gridEl.querySelector(".te-dochash-reason[data-dochash-token='" + tokenId + "']");
+            const documentHash = select && select.value;
+            const reason = reasonInput ? reasonInput.value.trim() : "";
+            const currentHash = String(currentCardDataById[tokenId].entry.documentHash).toLowerCase();
+            if (!documentHash) { window.alert(t("card.setDocumentHashNeedSelection")); return; }
+            if (documentHash.toLowerCase() === currentHash) { window.alert(t("card.correctSameDocument")); return; }
+            if (!reason) { window.alert(t("card.correctNeedReason")); return; }
+            if (!window.confirm(t("card.correctConfirm"))) return;
+            btn.disabled = true;
+            btn.textContent = t("card.correctingDocumentHash");
+            try {
+              await onCorrectDocumentHash(tokenId, documentHash, reason);
+              window.alert(t("card.correctDocumentHashSuccess"));
+              if (lastLoadParams) await load(lastLoadParams.backendBaseUrl, lastLoadParams.registryAddress);
+            } catch (err) {
+              window.alert(t("card.correctDocumentHashError", { msg: describeError(err) }));
+              btn.disabled = false;
+              btn.textContent = t("card.correctDocumentHashButton");
+            }
+          });
+        });
+      }
+
+      // Popolate una volta sola per tutte le card di questo load — la
+      // libreria documenti è la stessa per l'intero registry, non cambia
+      // da un token all'altro.
+      if (listDocumentsForSelect && (onSetDocumentHash || onCorrectDocumentHash)) {
+        populateDocumentSelects();
       }
     }
 
@@ -560,6 +636,7 @@
         return;
       }
 
+      currentCapabilities = data.capabilities || {};
       if (headerEl) await renderCollectionHeader(headerEl, data.collectionMetadataValue);
 
       if (!data.entries || data.entries.length === 0) {

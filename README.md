@@ -73,6 +73,7 @@ flowchart LR
 **Documenti e immagini**
 - Libreria foto e libreria documenti per registro, riutilizzabili tra le registrazioni.
 - **Documenti cifrati e hash sulla blockchain**: fatture, DDT e certificati vengono cifrati prima di essere archiviati; su IPFS c'è solo una versione illeggibile e il file originale si scarica solo dal registro, con firma. Sulla blockchain si registra la sua impronta: chiunque abbia il file può verificarne l'integrità, nel proprio browser.
+- **Impronta unica, correzioni trasparenti**: l'impronta di un lotto si scrive una volta sola; un errore si corregge con un motivo obbligatorio, e la vecchia impronta resta nello storico pubblico. La verifica distingue documento valido, documento sostituito e documento sconosciuto.
 
 **Gestione**
 - **Deleghe**: altri collaboratori operano con la propria identità, senza mai condividere credenziali.
@@ -128,6 +129,7 @@ Ogni campo `Lotto <materia prima>` crea automaticamente il collegamento al lotto
 - **Permessi verificati dal contratto.** Membership, deleghe e funzioni Gold vengono controllate on-chain a ogni chiamata, non solo nell'interfaccia.
 - **Firme trasparenti.** Le operazioni che non scrivono sulla blockchain chiedono una firma in formato standard [SIWE (EIP-4361)](https://eips.ethereum.org/EIPS/eip-4361): testo leggibile, link cliccabili, nessun costo. Il backend la verifica con ERC-1271 sulla Universal Profile e accetta solo registri deployati dalla Factory.
 - **Documenti riservati cifrati.** Sulla blockchain va solo l'impronta; su IPFS solo il file cifrato (AES-256-GCM, una chiave per documento custodita da una chiave madre). Il download dell'originale passa dal backend, con firma e controllo dell'impronta. Foto e metadata dei prodotti restano pubblici per scelta, e la guida lo dice chiaramente.
+- **Token non cedibili, dati non riscrivibili.** I token restano nel registro: non si possono trasferire a terzi, solo al nuovo titolare se ChainIntegrate cambia il titolare in emergenza. Nemmeno ChainIntegrate può riscrivere i dati di un token già registrato.
 - **Codice sorgente pubblico.** I contratti sono verificati su Blockscout e il codice è consultabile in questo repository.
 
 ## Architettura
@@ -181,7 +183,7 @@ Il percorso completo, con le decisioni prese e i problemi risolti, è nel [diari
 
 ```
 contracts/     TraceabilityRegistryFactory.sol, TraceabilityRegistry.sol
-scripts/       deploy.js, test-error-messages.js
+scripts/       deploy.js e i test (test-*.js)
 backend/       API Express (firme, IPFS, librerie, lettura on-chain)
 frontend/      pagine per settore, explorer.html, admin.html, how-it-works.html
 nginx/         intestazioni di sicurezza da includere nel blocco server di nginx
@@ -206,6 +208,7 @@ npm start                   # in produzione con pm2
 
 **Test**
 ```bash
+npx hardhat run --no-compile scripts/test-contract-rules.js  # regole del contratto: impronta unica, correzione, token non cedibili
 node scripts/test-error-messages.js      # traduzione di ogni revert dei contratti + parsing degli errori
 node scripts/test-document-encryption.js # cifratura dei documenti e percorso upload → IPFS → download
 node scripts/test-backend-hardening.js   # limiti per IP, cache per blocco, indirizzi, liste in POST

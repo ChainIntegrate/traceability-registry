@@ -45,6 +45,8 @@ for (const file of fs.readdirSync(path.join(ROOT, "contracts")).filter((f) => f.
     const strings = m[1].match(/"([^"]+)"/g);
     if (strings) reasons.push(strings[strings.length - 1].slice(1, -1));
   }
+  // anche i revert("…") espliciti (es. dati dei token protetti)
+  for (const m of src.matchAll(/revert\s*\(\s*"([^"]+)"\s*\)/g)) reasons.push(m[1]);
 }
 assert.ok(reasons.length > 20, "trovati troppo pochi require() nei contratti: " + reasons.length);
 

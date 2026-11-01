@@ -63,6 +63,38 @@
       it: "Questa funzione richiede una membership Gold.",
       en: "This feature requires a Gold membership.",
     },
+    // --- Impronta unica e correzione (audit §56 punto 4) ---
+    {
+      match: "document hash already set",
+      it: "Questa registrazione ha già l'impronta di un documento. Se è sbagliata, usa \"Correggi impronta\" indicando il motivo.",
+      en: "This entry already has a document fingerprint. If it's wrong, use \"Correct fingerprint\" and give the reason.",
+    },
+    {
+      match: "correction reason required",
+      it: "Per correggere l'impronta serve indicare il motivo della correzione.",
+      en: "To correct the fingerprint you need to give the reason for the correction.",
+    },
+    {
+      match: "no document hash to correct",
+      it: "Questa registrazione non ha ancora un'impronta da correggere: registrala prima normalmente.",
+      en: "This entry doesn't have a fingerprint to correct yet: register it normally first.",
+    },
+    {
+      match: "same document hash",
+      it: "Il documento scelto è lo stesso già registrato: nessuna correzione da fare.",
+      en: "The selected document is the same one already registered: nothing to correct.",
+    },
+    // --- Token non trasferibili e dati protetti (audit §56 punto 10) ---
+    {
+      match: "tokens can only move to registryAdmin",
+      it: "I lotti e i batch non si possono trasferire ad altri indirizzi: restano legati al titolare del registro.",
+      en: "Lots and batches can't be transferred to other addresses: they stay tied to the registry's owner.",
+    },
+    {
+      match: "token data is write-protected",
+      it: "I dati delle registrazioni non si possono modificare direttamente: si cambiano solo con le funzioni del registro.",
+      en: "Entry data can't be modified directly: it can only be changed through the registry's functions.",
+    },
     {
       match: "tokenId already used",
       it: "Questo codice risulta già registrato in questo registro: non può essere usato due volte.",

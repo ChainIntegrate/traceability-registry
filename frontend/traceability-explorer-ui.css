@@ -67,3 +67,8 @@
 .te-verify-result { font-size: 0.78rem; font-weight: 600; }
 .te-verify-result.te-verify-ok { color: #0a6; }
 .te-verify-result.te-verify-fail { color: #c33; }
+.te-verify-result.te-verify-warn { color: #a66a1e; }
+.te-dochash-history { margin-top: 6px; font-size: 0.72rem; color: #7a4a17; }
+.te-dochash-correction { margin-top: 2px; }
+.te-dochash-correct-row { border-top: 1px dashed #eee; padding-top: 8px; }
+.te-dochash-reason { font-size: 0.72rem; flex: 1 1 160px; min-width: 0; padding: 4px 6px; }

@@ -280,6 +280,18 @@ const I18N = {
     "card.documentHashBadge": "Documento registrato",
     "card.verifyButton": "Verifica un file", "card.verifyMatch": "✓ Il file corrisponde.",
     "card.verifyMismatch": "✗ Il file NON corrisponde.", "card.verifyError": "Errore verifica: {msg}",
+    "card.correctDocumentHashButton": "Correggi impronta",
+    "card.correctingDocumentHash": "Correzione in corso...",
+    "card.correctReasonPlaceholder": "Motivo della correzione (pubblico)",
+    "card.correctNeedReason": "Indica il motivo della correzione: resterà pubblico e permanente.",
+    "card.correctSameDocument": "Il documento scelto è già quello registrato.",
+    "card.correctConfirm": "Confermi la correzione? La vecchia impronta e il motivo resteranno visibili per sempre nello storico pubblico del lotto.",
+    "card.correctDocumentHashSuccess": "Impronta corretta on-chain.",
+    "card.correctDocumentHashError": "Correzione dell'impronta non riuscita. {msg}",
+    "card.documentHashCorrectedOn": "Corretta il {date} — motivo: «{reason}». Impronta sostituita:",
+    "card.verifySuperseded": "⚠ Il file corrisponde a un'impronta SOSTITUITA il {date}: non è più il documento di riferimento.",
+    "log.correctingDocumentHash": "Correzione impronta documento per {tokenId} in corso...",
+    "log.documentHashCorrected": "Impronta corretta ({hash}). Riferimento: {tx}",
     "card.setDocumentHashNeedSelection": "Seleziona prima un documento dalla libreria.",
     "card.setDocumentHashNeedsGold": "Richiede membership Gold.",
     "card.setDocumentHashSuspended": "Membership sospesa.",
@@ -402,6 +414,18 @@ const I18N = {
     "card.documentHashBadge": "Document registered",
     "card.verifyButton": "Verify a file", "card.verifyMatch": "✓ The file matches.",
     "card.verifyMismatch": "✗ The file does NOT match.", "card.verifyError": "Verification error: {msg}",
+    "card.correctDocumentHashButton": "Correct fingerprint",
+    "card.correctingDocumentHash": "Correcting...",
+    "card.correctReasonPlaceholder": "Reason for the correction (public)",
+    "card.correctNeedReason": "Enter the reason for the correction: it will be public and permanent.",
+    "card.correctSameDocument": "The selected document is already the registered one.",
+    "card.correctConfirm": "Confirm the correction? The old fingerprint and the reason will remain visible forever in the lot's public history.",
+    "card.correctDocumentHashSuccess": "Fingerprint corrected on-chain.",
+    "card.correctDocumentHashError": "Fingerprint correction failed. {msg}",
+    "card.documentHashCorrectedOn": "Corrected on {date} — reason: “{reason}”. Replaced fingerprint:",
+    "card.verifySuperseded": "⚠ The file matches a fingerprint REPLACED on {date}: it is no longer the reference document.",
+    "log.correctingDocumentHash": "Correcting document fingerprint for {tokenId}...",
+    "log.documentHashCorrected": "Fingerprint corrected ({hash}). Reference: {tx}",
     "card.setDocumentHashNeedSelection": "Select a document from the library first.",
     "card.setDocumentHashNeedsGold": "Requires a Gold membership.",
     "card.setDocumentHashSuspended": "Membership suspended.",
@@ -537,6 +561,7 @@ const REGISTRY_ABI = [
   "function invalidateEntry(bytes32 tokenId, string reason) external",
   "function setDocumentHash(bytes32 tokenId, bytes32 documentHash) external",
   "function setDocumentHashBatch(bytes32[] tokenIds, bytes32 documentHash) external",
+  "function correctDocumentHash(bytes32 tokenId, bytes32 newHash, string reason) external",
 ];
 
 const MEMBERSHIP_ABI = ["function tierOf(address account) view returns (uint256)"];
@@ -774,6 +799,16 @@ const exploreGallery = TraceabilityExplorerUI.createGalleryInstance({
     const tx = await activeRegistry.setDocumentHash(tokenId, documentHash);
     const receipt = await tx.wait();
     log(t("log.documentHashSet", { tx: receipt.transactionHash, hash: documentHash }));
+  },
+  // Correzione di un'impronta già registrata (solo registri nuovi: il
+  // pulsante compare solo se il backend segnala la capacità). Motivo
+  // obbligatorio, pubblico e permanente; la vecchia impronta resta nello
+  // storico (evento DocumentHashCorrected).
+  onCorrectDocumentHash: async (tokenId, documentHash, reason) => {
+    log(t("log.correctingDocumentHash", { tokenId: tokenId }));
+    const tx = await activeRegistry.correctDocumentHash(tokenId, documentHash, reason);
+    const receipt = await tx.wait();
+    log(t("log.documentHashCorrected", { tx: receipt.transactionHash, hash: documentHash }));
   },
   listDocumentsForSelect: async () => TraceabilityDocumentLibrary.listDocuments({
     backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer,

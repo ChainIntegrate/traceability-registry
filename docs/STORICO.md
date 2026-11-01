@@ -1786,6 +1786,38 @@ nascondi/ricarica). La migrazione degli indirizzi all'avvio non ha trovato
 righe da correggere. Passata la CSP da `Report-Only` ad attiva in
 `nginx/security-headers.conf` (audit punto 11 chiuso).
 
+## 60. Impronta unica, correzione tracciata, token non cedibili
+
+Chiusi i punti 4 e 10 dell'audit, prima del mainnet (modifica al contratto:
+vale per i registri creati dalla nuova Factory).
+
+- **Impronta scritta una volta sola**, nel contratto e non più solo
+  nell'interfaccia. Per gli errori (documento sbagliato collegato a un lotto) c'è
+  `correctDocumentHash` con **motivo obbligatorio**: la vecchia impronta, il
+  motivo, chi e quando restano nell'evento `DocumentHashCorrected`, pubblico e
+  permanente. Scelta: una correzione onesta deve essere possibile, ma mai
+  silenziosa.
+- **Verifica a tre esiti** nell'esploratore: valido, sostituito (file autentico
+  ma non più di riferimento, con la data della correzione), non corrispondente.
+  Storico delle correzioni sotto l'impronta.
+- **Token non cedibili a terzi**: si muovono solo verso il titolare attuale, così
+  dopo un `setRegistryAdmin` il nuovo titolare può riaverli e quello uscente non
+  può portarseli via o cederli. Il valore del registro è nei dati, non nel
+  possesso del token: un token ceduto non sposterebbe i dati ma confonderebbe
+  chi guarda la collezione da un wallet.
+- **Dati dei token protetti anche da ChainIntegrate**: disattivate
+  `setDataForTokenId` / `setDataBatchForTokenIds` pubbliche, che consentivano al
+  proprietario del contratto di riscrivere qualunque dato.
+- Backend: storico delle correzioni e capacità del contratto (versione ricavata
+  dal bytecode) nella risposta delle entry. Messaggi d'errore tradotti per i
+  nuovi motivi di revert.
+- Dimensioni: Registry 18.725 byte, Factory 23.416 byte (limite 24.576).
+- Test: `scripts/test-contract-rules.js` (compila con `solc` 0.8.28 da npm, gira
+  sulla rete hardhat interna) + prova end-to-end in Chromium.
+- Corretto anche il testo di riserva di `hiw.hashOnlyP` in how-it-works.html,
+  che conteneva un pezzo di frase vecchia (a pagina caricata lo sostituiva il
+  dizionario, quindi non era visibile).
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

@@ -67,6 +67,15 @@ contract TraceabilityRegistry is LSP8IdentifiableDigitalAsset {
     event ProductionBatchMinted(bytes32 indexed tokenId, bytes32[] usedLots, uint256 indexDate);
     event EntryInvalidated(bytes32 indexed tokenId, address indexed by, string reason);
     event DocumentHashSet(bytes32 indexed tokenId, bytes32 documentHash, address indexed by);
+    /// @notice Correzione esplicita di un'impronta già registrata: l'impronta
+    ///         precedente resta nella storia on-chain, con autore e motivo.
+    event DocumentHashCorrected(
+        bytes32 indexed tokenId,
+        bytes32 previousHash,
+        bytes32 newHash,
+        address indexed by,
+        string reason
+    );
 
     /// @dev Estratta dal modifier in una funzione interna: onlyAuthorized è
     ///      usato su 3 funzioni esterne di mint e, essendo un modifier, il
@@ -316,11 +325,35 @@ contract TraceabilityRegistry is LSP8IdentifiableDigitalAsset {
         }
     }
 
+    /// @dev Impronta unica (audit §56 punto 4): si registra una sola volta.
+    ///      Prima si poteva sovrascrivere e l'esploratore mostrava solo
+    ///      l'ultimo valore. Un errore si corregge con correctDocumentHash,
+    ///      che lascia traccia pubblica dell'impronta precedente e del motivo.
     function _setDocumentHash(bytes32 tokenId, bytes32 documentHash) internal {
         require(_exists(tokenId), "TraceabilityRegistry: tokenId does not exist");
         require(documentHash != bytes32(0), "TraceabilityRegistry: empty hash");
+        require(
+            _getDataForTokenId(tokenId, DOCUMENT_HASH_KEY).length == 0,
+            "TraceabilityRegistry: document hash already set"
+        );
         _setDataForTokenId(tokenId, DOCUMENT_HASH_KEY, abi.encode(documentHash));
         emit DocumentHashSet(tokenId, documentHash, msg.sender);
+    }
+
+    /// @notice Corregge un'impronta già registrata (es. caricato il documento
+    ///         sbagliato). Motivo obbligatorio; l'impronta precedente non si
+    ///         perde: resta nell'evento DocumentHashCorrected, visibile a
+    ///         tutti insieme a data, autore e motivo. Stessi permessi della
+    ///         registrazione (titolare o delegato, tier Gold).
+    function correctDocumentHash(bytes32 tokenId, bytes32 newHash, string calldata reason) external onlyGoldFeature {
+        require(bytes(reason).length > 0, "TraceabilityRegistry: correction reason required");
+        bytes memory raw = _getDataForTokenId(tokenId, DOCUMENT_HASH_KEY);
+        require(raw.length > 0, "TraceabilityRegistry: no document hash to correct");
+        bytes32 previousHash = abi.decode(raw, (bytes32));
+        require(newHash != bytes32(0), "TraceabilityRegistry: empty hash");
+        require(newHash != previousHash, "TraceabilityRegistry: same document hash");
+        _setDataForTokenId(tokenId, DOCUMENT_HASH_KEY, abi.encode(newHash));
+        emit DocumentHashCorrected(tokenId, previousHash, newHash, msg.sender, reason);
     }
 
     function getDocumentHash(bytes32 tokenId) external view returns (bytes32) {
@@ -375,5 +408,42 @@ contract TraceabilityRegistry is LSP8IdentifiableDigitalAsset {
         address old = address(membershipCorporate);
         membershipCorporate = IMembershipCorporate(newMembershipCorporate);
         emit MembershipCorporateUpdated(old, newMembershipCorporate);
+    }
+
+    // ---------------------------------------------------------------------
+    // Protezioni (audit §56 punti 4 e 10)
+    // ---------------------------------------------------------------------
+
+    /// @dev Token non trasferibili verso terzi: un lotto o un batch è una
+    ///      registrazione, non un bene da cedere. L'unico spostamento ammesso
+    ///      è verso il titolare attuale del registro, così dopo un cambio di
+    ///      UP (setRegistryAdmin) i token si possono riportare nel profilo
+    ///      giusto. Il conio (from = 0) resta libero; la distruzione non è
+    ///      esposta e comunque qui verrebbe rifiutata.
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        bytes32 tokenId,
+        bytes memory data
+    ) internal virtual override {
+        require(
+            from == address(0) || to == registryAdmin,
+            "TraceabilityRegistry: tokens can only move to registryAdmin"
+        );
+        super._beforeTokenTransfer(from, to, tokenId, data);
+    }
+
+    /// @dev LSP8 permette al proprietario del contratto (ChainIntegrate) di
+    ///      riscrivere direttamente qualunque dato di qualunque token:
+    ///      impronta, stato di annullamento, lotti collegati, metadata.
+    ///      Aggirerebbe tutte le regole di questo registro, impronta unica
+    ///      compresa. I dati dei token si cambiano solo con le funzioni del
+    ///      registro, ognuna con i suoi permessi e i suoi eventi.
+    function setDataForTokenId(bytes32, bytes32, bytes memory) public virtual override {
+        revert("TraceabilityRegistry: token data is write-protected");
+    }
+
+    function setDataBatchForTokenIds(bytes32[] memory, bytes32[] memory, bytes[] memory) public virtual override {
+        revert("TraceabilityRegistry: token data is write-protected");
     }
 }

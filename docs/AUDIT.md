@@ -9,13 +9,13 @@ indica gravità, stato e dove è stato risolto.
 | 1 | 🔴 Alta | Frontend | XSS nell'esploratore pubblico da metadata dei token | ✅ Risolto (PR 1) |
 | 2 | 🔴 Alta | Privacy | Documenti riservati in chiaro su IPFS ("il file resta privato" non vero) | ✅ Risolto: documenti cifrati |
 | 3 | 🟠 Media | Frontend | XSS nelle tabelle libreria foto/documenti (delegato → titolare) | ✅ Risolto (PR 1) |
-| 4 | 🟠 Media | Contratto | Hash documento sovrascrivibile | ⏳ Da decidere prima del mainnet |
+| 4 | 🟠 Media | Contratto | Hash documento sovrascrivibile | ✅ Risolto nei nuovi registri: impronta unica + correzione tracciata |
 | 5 | 🟠 Media | Backend | Endpoint pubblici senza limiti, cache disattivata | ✅ Risolto (PR 2) |
 | 6 | 🟠 Media | Frontend | Librerie da CDN, ERC725 senza versione fissata | ✅ Risolto (PR 1) |
 | 7 | 🟡 Bassa | Backend | Indirizzo del registro non normalizzato nel database | ✅ Risolto (PR 2) |
 | 8 | 🟡 Bassa | Backend | Ricaricare un elemento nascosto non lo rende visibile | ✅ Risolto (PR 2) |
 | 9 | 🟡 Bassa | Backend | Firme delle liste nella query string (log) | ✅ Risolto (PR 2) |
-| 10 | ℹ️ Info | Contratto | Token LSP8 trasferibili dal titolare | ⏳ Da decidere prima del mainnet |
+| 10 | ℹ️ Info | Contratto | Token LSP8 trasferibili dal titolare | ✅ Risolto nei nuovi registri: token non cedibili a terzi |
 | 11 | 🟡 Bassa | Frontend | Nessuna intestazione di sicurezza (CSP, clickjacking) | ✅ Risolto: CSP attiva |
 
 ---
@@ -126,14 +126,41 @@ validazione del file e nella lista delle deleghe.
 escape di tutti questi valori; `id` delle righe forzati a numero; link di
 download mostrati solo se il CID è valido.
 
-## 4. Hash documento sovrascrivibile — 🟠 Media — ⏳ Prima del mainnet
+## 4. Hash documento sovrascrivibile — 🟠 Media — ✅ Risolto (nuovi registri)
 
-`_setDocumentHash` scrive senza controllare se un hash esiste già: solo
-l'interfaccia lo impedisce. Un titolare Gold può sostituirlo in seguito;
-l'esploratore mostra solo l'ultimo valore (lo storico resta negli eventi
-`DocumentHashSet`). Proposta: rendere l'hash scrivibile una sola volta nel
-contratto (o mostrare lo storico). È una modifica al contratto: va fatta
-**prima del deploy su mainnet**, dopo non è più possibile.
+**Problema.** `_setDocumentHash` scriveva senza controllare se un hash esisteva
+già: solo l'interfaccia lo impediva. Un titolare Gold poteva sostituirlo in
+seguito e l'esploratore mostrava solo l'ultimo valore. In più il proprietario
+del contratto (ChainIntegrate) poteva riscrivere qualunque dato di un token con
+le funzioni LSP8 `setDataForTokenId` / `setDataBatchForTokenIds`.
+
+**Correzione** (`TraceabilityRegistry.sol`):
+- **Impronta unica**: `setDocumentHash` / `setDocumentHashBatch` rifiutano un
+  token che ha già un'impronta (il batch è atomico: un solo token già impostato
+  annulla tutto).
+- **Correzione tracciata**: `correctDocumentHash(tokenId, newHash, reason)`,
+  stessi permessi della registrazione (Gold, titolare o delegato). Motivo
+  obbligatorio; rifiutati hash vuoto e hash uguale a quello attuale. Emette
+  `DocumentHashCorrected(tokenId, previousHash, newHash, by, reason)`: lo
+  storico è pubblico e permanente.
+- **Dati dei token non riscrivibili**: `setDataForTokenId` e
+  `setDataBatchForTokenIds` pubbliche sono disattivate (revert); i dati si
+  scrivono solo dalle funzioni del registro.
+- **Backend**: la lettura delle entry include lo storico delle correzioni
+  (data, motivo, impronta sostituita) e le capacità del contratto, ricavate dal
+  bytecode (`correctDocumentHash` presente = versione 2).
+- **Esploratore**: storico sotto l'impronta; la verifica di un file ha tre
+  esiti — valido, **sostituito** (impronta vecchia, con la data della
+  correzione), non corrispondente. Pulsante "Correggi impronta" nelle pagine
+  private, solo sui registri che lo supportano.
+
+**Test**: `scripts/test-contract-rules.js` (20 controlli su hardhat; sul
+contratto precedente 17 falliscono) e prova end-to-end contratto → backend →
+esploratore in Chromium.
+
+**Limite**: vale per i registri creati dalla nuova Factory. I registri già
+deployati mantengono il codice precedente (un contratto non si aggiorna): per
+loro resta il blocco nell'interfaccia.
 
 ## 5. Endpoint pubblici senza limiti — 🟠 Media — ✅ Risolto (PR 2)
 
@@ -211,11 +238,17 @@ pagine usano `POST /photos/list` e `POST /documents/list` con la firma nel
 corpo. I GET restano temporaneamente per le pagine ancora in cache nel
 browser: **da togliere** in una prossima versione.
 
-## 10. Token trasferibili — ℹ️ Info — ⏳ Prima del mainnet
+## 10. Token trasferibili — ℹ️ Info — ✅ Risolto (nuovi registri)
 
-I token LSP8 vengono coniati al titolare, che può trasferirli. I dati restano
-nel registro, ma la proprietà del token può spostarsi (anche dopo un
-`setRegistryAdmin`). Decidere la regola prima del mainnet.
+I token LSP8 venivano coniati al titolare, che poteva trasferirli a chiunque: i
+dati restavano nel registro, ma la proprietà del token poteva finire a terzi
+(es. un titolare uscente dopo un `setRegistryAdmin` poteva tenerli o cederli).
+
+**Correzione**: `_beforeTokenTransfer` consente solo il conio e il trasferimento
+**verso il titolare attuale** (`registryAdmin`). Nessuna cessione a terzi,
+nemmeno tramite operatore; dopo un cambio di titolare in emergenza i token
+possono essere riportati al nuovo titolare. Stessi limiti del punto 4: vale per
+i registri creati dalla nuova Factory.
 
 ---
 
