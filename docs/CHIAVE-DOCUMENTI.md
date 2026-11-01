@@ -78,6 +78,12 @@ Backend e nodo IPFS sono su **due server diversi**, quindi servono due backup:
 | **backend** (`/var/www/traceability-registry`) | database e sue copie in `backend/backups/`, `.env` (compresa la chiave madre: una copia in più, oltre a quelle fuori dai server) |
 | **nodo IPFS** | i file: foto, metadata dei token, documenti cifrati. Senza, un guasto del nodo lascia i token on-chain senza nomi e immagini e i documenti irrecuperabili |
 
+> **Decisione attuale (01/11/2026)**: il backup esterno automatico è
+> rimandato a quando ci saranno clienti; per ora in mainnet c'è solo il
+> birrificio. Il backend è su una VPS Aruba, quindi Contabo Auto Backup non si
+> applica: quando servirà, va scelto il backup del fornitore di ciascun server.
+> La chiave madre ha già la sua copia fuori dal server.
+
 Il database è comodo da avere, ma non vitale: senza, i documenti si recuperano
 comunque con la chiave madre, **purché i file esistano ancora sul nodo IPFS**.
 

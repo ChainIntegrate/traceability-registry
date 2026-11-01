@@ -175,7 +175,7 @@ flowchart TB
 | Factory su testnet | [`0xDBDa…73dF`](https://explorer.execution.testnet.lukso.network/address/0xDBDa7678675Ee99A21D578480a8e5B838a5273dF) (versione 2: impronta unica, token non cedibili). La precedente [`0x5979…fee9`](https://explorer.execution.testnet.lukso.network/address/0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9) resta on-chain con i suoi registri di prova, non più usati da backend e pagine |
 | Funzionalità verificate dal vivo | registrazione lotti e batch, collegamenti, import JSON, librerie, deleghe (Silver), hash documento (Gold), sospensione (tier 0), multi-settore |
 | Dati di prova | dati reali di un birrificio pilota, su registri di test |
-| Mainnet | script di deploy pronto; manca la decisione su come far convivere testnet e mainnet |
+| Mainnet | deciso: solo mainnet, testnet abbandonata; primo servizio il birrificio pilota. Deploy in preparazione |
 
 Il percorso completo, con le decisioni prese e i problemi risolti, è nel [diario di sviluppo](docs/STORICO.md).
 
