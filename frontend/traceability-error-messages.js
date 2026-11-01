@@ -157,7 +157,7 @@
     },
     {
       match: "empty hash",
-      it: "Manca l'hash del documento da registrare.",
+      it: "Manca l'impronta del documento da registrare.",
       en: "The document hash to record is missing.",
     },
     {
@@ -210,7 +210,7 @@
     // --- Errori backend §49 (gate tier sull'upload IPFS) ---
     {
       match: "Membership sospesa o mai attiva",
-      it: "Membership sospesa: l'upload non è consentito finché non viene riattivata.",
+      it: "Membership sospesa: il caricamento di file non è consentito finché non viene riattivata.",
       en: "Membership suspended: uploads aren't allowed until it's reactivated.",
     },
     {
@@ -227,8 +227,8 @@
     // --- Errori tipici del provider RPC/UP extension ---
     {
       match: "insufficient funds",
-      it: "Fondi insufficienti per pagare il gas della transazione.",
-      en: "Insufficient funds to pay the transaction's gas.",
+      it: "Saldo in LYX insufficiente per pagare il costo dell'operazione.",
+      en: "Not enough LYX to pay for the operation.",
     },
     {
       match: "network changed",

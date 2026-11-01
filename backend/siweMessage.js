@@ -26,10 +26,25 @@
 const { ethers } = require("ethers");
 
 const SIWE_STATEMENT =
-  "[IT] Firma dalla tua Universal Profile: nessuna transazione on-chain, nessun costo di gas. " +
-  "Serve solo a dimostrare che sei davvero tu a chiedere questa operazione. " +
-  "[EN] Signature from your Universal Profile: no on-chain transaction, no gas cost. " +
-  "It only proves it's really you asking for this.";
+  "[IT] Firma di conferma dalla tua Universal Profile: non è un pagamento, non costa nulla " +
+  "e non scrive niente sulla blockchain. Serve solo a dimostrare che sei davvero tu a chiedere questa operazione. " +
+  "[EN] Confirmation signature from your Universal Profile: it is not a payment, costs nothing " +
+  "and writes nothing on the blockchain. It only proves it's really you asking for this.";
+
+// Nome dell'operazione mostrato nel messaggio da firmare, in italiano e
+// inglese. Deve restare IDENTICO tra frontend/traceability-siwe.js e
+// backend/siweMessage.js: il backend ricostruisce il messaggio e lo confronta.
+const OPERATION_LABELS = {
+  "Upload document": "Caricamento documento / Upload document",
+  "List documents": "Elenco documenti / List documents",
+  "Hide document": "Nascondi documento / Hide document",
+  "Download document": "Scarica documento / Download document",
+  "Upload photo": "Caricamento foto / Upload photo",
+  "List photos": "Elenco foto / List photos",
+  "Hide photo": "Nascondi foto / Hide photo",
+  "Pin metadata": "Salvataggio dati / Save data",
+  "Pin metadata batch": "Salvataggio dati / Save data",
+};
 
 /**
  * @param {object} p
@@ -42,7 +57,8 @@ const SIWE_STATEMENT =
  * @param {number} p.timestamp - secondi Unix, lo stesso già verificato per freschezza
  */
 function buildSiweMessage({ domain, uri, address, chainId, registryAddress, details, timestamp }) {
-  const operation = details.split("\n")[0].replace("ChainIntegrate TraceabilityRegistry - ", "");
+  const rawOperation = details.split("\n")[0].replace("ChainIntegrate TraceabilityRegistry - ", "");
+  const operation = OPERATION_LABELS[rawOperation] || rawOperation;
   const nonce = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(details)).slice(2);
   const issuedAt = new Date(timestamp * 1000).toISOString();
   return (
