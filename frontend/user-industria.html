@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TraceabilityRegistry — Pannello Azienda</title>
+<title>Track &amp; Trace — Pannello Azienda</title>
 <link rel="icon" type="image/x-icon" href="./favicon.ico">
 <script src="/shared/ethers/5.7.2/ethers.umd.min.js"></script>
 <script src="./traceability-json-validators.js"></script>
@@ -56,6 +56,7 @@
   .material-row input, .lot-row input { flex: 1; }
   #log { white-space: pre-wrap; background: #111; color: #0f0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; max-height: 110px; overflow-y: auto; }
 </style>
+<link rel="stylesheet" href="./traceability-theme.css">
 </head>
 <body>
 
@@ -63,10 +64,15 @@
 
 <header>
   <div class="header-left">
-    <img src="./logo_700x700.png" alt="TraceabilityRegistry" class="site-logo">
-    <h1>TraceabilityRegistry</h1>
+    <img src="./logo_700x700.png" alt="Track &amp; Trace" class="site-logo">
+    <h1>Track &amp; Trace<span class="site-sub" data-i18n="site.subtitle">Pannello azienda</span></h1>
   </div>
   <div class="header-right">
+    <div class="site-links">
+      <a href="./" data-i18n="nav.home">Home</a>
+      <a href="./how-it-works.html" data-i18n="nav.guide">Guida</a>
+      <a href="./explorer.html" data-i18n="nav.explorer">Esploratore</a>
+    </div>
     <div class="lang-toggle">
       <button id="langItBtn" class="lang-btn active">IT</button>
       <button id="langEnBtn" class="lang-btn">EN</button>
@@ -77,6 +83,16 @@
     <button id="disconnectBtn" class="secondary" data-i18n="connect.disconnect" style="display:none;">Disconnetti</button>
   </div>
 </header>
+
+<section id="welcomeCard" class="card tt-welcome">
+  <h2 data-i18n="welcome.title">Benvenuto nel tuo pannello</h2>
+  <p data-i18n="welcome.text"></p>
+  <div class="tt-ways">
+    <div class="tt-way"><strong data-i18n="welcome.upTitle"></strong><span data-i18n="welcome.upText"></span></div>
+    <div class="tt-way"><strong data-i18n="welcome.uwTitle"></strong><span data-i18n="welcome.uwText"></span></div>
+  </div>
+  <a class="tt-guide-link" href="./how-it-works.html" data-i18n="welcome.guide">Prima volta? Leggi la guida</a>
+</section>
 
 <section id="registrySetup" style="display:none;">
   <div class="card">
@@ -243,6 +259,17 @@ TraceabilityValidators.CONFIG.RECOGNIZED_DATE_TRAIT_TYPES_BATCH = ["Data Produzi
 // -----------------------------------------------------------------------
 const I18N = {
   it: {
+    "welcome.title": "Benvenuto nel tuo pannello",
+    "welcome.text": "Collega la Universal Profile della tua azienda per gestire il registro: registrare lotti e batch, collegare documenti, aggiungere delegati.",
+    "welcome.upTitle": "Estensione Universal Profile",
+    "welcome.upText": "Premi \"Connetti Universal Profile\" in alto e conferma nell'estensione di LUKSO.",
+    "welcome.uwTitle": "UP Wallet di ChainIntegrate",
+    "welcome.uwText": "Premi \"Connetti con UP Wallet\", copia il link e incollalo in \"Collega una dApp\" di UP Wallet.",
+    "welcome.guide": "Prima volta? Leggi la guida",
+    "nav.home": "Home",
+    "nav.guide": "Guida",
+    "nav.explorer": "Esploratore",
+    "site.subtitle": "Pannello azienda",
     "log.lotDecodeError": "Impossibile leggere i dati di un lotto: {msg}",
     "tier.0": "sospesa",
     "tier.1": "Bronze",
@@ -385,6 +412,17 @@ const I18N = {
     "log.collectionUpdated": "Dati della collezione aggiornati. Riferimento dell'operazione: {tx}", "log.collectionError": "Errore nei dati della collezione: {msg}",
   },
   en: {
+    "welcome.title": "Welcome to your panel",
+    "welcome.text": "Connect your company's Universal Profile to manage the registry: record lots and batches, link documents, add delegates.",
+    "welcome.upTitle": "Universal Profile extension",
+    "welcome.upText": "Press \"Connect Universal Profile\" above and confirm in LUKSO's extension.",
+    "welcome.uwTitle": "ChainIntegrate's UP Wallet",
+    "welcome.uwText": "Press \"Connect with UP Wallet\", copy the link and paste it in UP Wallet's \"Connect a dApp\".",
+    "welcome.guide": "First time? Read the guide",
+    "nav.home": "Home",
+    "nav.guide": "Guide",
+    "nav.explorer": "Explorer",
+    "site.subtitle": "Company panel",
     "log.lotDecodeError": "Could not read a lot's data: {msg}",
     "tier.0": "suspended",
     "tier.1": "Bronze",
@@ -680,6 +718,7 @@ async function connectWith(injected) {
   document.getElementById("connectUpWalletBtn").style.display = "none";
   document.getElementById("disconnectBtn").style.display = "inline-block";
   factory = new ethers.Contract(CONFIG.FACTORY_ADDRESS, FACTORY_ABI, signer);
+  document.getElementById("welcomeCard").style.display = "none";
   document.getElementById("registrySetup").style.display = "block";
   await loadMyRegistries();
 }
@@ -710,6 +749,7 @@ document.getElementById("disconnectBtn").addEventListener("click", () => {
   document.getElementById("disconnectBtn").style.display = "none";
   document.getElementById("registrySetup").style.display = "none";
   document.getElementById("app").style.display = "none";
+  document.getElementById("welcomeCard").style.display = "block";
 });
 
 async function showConnectedProfile(address) {

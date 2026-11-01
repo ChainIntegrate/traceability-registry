@@ -26,6 +26,7 @@
   .muted { color: #777; font-size: 0.85rem; }
   #log { white-space: pre-wrap; background: #111; color: #0f0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; max-height: 200px; overflow-y: auto; }
 </style>
+<link rel="stylesheet" href="./traceability-theme.css">
 </head>
 <body>
 
@@ -33,10 +34,15 @@
 
 <header>
   <div class="header-left">
-    <img src="./logo_700x700.png" alt="TraceabilityRegistry" class="site-logo">
+    <img src="./logo_700x700.png" alt="Track &amp; Trace" class="site-logo">
     <h1 data-i18n="header.title">TraceabilityRegistry — Admin ChainIntegrate</h1>
   </div>
   <div class="header-right">
+    <div class="site-links">
+      <a href="./" data-i18n="nav.home">Home</a>
+      <a href="./how-it-works.html" data-i18n="nav.guide">Guida</a>
+      <a href="./explorer.html" data-i18n="nav.explorer">Esploratore</a>
+    </div>
     <div class="lang-toggle">
       <button id="langItBtn" class="lang-btn active">IT</button>
       <button id="langEnBtn" class="lang-btn">EN</button>
@@ -105,6 +111,9 @@
 <script>
 const I18N = {
   it: {
+    "nav.home": "Home",
+    "nav.guide": "Guida",
+    "nav.explorer": "Esploratore",
     "header.title": "TraceabilityRegistry — Admin ChainIntegrate", "connect.button": "Connetti", "connect.connected": "Connesso",
     "warning.text": "ATTENZIONE: le funzioni qui sotto richiedono che l'indirizzo connesso sia chainIntegrateOwner (owner) — su un registry o sulla Factory, altrimenti le transazioni vengono rifiutate on-chain. Nessun controllo lato UI oltre a questo: la sicurezza vera è nel contratto.",
     "factory.title": "Factory — Membership Corporate", "factory.newMembership": "Nuovo indirizzo Membership Corporate",
@@ -141,6 +150,9 @@ const I18N = {
     "log.noAccountAuthorized": "Nessun account autorizzato — apri l'estensione della Universal Profile e riprova.",
   },
   en: {
+    "nav.home": "Home",
+    "nav.guide": "Guide",
+    "nav.explorer": "Explorer",
     "header.title": "TraceabilityRegistry — ChainIntegrate Admin", "connect.button": "Connect", "connect.connected": "Connected",
     "warning.text": "WARNING: the functions below require the connected address to be chainIntegrateOwner (owner) — on a registry or on the Factory, otherwise transactions will be rejected on-chain. No UI-side check beyond this: the real security is in the contract.",
     "factory.title": "Factory — Membership Corporate", "factory.newMembership": "New Membership Corporate address",

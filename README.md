@@ -186,7 +186,7 @@ Il percorso completo, con le decisioni prese e i problemi risolti, è nel [diari
 contracts/     TraceabilityRegistryFactory.sol, TraceabilityRegistry.sol
 scripts/       deploy.js e i test (test-*.js)
 backend/       API Express (firme, IPFS, librerie, lettura on-chain)
-frontend/      pagine per settore, explorer.html, admin.html, how-it-works.html
+frontend/      index.html (pagina iniziale), pagine per settore, explorer.html, admin.html, how-it-works.html, traceability-theme.css
 nginx/         intestazioni di sicurezza da includere nel blocco server di nginx
 schemas/       JSON Schema dei file di importazione
 docs/          STORICO.md, il diario di sviluppo

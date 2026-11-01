@@ -1891,6 +1891,31 @@ verifica con ERC-1271 sulla UP.
   sessione riusata e chiusa). L'abbinamento reale va provato dal vivo: il relay
   non è raggiungibile dall'ambiente di sviluppo.
 
+## 64. Nuovo aspetto, pagina iniziale e nome del profilo
+
+- **Nome del profilo al posto dell'indirizzo**: intestazione ed elenco dei
+  delegati mostrano "nome#4be6" come su LUKSO (LSP3Profile letto dalla UP, JSON
+  dal nostro gateway IPFS, ripulito e messo nella pagina solo come testo);
+  senza nome, l'indirizzo abbreviato. Indirizzo completo al passaggio del mouse.
+- **Tema grafico comune** `frontend/traceability-theme.css`, caricato dopo lo
+  stile di ogni pagina (nessun id o classe usati dal codice cambia): colori del
+  banner, intestazione blu notte, schede di navigazione a pillola, card con
+  ombre morbide, campi e pulsanti curati, pannello "attività" chiaro invece
+  della console nera, versione per telefono. Nome visibile "Track & Trace"
+  (come il banner) invece di "TraceabilityRegistry".
+- **Pagina iniziale** `frontend/index.html` (radice del dominio): cosa fa il
+  servizio, come si inizia, scelta del pannello per settore, i due modi di
+  collegarsi, collegamento alla guida.
+- **Home, Guida ed Esploratore** nell'intestazione di tutte le pagine (anche
+  admin e guida); nell'esploratore incorporato in un iframe i collegamenti si
+  nascondono.
+- **Pulsanti di connessione**: "Connetti Universal Profile" (bianco) e
+  "Connetti con UP Wallet" (blu), con icona; prima della connessione una scheda
+  di benvenuto spiega i due modi.
+- Prove in Chromium con la CSP del sito: nessuna violazione su tutte le pagine;
+  connessione con l'estensione LUKSO e con UP Wallet (simulati), e2e della
+  correzione dell'impronta.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
