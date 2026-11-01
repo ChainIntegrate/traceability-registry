@@ -11,6 +11,16 @@ const MAX_BLOCK_RANGE = parseInt(process.env.MAX_BLOCK_RANGE_PER_CALL || "10000"
 // errori per rispondere 400 invece di 500.
 class InvalidRegistryError extends Error {}
 
+// Riconoscimento della versione di un registro dal suo codice on-chain: i
+// registri già deployati restano con la versione con cui sono nati (il
+// contratto non si aggiorna). Il selettore di correctDocumentHash compare nel
+// bytecode solo nella versione con impronta correggibile, che è anche quella
+// con token non trasferibili e dati protetti: le tre regole sono arrivate
+// insieme. (Un testo come il motivo di un revert non si può cercare così: il
+// compilatore lo spezza in blocchi da 32 byte sparsi nel codice.)
+// Serve alle pagine per mostrare "Correggi impronta" solo dove funziona.
+const CORRECT_DOCUMENT_HASH_SELECTOR = ethers.utils.id("correctDocumentHash(bytes32,bytes32,string)").slice(2, 10);
+
 /**
  * Logica pura (nessuna chiamata di rete) di combinazione e ordinamento —
  * separata dalla route per essere testabile senza un nodo RPC vero.
@@ -116,11 +126,45 @@ function buildChainReadRouter(provider, factoryContract) {
       // Enumerazione via eventi, non tokenIdsOf/loop su contatore — i
       // tokenId sono hash, non sequenziali. Suddivisa in chunk: molti
       // provider RPC impongono un tetto massimo di blocchi per chiamata.
-      const [lotEvents, batchEvents, invalidatedEvents] = await Promise.all([
+      const [lotEvents, batchEvents, invalidatedEvents, correctionEvents, code] = await Promise.all([
         chunkedQueryFilter(registry, registry.filters.RawMaterialLotMinted(), fromBlock, latestBlock, MAX_BLOCK_RANGE),
         chunkedQueryFilter(registry, registry.filters.ProductionBatchMinted(), fromBlock, latestBlock, MAX_BLOCK_RANGE),
         chunkedQueryFilter(registry, registry.filters.EntryInvalidated(), fromBlock, latestBlock, MAX_BLOCK_RANGE),
+        chunkedQueryFilter(registry, registry.filters.DocumentHashCorrected(), fromBlock, latestBlock, MAX_BLOCK_RANGE),
+        provider.getCode(registryAddress),
       ]);
+      const isV2 = String(code || "").toLowerCase().includes(CORRECT_DOCUMENT_HASH_SELECTOR);
+      const capabilities = {
+        contractVersion: isV2 ? 2 : 1,
+        documentHashCorrection: isV2,
+        nonTransferable: isV2,
+      };
+
+      // Storico delle correzioni d'impronta, in ordine cronologico, con la
+      // data del blocco (una lettura per blocco distinto: le correzioni sono
+      // rare).
+      const blockTimestamps = {};
+      await Promise.all(
+        Array.from(new Set(correctionEvents.map((e) => e.blockNumber))).map(async (n) => {
+          const block = await provider.getBlock(n);
+          blockTimestamps[n] = block ? block.timestamp : null;
+        })
+      );
+      const documentHashHistoryByTokenId = {};
+      correctionEvents
+        .slice()
+        .sort((a, b) => a.blockNumber - b.blockNumber || a.logIndex - b.logIndex)
+        .forEach((e) => {
+          const list = documentHashHistoryByTokenId[e.args.tokenId] || (documentHashHistoryByTokenId[e.args.tokenId] = []);
+          list.push({
+            previousHash: e.args.previousHash,
+            newHash: e.args.newHash,
+            by: e.args.by,
+            reason: e.args.reason,
+            blockNumber: e.blockNumber,
+            timestamp: blockTimestamps[e.blockNumber],
+          });
+        });
 
       const invalidationInfoByTokenId = {};
       invalidatedEvents.forEach((e) => {
@@ -149,7 +193,7 @@ function buildChainReadRouter(provider, factoryContract) {
           } catch (err) {
             documentHash = null; // funzione assente su registry pre-esistenti (contratto non upgradabile)
           }
-          return { ...entry, metadataValue, documentHash };
+          return { ...entry, metadataValue, documentHash, documentHashHistory: documentHashHistoryByTokenId[entry.tokenId] || [] };
         })
       );
 
@@ -160,7 +204,7 @@ function buildChainReadRouter(provider, factoryContract) {
         collectionMetadataValue = null; // registry senza metadata di collezione ancora impostata: non blocca la risposta
       }
 
-      return { registryAddress, deployedAtBlock: fromBlock, collectionMetadataValue, entries: entriesWithMetadata };
+      return { registryAddress, deployedAtBlock: fromBlock, collectionMetadataValue, capabilities, entries: entriesWithMetadata };
   }
 
   

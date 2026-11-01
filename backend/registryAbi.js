@@ -30,6 +30,9 @@ const TRACEABILITY_REGISTRY_READ_ABI = [
   "event RawMaterialLotMinted(bytes32 indexed tokenId, uint256 indexDate)",
   "event ProductionBatchMinted(bytes32 indexed tokenId, bytes32[] usedLots, uint256 indexDate)",
   "event EntryInvalidated(bytes32 indexed tokenId, address indexed by, string reason)",
+  // Solo nei registri creati con la versione del contratto con impronta
+  // correggibile (audit §56 punto 4); sui registri precedenti non compare mai.
+  "event DocumentHashCorrected(bytes32 indexed tokenId, bytes32 previousHash, bytes32 newHash, address indexed by, string reason)",
   "event DelegateAdded(address indexed delegate, address indexed grantedBy)",
   "event DelegateRemoved(address indexed delegate, address indexed revokedBy)",
 ];

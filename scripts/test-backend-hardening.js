@@ -101,6 +101,7 @@ async function main() {
     async getBlockNumber() { getBlockCalls++; return blockNumber; }
     async perform(method) {
       if (method === "call") return ethers.utils.defaultAbiCoder.encode(["uint256"], [1]); // deployedAtBlock = 1
+      if (method === "getCode") return "0x6080"; // registro "vecchio": nessuna funzione nuova
       throw new Error("non simulato: " + method);
     }
   }
@@ -115,7 +116,7 @@ async function main() {
     scans = 0;
     const rs = await Promise.all(Array.from({ length: 20 }, () => fetch(urlOf(readServer) + "/api/traceability/registry/" + REG_CS + "/entries")));
     assert.ok(rs.every((r) => r.status === 200));
-    assert.strictEqual(scans, 3, "attese 3 query (lotti, batch, annullamenti) una volta sola, fatte " + scans);
+    assert.strictEqual(scans, 4, "attese 4 query (lotti, batch, annullamenti, correzioni impronta) una volta sola, fatte " + scans);
   });
 
   await check("/entries: al blocco successivo i dati vengono ricalcolati", async () => {
@@ -124,7 +125,9 @@ async function main() {
     await new Promise((r) => setTimeout(r, 2100)); // il numero di blocco si rilegge al massimo ogni 2 s
     const r = await fetch(urlOf(readServer) + "/api/traceability/registry/" + REG_CS.toLowerCase() + "/entries");
     assert.strictEqual(r.status, 200);
-    assert.strictEqual(scans, 3);
+    assert.strictEqual(scans, 4);
+    const body = await r.json();
+    assert.deepStrictEqual(body.capabilities, { contractVersion: 1, documentHashCorrection: false, nonTransferable: false });
   });
 
   await check("/delegates: stessa cache per blocco", async () => {
