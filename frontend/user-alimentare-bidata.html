@@ -346,6 +346,7 @@ const I18N = {
     "documents.needBoth": "Etichetta e file obbligatori.", "documents.hideError": "Errore nascondi documento: {msg}",
     "documents.selectLabel": "Documento (libreria, opzionale — richiede tier Gold)",
     "documents.hashAttachError": "Registrazione avvenuta, ma la registrazione dell'impronta del documento non è riuscita. {msg} Potrai registrarla dalla scheda del lotto.",
+    "documents.needsGoldBeforeMint": "Collegare un documento richiede una membership Gold: togli il documento selezionato oppure passa a Gold prima di registrare.",
     "log.documentHashBatchSet": "Hash documento registrato su {n} lotti ({hash}). Riferimento: {tx}",
     "delegates.title": "Deleghe", "delegates.requirement": "Richiede tier Silver o superiore sulla Membership Corporate.",
     "delegates.tierNote": "Tier registryAdmin: {tier} ({status})", "delegates.enabled": "deleghe abilitate",
@@ -481,6 +482,7 @@ const I18N = {
     "documents.needBoth": "Label and file are required.", "documents.hideError": "Hide document error: {msg}",
     "documents.selectLabel": "Document (library, optional — requires Gold tier)",
     "documents.hashAttachError": "Registration succeeded, but registering the document fingerprint failed. {msg} You can register it from the lot's card.",
+    "documents.needsGoldBeforeMint": "Linking a document requires a Gold membership: clear the selected document or upgrade to Gold before registering.",
     "log.documentHashBatchSet": "Document hash registered on {n} lots ({hash}). Reference: {tx}",
     "delegates.title": "Delegates", "delegates.requirement": "Requires Silver tier or higher on the Membership Corporate.",
     "delegates.tierNote": "registryAdmin tier: {tier} ({status})", "delegates.enabled": "delegation enabled",
@@ -1089,6 +1091,20 @@ async function refreshTierNote() {
 // carichi comunque foto/documenti nella libreria dall'interfaccia normale,
 // oltre a intasare inutilmente il nodo IPFS visto che il mint fallirebbe
 // comunque. Chiamata dopo ogni lettura del tier.
+// Impronta del documento = funzione Gold (onlyGoldFeature nel contratto).
+// Nei moduli di registrazione la scelta del documento si disattiva prima del
+// conio se il tier letto non è Gold: altrimenti il lotto veniva registrato e
+// l'impronta falliva dopo, a metà operazione. Tier non ancora letto (null):
+// la scelta resta attiva e decide il contratto, come nelle schede.
+function documentNeedsGold() {
+  return activeRegistryTier !== null && activeRegistryTier < GOLD_TIER;
+}
+function gateDocumentSelect(docSel) {
+  if (!documentNeedsGold()) return;
+  docSel.innerHTML = "<option value=''>" + esc(activeRegistryTier === 0 ? t("card.setDocumentHashSuspended") : t("card.setDocumentHashNeedsGold")) + "</option>";
+  docSel.disabled = true;
+}
+
 function applyMembershipGate() {
   const suspended = activeRegistryTier === 0;
   const uploadBtn = document.getElementById("uploadPhotoBtn");
@@ -1288,8 +1304,12 @@ async function processRawMaterialJson(json, previewEl) {
   const docSel = document.getElementById("rmDocumentSelect");
   docSel.innerHTML = "<option value=''>" + t("common.noneF") + "</option>";
   documents.forEach((d) => { const o = document.createElement("option"); o.value = d.keccak256_hash; o.textContent = d.label; docSel.appendChild(o); });
+  gateDocumentSelect(docSel);
 
   document.getElementById("confirmMintRawMaterialBtn").addEventListener("click", async () => {
+    // controllo prima del conio: il tier potrebbe essere stato letto dopo
+    // il riempimento della select
+    if (docSel.value && documentNeedsGold()) { alert(t("documents.needsGoldBeforeMint")); return; }
     try {
       const photoVal = sel.value;
       const resolvePhoto = () => (photoVal ? toLibraryEntry(JSON.parse(photoVal)) : null);
@@ -1480,8 +1500,12 @@ async function processProductionBatchJson(json, previewEl) {
   const docSel = document.getElementById("batchDocumentSelect");
   docSel.innerHTML = "<option value=''>" + t("common.noneF") + "</option>";
   documents.forEach((d) => { const o = document.createElement("option"); o.value = d.keccak256_hash; o.textContent = d.label; docSel.appendChild(o); });
+  gateDocumentSelect(docSel);
 
   document.getElementById("confirmMintBatchBtn").addEventListener("click", async () => {
+    // controllo prima del conio: il tier potrebbe essere stato letto dopo
+    // il riempimento della select
+    if (docSel.value && documentNeedsGold()) { alert(t("documents.needsGoldBeforeMint")); return; }
     try {
       let chosenDateStr = extracted.dateCandidates[0].value;
       if (extracted.requiresDateSelection) {
