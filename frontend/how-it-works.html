@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Come funziona — TraceabilityRegistry</title>
+<title>Come funziona — Track &amp; Trace</title>
 <link rel="icon" type="image/x-icon" href="./favicon.ico">
 <style>
   :root { --powder-line: #e2e2e2; --ink-soft: #6b7280; --blueprint: #3454d1; --amber: #a66a1e; --amber-bg: #fdf2e2; }
@@ -37,13 +37,19 @@
   .flow-arrow { align-self: center; color: var(--blueprint); font-size: 1.3rem; }
   @media (max-width: 560px) { .flow { flex-direction: column; } .flow-step { flex: none; } .flow-arrow { transform: rotate(90deg); } }
 </style>
+<link rel="stylesheet" href="./traceability-theme.css">
 </head>
-<body>
+<body class="tt-guide">
 
 <header>
   <div class="header-left">
-    <img src="./logo_700x700.png" alt="TraceabilityRegistry" class="site-logo" onerror="this.style.display='none'">
-    <strong>TraceabilityRegistry</strong>
+    <img src="./logo_700x700.png" alt="Track &amp; Trace" class="site-logo" onerror="this.style.display='none'">
+    <h1>Track &amp; Trace<span class="site-sub" data-i18n="site.subtitle">Guida</span></h1>
+  </div>
+  <div class="site-links">
+    <a href="./" data-i18n="nav.home">Home</a>
+    <a href="./how-it-works.html" data-i18n="nav.guide" aria-current="page">Guida</a>
+    <a href="./explorer.html" data-i18n="nav.explorer">Esploratore</a>
   </div>
   <div class="lang-toggle">
     <button id="langItBtn" class="lang-btn active">IT</button>
@@ -54,10 +60,10 @@
 <main>
 
 <h1 data-i18n="hiw.title">Come funziona</h1>
-<p class="lede" data-i18n="hiw.lede">Una guida breve e pratica: cosa fa TraceabilityRegistry, cosa succede davvero quando registri qualcosa, e cosa resta pubblico per sempre.</p>
+<p class="lede" data-i18n="hiw.lede">Una guida breve e pratica: cosa fa Track &amp; Trace, cosa succede davvero quando registri qualcosa, e cosa resta pubblico per sempre.</p>
 
 <h2 data-i18n="hiw.whatH">Di cosa si tratta</h2>
-<p data-i18n="hiw.whatP">TraceabilityRegistry ti permette di registrare in modo permanente e verificabile la tracciabilità dei tuoi prodotti — dalle materie prime in ingresso ai lotti/batch di produzione — sulla blockchain LUKSO, con i batch collegati ai lotti usati per produrli. Il tuo registro è tuo: nessun altro può scriverci, nemmeno ChainIntegrate.</p>
+<p data-i18n="hiw.whatP">Track &amp; Trace ti permette di registrare in modo permanente e verificabile la tracciabilità dei tuoi prodotti — dalle materie prime in ingresso ai lotti/batch di produzione — sulla blockchain LUKSO, con i batch collegati ai lotti usati per produrli. Il tuo registro è tuo: nessun altro può scriverci, nemmeno ChainIntegrate.</p>
 
 <h2 data-i18n="hiw.entriesH">Materie prime e batch</h2>
 <p data-i18n="hiw.entriesP">Ci sono due tipi di voce: un <strong>lotto di materia prima</strong> (qualcosa che acquisti o ricevi) e un <strong>batch di produzione</strong> (qualcosa che produci, che può richiamare uno o più lotti usati). Un batch è identificato da un "Codice" a tua scelta — lo stesso codice guida anche quale foto associare quando lo consulti nell'esploratore.</p>
@@ -152,10 +158,14 @@
 <script>
   const I18N = {
     it: {
+      "site.subtitle": "Guida",
+      "nav.home": "Home",
+      "nav.guide": "Guida",
+      "nav.explorer": "Esploratore",
       "hiw.title": "Come funziona",
-      "hiw.lede": "Una guida breve e pratica: cosa fa TraceabilityRegistry, cosa succede davvero quando registri qualcosa, e cosa resta pubblico per sempre.",
+      "hiw.lede": "Una guida breve e pratica: cosa fa Track &amp; Trace, cosa succede davvero quando registri qualcosa, e cosa resta pubblico per sempre.",
       "hiw.whatH": "Di cosa si tratta",
-      "hiw.whatP": "TraceabilityRegistry ti permette di registrare in modo permanente e verificabile la tracciabilità dei tuoi prodotti — dalle materie prime in ingresso ai lotti/batch di produzione — sulla blockchain LUKSO, con i batch collegati ai lotti usati per produrli. Il tuo registro è tuo: nessun altro può scriverci, nemmeno ChainIntegrate.",
+      "hiw.whatP": "Track &amp; Trace ti permette di registrare in modo permanente e verificabile la tracciabilità dei tuoi prodotti — dalle materie prime in ingresso ai lotti/batch di produzione — sulla blockchain LUKSO, con i batch collegati ai lotti usati per produrli. Il tuo registro è tuo: nessun altro può scriverci, nemmeno ChainIntegrate.",
       "hiw.entriesH": "Materie prime e batch",
       "hiw.entriesP": "Ci sono due tipi di voce: un <strong>lotto di materia prima</strong> (qualcosa che acquisti o ricevi) e un <strong>batch di produzione</strong> (qualcosa che produci, che può richiamare uno o più lotti usati). Un batch è identificato da un \"Codice\" a tua scelta — lo stesso codice guida anche quale foto associare quando lo consulti nell'esploratore.",
       "hiw.crossH": "La tracciabilità incrociata dei lotti",
@@ -203,10 +213,14 @@
       "hiw.signP": "Alcune operazioni (caricare un file nella libreria, consultare le tue foto/documenti, nasconderne uno) chiedono solo una firma dalla tua Universal Profile — non una transazione sulla blockchain. Non costa gas e non sposta nessun fondo: serve solo a dimostrare che sei davvero tu a fare quella richiesta, prima che ChainIntegrate esegua l'operazione lato server.",
     },
     en: {
+      "site.subtitle": "Guide",
+      "nav.home": "Home",
+      "nav.guide": "Guide",
+      "nav.explorer": "Explorer",
       "hiw.title": "How it works",
-      "hiw.lede": "A short, practical guide: what TraceabilityRegistry does, what actually happens when you record something, and what stays public forever.",
+      "hiw.lede": "A short, practical guide: what Track &amp; Trace does, what actually happens when you record something, and what stays public forever.",
       "hiw.whatH": "What this is",
-      "hiw.whatP": "TraceabilityRegistry lets you record your products' traceability — from incoming raw materials to production lots/batches — permanently and verifiably on the LUKSO blockchain, with each batch linked to the lots used to make it. You own your registry: nobody else can write to it, not even ChainIntegrate.",
+      "hiw.whatP": "Track &amp; Trace lets you record your products' traceability — from incoming raw materials to production lots/batches — permanently and verifiably on the LUKSO blockchain, with each batch linked to the lots used to make it. You own your registry: nobody else can write to it, not even ChainIntegrate.",
       "hiw.entriesH": "Raw materials and batches",
       "hiw.entriesP": "There are two kinds of entries: a <strong>raw material lot</strong> (something you buy or receive) and a <strong>production batch</strong> (something you produce, which can reference one or more lots used). A batch is identified by a \"Code\" of your choosing — the same code also drives which photo gets shown when you look it up in the explorer.",
       "hiw.crossH": "Cross-traceability of lots",
@@ -259,7 +273,7 @@
 
   function applyLanguage() {
     document.documentElement.lang = currentLang;
-    document.title = currentLang === "it" ? "Come funziona — TraceabilityRegistry" : "How it works — TraceabilityRegistry";
+    document.title = currentLang === "it" ? "Come funziona — Track & Trace" : "How it works — Track & Trace";
     document.querySelectorAll("[data-i18n]").forEach((el) => {
       const key = el.getAttribute("data-i18n");
       const dict = I18N[currentLang] || I18N.it;

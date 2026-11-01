@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Track &amp; Trace — Tracciabilità di filiera su blockchain</title>
+<meta name="description" content="Track & Trace di ChainIntegrate: registra lotti di materia prima e batch di produzione su blockchain LUKSO, collega i documenti con la loro impronta e fai verificare la filiera a chiunque.">
+<link rel="icon" type="image/x-icon" href="./favicon.ico">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0 auto; padding: 20px; }
+  .hero { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 28px; align-items: center; margin: 10px 0 34px; }
+  .hero h2 { font-size: 2.3rem; line-height: 1.12; letter-spacing: -0.02em; margin: 0 0 14px; }
+  .hero h2 span { background: linear-gradient(120deg, var(--tt-blue), var(--tt-cyan)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { color: var(--tt-ink-soft); font-size: 1.08rem; margin: 0 0 22px; }
+  .hero img { width: 100%; border-radius: 20px; box-shadow: 0 18px 44px rgba(11, 29, 58, 0.3); }
+  .cta { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; border-radius: 12px; padding: 12px 20px; font-weight: 700; font-size: 0.95rem; }
+  .btn-primary { background: linear-gradient(120deg, var(--tt-blue), var(--tt-blue-2)); color: #fff; box-shadow: 0 6px 16px rgba(30, 107, 255, 0.3); }
+  .btn-primary:hover { filter: brightness(1.05); }
+  .btn-ghost { background: #fff; color: var(--tt-ink); border: 1px solid #cdd6e4; }
+  .btn-ghost:hover { background: #f2f6fd; }
+  .section { margin: 0 0 34px; }
+  .section > h2 { font-size: 1.5rem; letter-spacing: -0.01em; margin: 0 0 6px; }
+  .section > p.lead { color: var(--tt-ink-soft); margin: 0 0 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+  .tile { background: var(--tt-card); border: 1px solid var(--tt-line); border-radius: var(--tt-radius); padding: 20px; box-shadow: var(--tt-shadow); }
+  .tile h3 { margin: 10px 0 6px; font-size: 1.05rem; }
+  .tile p { margin: 0; color: var(--tt-ink-soft); font-size: 0.92rem; }
+  .ico { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; background: linear-gradient(135deg, #e6efff, #dff7fc); }
+  .steps { counter-reset: step; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+  .step { position: relative; padding-top: 26px; }
+  .step::before { counter-increment: step; content: counter(step); position: absolute; top: -14px; left: 20px; width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(120deg, var(--tt-blue), var(--tt-cyan)); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 14px rgba(30, 107, 255, 0.35); }
+  a.panel { text-decoration: none; color: inherit; display: block; transition: transform 0.18s, box-shadow 0.18s; }
+  a.panel:hover { transform: translateY(-3px); box-shadow: var(--tt-shadow-hover); }
+  a.panel .go { margin-top: 12px; color: var(--tt-blue); font-weight: 700; font-size: 0.9rem; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .note { font-size: 0.85rem; color: var(--tt-ink-soft); margin-top: 10px; }
+  .band { background: linear-gradient(120deg, var(--tt-navy), var(--tt-navy-2) 60%, #1b4a8f); color: #fff; border-radius: 20px; padding: 26px; display: flex; gap: 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; box-shadow: 0 10px 30px rgba(11, 29, 58, 0.25); }
+  .band h2 { margin: 0 0 6px; font-size: 1.35rem; }
+  .band p { margin: 0; color: #c9dbff; }
+  .band .btn-ghost { border: none; }
+  @media (max-width: 820px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero h2 { font-size: 1.8rem; }
+    .split { grid-template-columns: 1fr; }
+  }
+</style>
+<link rel="stylesheet" href="./traceability-theme.css">
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <img src="./logo_700x700.png" alt="Track &amp; Trace" class="site-logo">
+    <h1>Track &amp; Trace<span class="site-sub" data-i18n="site.subtitle">Tracciabilità di filiera su blockchain</span></h1>
+  </div>
+  <div class="header-right">
+    <div class="site-links">
+      <a href="./how-it-works.html" data-i18n="nav.guide">Guida</a>
+      <a href="./explorer.html" data-i18n="nav.explorer">Esploratore</a>
+    </div>
+    <div class="lang-toggle">
+      <button id="langItBtn" class="lang-btn active">IT</button>
+      <button id="langEnBtn" class="lang-btn">EN</button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div>
+    <h2 data-i18n-html="hero.title">La storia dei tuoi prodotti, <span>verificabile da chiunque</span>.</h2>
+    <p data-i18n="hero.text">Registra i lotti di materia prima che ricevi e i batch che produci: il sistema li collega tra loro e li conserva in modo permanente sulla blockchain LUKSO. Clienti, distributori e controllori possono verificare la filiera, senza doversi fidare di nessuno.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="#pannelli" data-i18n="hero.ctaPanel">Accedi al tuo pannello</a>
+      <a class="btn btn-ghost" href="./explorer.html" data-i18n="hero.ctaExplore">Esplora un registro</a>
+      <a class="btn btn-ghost" href="./how-it-works.html" data-i18n="hero.ctaGuide">Come funziona</a>
+    </div>
+  </div>
+  <img src="./banner._1800x1004.png" alt="">
+</section>
+
+<section class="section">
+  <h2 data-i18n="what.title">Cosa puoi fare</h2>
+  <p class="lead" data-i18n="what.lead">Tutto quello che serve per raccontare e dimostrare l'origine dei tuoi prodotti.</p>
+  <div class="grid">
+    <div class="tile"><div class="ico">📦</div><h3 data-i18n="what.lotsH">Lotti e batch collegati</h3><p data-i18n="what.lotsP">Ogni batch di produzione porta con sé i lotti di materia prima usati per produrlo: la filiera si ricostruisce con un clic.</p></div>
+    <div class="tile"><div class="ico">🔏</div><h3 data-i18n="what.docsH">Documenti con impronta</h3><p data-i18n="what.docsP">Fatture, DDT e certificati restano cifrati e riservati; sulla blockchain va solo la loro impronta digitale, che prova che non sono stati modificati.</p></div>
+    <div class="tile"><div class="ico">🔎</div><h3 data-i18n="what.verifyH">Verifica pubblica</h3><p data-i18n="what.verifyP">L'esploratore mostra a chiunque la storia del registro e verifica un documento direttamente nel browser, senza caricarlo da nessuna parte.</p></div>
+    <div class="tile"><div class="ico">🛡️</div><h3 data-i18n="what.safeH">Nessuna modifica nascosta</h3><p data-i18n="what.safeP">Una registrazione sbagliata si annulla con un motivo, mai si cancella. Un'impronta errata si corregge alla luce del sole, con lo storico visibile.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2 data-i18n="start.title">Come si inizia</h2>
+  <p class="lead" data-i18n="start.lead">Quattro passi, una volta sola.</p>
+  <div class="steps">
+    <div class="tile step"><h3 data-i18n="start.s1H">Membership ChainIntegrate</h3><p data-i18n="start.s1P">Attiva una membership aziendale: il livello decide le funzioni (deleghe da Silver, impronte dei documenti con Gold).</p></div>
+    <div class="tile step"><h3 data-i18n="start.s2H">La tua Universal Profile</h3><p data-i18n="start.s2P">È l'identità digitale dell'azienda su LUKSO: con lei firmi e registri, senza password da condividere.</p></div>
+    <div class="tile step"><h3 data-i18n="start.s3H">Il settore</h3><p data-i18n="start.s3P">ChainIntegrate abilita il tuo profilo per il settore giusto (alimentare o industria).</p></div>
+    <div class="tile step"><h3 data-i18n="start.s4H">Il tuo registro</h3><p data-i18n="start.s4P">Dal pannello del tuo settore crei il registro con un clic: da lì registri lotti, batch e documenti.</p></div>
+  </div>
+</section>
+
+<section class="section" id="pannelli">
+  <h2 data-i18n="panels.title">Scegli il tuo pannello</h2>
+  <p class="lead" data-i18n="panels.lead">Il pannello dipende dal settore abilitato per la tua azienda.</p>
+  <div class="grid">
+    <a class="tile panel" href="./user-alimentare-bidata.html"><div class="ico">🍺</div><h3 data-i18n="panels.biH">Alimentare — due date</h3><p data-i18n="panels.biP">Per prodotti fatti in una data e confezionati in un'altra: birra, vino, conserve.</p><div class="go" data-i18n="panels.open">Apri il pannello →</div></a>
+    <a class="tile panel" href="./user-alimentare-monodata.html"><div class="ico">🧀</div><h3 data-i18n="panels.monoH">Alimentare — una data</h3><p data-i18n="panels.monoP">Per prodotti con una sola data di produzione: pane, formaggi freschi, prodotti confezionati subito.</p><div class="go" data-i18n="panels.open">Apri il pannello →</div></a>
+    <a class="tile panel" href="./user-industria.html"><div class="ico">🏭</div><h3 data-i18n="panels.indH">Industria</h3><p data-i18n="panels.indP">Per prodotti non alimentari: componenti, semilavorati, prodotti finiti.</p><div class="go" data-i18n="panels.open">Apri il pannello →</div></a>
+  </div>
+</section>
+
+<section class="section">
+  <h2 data-i18n="connect.title">Due modi di collegarsi</h2>
+  <p class="lead" data-i18n="connect.lead">In entrambi i casi l'account è la Universal Profile della tua azienda.</p>
+  <div class="split">
+    <div class="tile"><div class="ico">🟣</div><h3 data-i18n="connect.upH">Estensione Universal Profile</h3><p data-i18n="connect.upP">L'estensione ufficiale di LUKSO per il browser: premi "Connetti Universal Profile" nel pannello e conferma.</p></div>
+    <div class="tile"><div class="ico">🔐</div><h3 data-i18n="connect.uwH">UP Wallet di ChainIntegrate</h3><p data-i18n="connect.uwP">L'estensione per il browser (o l'app Android) che firma con una chiave del tuo dispositivo, protetta da passkey. Premi "Connetti con UP Wallet", copia il link e incollalo in "Collega una dApp".</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="band">
+    <div>
+      <h2 data-i18n="band.title">Vuoi sapere di più?</h2>
+      <p data-i18n="band.text">La guida spiega cosa succede davvero quando registri qualcosa, cosa resta pubblico e come sono protetti i documenti.</p>
+    </div>
+    <a class="btn btn-ghost" href="./how-it-works.html" data-i18n="band.cta">Leggi la guida</a>
+  </div>
+</section>
+
+<footer style="padding:16px 28px; margin-top:20px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; font-size:13px; color:var(--ink-soft);">
+  <div data-i18n="footer.rights">© 2026 Chain Integrate — Tutti i diritti riservati.</div>
+  <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+    <span data-i18n="footer.consulting">Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate</span>
+    <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="ChainIntegrate su LinkedIn" style="color:var(--blueprint); display:inline-flex;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+    </a>
+    <span>·</span>
+    <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener" data-i18n="footer.telegram" style="color:var(--blueprint); text-decoration:none; font-weight:600;">Assistenza via Telegram</a>
+  </div>
+</footer>
+
+<script>
+const I18N = {
+  it: {
+    "site.subtitle": "Tracciabilità di filiera su blockchain",
+    "nav.guide": "Guida", "nav.explorer": "Esploratore",
+    "hero.title": "La storia dei tuoi prodotti, <span>verificabile da chiunque</span>.",
+    "hero.text": "Registra i lotti di materia prima che ricevi e i batch che produci: il sistema li collega tra loro e li conserva in modo permanente sulla blockchain LUKSO. Clienti, distributori e controllori possono verificare la filiera, senza doversi fidare di nessuno.",
+    "hero.ctaPanel": "Accedi al tuo pannello", "hero.ctaExplore": "Esplora un registro", "hero.ctaGuide": "Come funziona",
+    "what.title": "Cosa puoi fare", "what.lead": "Tutto quello che serve per raccontare e dimostrare l'origine dei tuoi prodotti.",
+    "what.lotsH": "Lotti e batch collegati", "what.lotsP": "Ogni batch di produzione porta con sé i lotti di materia prima usati per produrlo: la filiera si ricostruisce con un clic.",
+    "what.docsH": "Documenti con impronta", "what.docsP": "Fatture, DDT e certificati restano cifrati e riservati; sulla blockchain va solo la loro impronta digitale, che prova che non sono stati modificati.",
+    "what.verifyH": "Verifica pubblica", "what.verifyP": "L'esploratore mostra a chiunque la storia del registro e verifica un documento direttamente nel browser, senza caricarlo da nessuna parte.",
+    "what.safeH": "Nessuna modifica nascosta", "what.safeP": "Una registrazione sbagliata si annulla con un motivo, mai si cancella. Un'impronta errata si corregge alla luce del sole, con lo storico visibile.",
+    "start.title": "Come si inizia", "start.lead": "Quattro passi, una volta sola.",
+    "start.s1H": "Membership ChainIntegrate", "start.s1P": "Attiva una membership aziendale: il livello decide le funzioni (deleghe da Silver, impronte dei documenti con Gold).",
+    "start.s2H": "La tua Universal Profile", "start.s2P": "È l'identità digitale dell'azienda su LUKSO: con lei firmi e registri, senza password da condividere.",
+    "start.s3H": "Il settore", "start.s3P": "ChainIntegrate abilita il tuo profilo per il settore giusto (alimentare o industria).",
+    "start.s4H": "Il tuo registro", "start.s4P": "Dal pannello del tuo settore crei il registro con un clic: da lì registri lotti, batch e documenti.",
+    "panels.title": "Scegli il tuo pannello", "panels.lead": "Il pannello dipende dal settore abilitato per la tua azienda.",
+    "panels.biH": "Alimentare — due date", "panels.biP": "Per prodotti fatti in una data e confezionati in un'altra: birra, vino, conserve.",
+    "panels.monoH": "Alimentare — una data", "panels.monoP": "Per prodotti con una sola data di produzione: pane, formaggi freschi, prodotti confezionati subito.",
+    "panels.indH": "Industria", "panels.indP": "Per prodotti non alimentari: componenti, semilavorati, prodotti finiti.",
+    "panels.open": "Apri il pannello →",
+    "connect.title": "Due modi di collegarsi", "connect.lead": "In entrambi i casi l'account è la Universal Profile della tua azienda.",
+    "connect.upH": "Estensione Universal Profile", "connect.upP": "L'estensione ufficiale di LUKSO per il browser: premi \"Connetti Universal Profile\" nel pannello e conferma.",
+    "connect.uwH": "UP Wallet di ChainIntegrate", "connect.uwP": "L'estensione per il browser (o l'app Android) che firma con una chiave del tuo dispositivo, protetta da passkey. Premi \"Connetti con UP Wallet\", copia il link e incollalo in \"Collega una dApp\".",
+    "band.title": "Vuoi sapere di più?", "band.text": "La guida spiega cosa succede davvero quando registri qualcosa, cosa resta pubblico e come sono protetti i documenti.", "band.cta": "Leggi la guida",
+    "footer.rights": "© 2026 Chain Integrate — Tutti i diritti riservati.",
+    "footer.consulting": "Servizi di consulenza in integrazione dati & blockchain a cura di ChainIntegrate",
+    "footer.telegram": "Assistenza via Telegram",
+  },
+  en: {
+    "site.subtitle": "Supply chain traceability on blockchain",
+    "nav.guide": "Guide", "nav.explorer": "Explorer",
+    "hero.title": "Your products' story, <span>verifiable by anyone</span>.",
+    "hero.text": "Record the raw material lots you receive and the batches you produce: the system links them together and keeps them permanently on the LUKSO blockchain. Customers, distributors and inspectors can verify the supply chain without having to trust anyone.",
+    "hero.ctaPanel": "Go to your panel", "hero.ctaExplore": "Explore a registry", "hero.ctaGuide": "How it works",
+    "what.title": "What you can do", "what.lead": "Everything you need to tell and prove where your products come from.",
+    "what.lotsH": "Linked lots and batches", "what.lotsP": "Each production batch carries the raw material lots used to make it: the supply chain is rebuilt with one click.",
+    "what.docsH": "Documents with a fingerprint", "what.docsP": "Invoices, delivery notes and certificates stay encrypted and private; only their digital fingerprint goes on the blockchain, proving they have not been changed.",
+    "what.verifyH": "Public verification", "what.verifyP": "The explorer shows anyone the registry's history and checks a document right in the browser, without uploading it anywhere.",
+    "what.safeH": "No hidden changes", "what.safeP": "A wrong entry is cancelled with a reason, never deleted. A wrong fingerprint is corrected in the open, with its history visible.",
+    "start.title": "Getting started", "start.lead": "Four steps, once.",
+    "start.s1H": "ChainIntegrate membership", "start.s1P": "Activate a company membership: its level sets the features (delegates from Silver, document fingerprints with Gold).",
+    "start.s2H": "Your Universal Profile", "start.s2P": "It is the company's digital identity on LUKSO: you sign and record with it, with no passwords to share.",
+    "start.s3H": "The sector", "start.s3P": "ChainIntegrate enables your profile for the right sector (food or industry).",
+    "start.s4H": "Your registry", "start.s4P": "From your sector's panel you create the registry with one click: from there you record lots, batches and documents.",
+    "panels.title": "Choose your panel", "panels.lead": "The panel depends on the sector enabled for your company.",
+    "panels.biH": "Food — two dates", "panels.biP": "For products made on one date and packaged on another: beer, wine, preserves.",
+    "panels.monoH": "Food — one date", "panels.monoP": "For products with a single production date: bread, fresh cheese, products packaged right away.",
+    "panels.indH": "Industry", "panels.indP": "For non-food products: components, semi-finished and finished goods.",
+    "panels.open": "Open the panel →",
+    "connect.title": "Two ways to connect", "connect.lead": "Either way, the account is your company's Universal Profile.",
+    "connect.upH": "Universal Profile extension", "connect.upP": "LUKSO's official browser extension: press \"Connect Universal Profile\" in the panel and confirm.",
+    "connect.uwH": "ChainIntegrate's UP Wallet", "connect.uwP": "The browser extension (or Android app) that signs with a key on your device, protected by a passkey. Press \"Connect with UP Wallet\", copy the link and paste it in \"Connect a dApp\".",
+    "band.title": "Want to know more?", "band.text": "The guide explains what really happens when you record something, what stays public and how documents are protected.", "band.cta": "Read the guide",
+    "footer.rights": "© 2026 Chain Integrate — All rights reserved.",
+    "footer.consulting": "Data integration & blockchain consulting services by ChainIntegrate",
+    "footer.telegram": "Support via Telegram",
+  },
+};
+
+let currentLang = "it";
+try { currentLang = localStorage.getItem("traceabilityLang") || "it"; } catch (e) { /* storage non disponibile */ }
+
+function applyLanguage() {
+  const dict = I18N[currentLang] || I18N.it;
+  document.documentElement.lang = currentLang;
+  document.title = "Track & Trace — " + dict["site.subtitle"];
+  document.querySelectorAll("[data-i18n]").forEach((el) => { if (dict[el.dataset.i18n] !== undefined) el.textContent = dict[el.dataset.i18n]; });
+  // Testo fisso della pagina (solo <span> di stile): nessun dato esterno.
+  document.querySelectorAll("[data-i18n-html]").forEach((el) => { if (dict[el.dataset.i18nHtml] !== undefined) el.innerHTML = dict[el.dataset.i18nHtml]; });
+  document.getElementById("langItBtn").classList.toggle("active", currentLang === "it");
+  document.getElementById("langEnBtn").classList.toggle("active", currentLang === "en");
+}
+const setLang = (l) => { currentLang = l; try { localStorage.setItem("traceabilityLang", l); } catch (e) { /* storage non disponibile */ } applyLanguage(); };
+document.getElementById("langItBtn").addEventListener("click", () => setLang("it"));
+document.getElementById("langEnBtn").addEventListener("click", () => setLang("en"));
+applyLanguage();
+</script>
+</body>
+</html>

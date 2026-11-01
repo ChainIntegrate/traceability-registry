@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TraceabilityRegistry — Esplora</title>
+<title>Track &amp; Trace — Esplora</title>
 <link rel="icon" type="image/x-icon" href="./favicon.ico">
 <link rel="stylesheet" href="./traceability-explorer-ui.css">
 <script src="/shared/ethers/5.7.2/ethers.umd.min.js"></script>
@@ -24,6 +24,7 @@
   .lookup-form button { padding: 8px 16px; background: #222; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
   .muted { color: #777; font-size: 0.85rem; }
 </style>
+<link rel="stylesheet" href="./traceability-theme.css">
 </head>
 <body>
 
@@ -31,8 +32,13 @@
 
 <header>
   <div class="header-left">
-    <img src="./logo_700x700.png" alt="TraceabilityRegistry" class="site-logo">
-    <h1 style="margin:0;">TraceabilityRegistry</h1>
+    <img src="./logo_700x700.png" alt="Track &amp; Trace" class="site-logo">
+    <h1>Track &amp; Trace<span class="site-sub" data-i18n="site.subtitle">Esploratore pubblico</span></h1>
+  </div>
+  <div class="site-links">
+    <a href="./" data-i18n="nav.home">Home</a>
+    <a href="./how-it-works.html" data-i18n="nav.guide">Guida</a>
+    <a href="./explorer.html" data-i18n="nav.explorer" aria-current="page">Esploratore</a>
   </div>
   <div class="lang-toggle">
     <button id="langItBtn" class="lang-btn active">IT</button>
@@ -53,6 +59,10 @@
 <script>
 const I18N = {
   it: {
+    "nav.home": "Home",
+    "nav.guide": "Guida",
+    "nav.explorer": "Esploratore",
+    "site.subtitle": "Esploratore pubblico",
     "lookup.button": "Visualizza", "lookup.placeholder": "Indirizzo del registro (0x...)",
     "status.loading": "Caricamento...", "status.error": "Errore: {msg}",
     "status.empty": "Nessuna registrazione ancora in questo registro.",
@@ -75,6 +85,10 @@ const I18N = {
     "card.verifySuperseded": "⚠ Il file corrisponde a un'impronta SOSTITUITA il {date}: non è più il documento di riferimento.",
   },
   en: {
+    "nav.home": "Home",
+    "nav.guide": "Guide",
+    "nav.explorer": "Explorer",
+    "site.subtitle": "Public explorer",
     "lookup.button": "View", "lookup.placeholder": "Registry address (0x...)",
     "status.loading": "Loading...", "status.error": "Error: {msg}",
     "status.empty": "No entries in this registry yet.",
@@ -148,6 +162,9 @@ document.getElementById("lookupBtn").addEventListener("click", () => {
 
 // Se ?registry=0x... è già nell'URL, carica subito — utile per embed
 // diretto via iframe su un sito esterno, senza compilare il form.
+// Incorporato in un <iframe> sul sito di un cliente: i collegamenti al
+// nostro sito resterebbero dentro il riquadro, quindi si nascondono.
+if (window.top !== window) document.querySelectorAll(".site-links").forEach((el) => { el.style.display = "none"; });
 applyLanguage();
 const initialRegistry = new URLSearchParams(window.location.search).get("registry") || "";
 if (initialRegistry) {
