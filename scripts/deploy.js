@@ -51,8 +51,8 @@ async function main() {
   console.log();
   console.log("Prossimi passi:");
   console.log("1. Aggiungi FACTORY_ADDRESS=" + factoryAddress + " nel .env del backend.");
-  console.log("2. Esegui scripts/test-erc1271-live.js con una UP reale prima di usare il backend in produzione.");
-  console.log("3. Verifica il contratto sull'explorer, se disponibile per questa rete.");
+  console.log("2. Aggiorna CONFIG.FACTORY_ADDRESS in admin.html e nelle pagine user-*.html, poi riavvia il backend.");
+  console.log("3. Verifica il contratto su Blockscout: npx hardhat verify --network " + networkName + " " + factoryAddress + " " + config.membershipCorporate + " " + config.chainIntegrateOwner);
 }
 
 main().catch((error) => {

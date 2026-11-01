@@ -6,7 +6,7 @@
 
 TraceabilityRegistry è la piattaforma di tracciabilità di [ChainIntegrate](https://chainintegrate.it) basata sulla blockchain [LUKSO](https://lukso.network). Ogni azienda ha il **proprio registro**: vi registra i lotti di materia prima che riceve e i batch che produce, e il sistema li **collega tra loro**. Da un prodotto finito si risale ai fornitori; da un lotto difettoso si trovano in pochi secondi tutti i batch coinvolti. Tutto verificabile pubblicamente, senza dover credere sulla parola a nessuno, nemmeno a ChainIntegrate.
 
-> **Stato**: operativo su **LUKSO testnet**, con tutte le funzionalità verificate dal vivo e dati reali di un'azienda pilota del settore birrario. Pronto per il passaggio a mainnet. → [Stato del progetto](#stato-del-progetto)
+> **Stato**: in produzione su **LUKSO mainnet**, con tutte le funzionalità verificate dal vivo su testnet. Primo servizio: un'azienda pilota del settore birrario. → [Stato del progetto](#stato-del-progetto)
 
 ---
 
@@ -172,10 +172,10 @@ flowchart TB
 
 | | |
 |---|---|
-| Factory su testnet | [`0xDBDa…73dF`](https://explorer.execution.testnet.lukso.network/address/0xDBDa7678675Ee99A21D578480a8e5B838a5273dF) (versione 2: impronta unica, token non cedibili). La precedente [`0x5979…fee9`](https://explorer.execution.testnet.lukso.network/address/0x5979cFcfdCC860C3273B83e89D9FCf4D8a2bfee9) resta on-chain con i suoi registri di prova, non più usati da backend e pagine |
+| Factory su mainnet | [`0x54C3…88a3`](https://explorer.execution.mainnet.lukso.network/address/0x54C3A7C31C4eCA1f1997f5E6f19197f3A82b88a3) (versione 2: impronta unica, correzione tracciata, token non cedibili) |
 | Funzionalità verificate dal vivo | registrazione lotti e batch, collegamenti, import JSON, librerie, deleghe (Silver), hash documento (Gold), sospensione (tier 0), multi-settore |
-| Dati di prova | dati reali di un birrificio pilota, su registri di test |
-| Mainnet | deciso: solo mainnet, testnet abbandonata; primo servizio il birrificio pilota. Deploy in preparazione |
+| Testnet | abbandonata: le prove sono state fatte lì (Factory [`0xDBDa…73dF`](https://explorer.execution.testnet.lukso.network/address/0xDBDa7678675Ee99A21D578480a8e5B838a5273dF)), ora pagine e backend usano solo mainnet |
+| Primo servizio | il birrificio pilota |
 
 Il percorso completo, con le decisioni prese e i problemi risolti, è nel [diario di sviluppo](docs/STORICO.md).
 

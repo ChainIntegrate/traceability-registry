@@ -1844,6 +1844,17 @@ Decisioni (01/11/2026):
   database sullo stesso server (`scripts/backup-db.js`), che non proteggono da
   un guasto del server.
 
+## 62. Deploy su mainnet
+
+Factory deployata su LUKSO mainnet il 01/11/2026:
+[`0x54C3A7C31C4eCA1f1997f5E6f19197f3A82b88a3`](https://explorer.execution.mainnet.lukso.network/address/0x54C3A7C31C4eCA1f1997f5E6f19197f3A82b88a3)
+(Membership Corporate `0x18Ba…2a3e`, ChainIntegrate owner `0x4a26…8c27`; deploy
+via RPC pubblico `rpc.mainnet.lukso.network`). Indirizzo aggiornato in admin e
+nelle pagine utente; il backend passa a `FACTORY_ADDRESS` e `LUKSO_RPC_URL`
+mainnet (chiave RPC dedicata). Tolto da `scripts/deploy.js` il rimando a
+`test-erc1271-live.js`, script che non esiste più (la verifica ERC-1271 con una
+UP reale è stata fatta dal vivo durante le prove su testnet).
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
