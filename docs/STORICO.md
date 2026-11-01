@@ -1823,6 +1823,27 @@ vale per i registri creati dalla nuova Factory).
   che conteneva un pezzo di frase vecchia (a pagina caricata lo sostituiva il
   dizionario, quindi non era visibile).
 
+## 61. Decisioni prima del mainnet
+
+Prove su testnet della §60 completate dal vivo: impronta unica, correzione con
+motivo e storico, verifica a tre esiti, blocco del documento e della
+correzione sotto Gold con la spiegazione, trasferimento del token a terzi
+rifiutato dal contratto.
+
+Decisioni (01/11/2026):
+- **Solo mainnet.** La testnet viene abbandonata: nessuna convivenza
+  testnet/mainnet, `traceability.chainintegrate.it` passa alla configurazione
+  mainnet. Risolve la decisione aperta della §30.
+- **Un solo servizio iniziale**: il birrificio (Birra20Venti). Nessun cliente
+  esterno per ora.
+- **Chiave madre dei documenti** (`DOCUMENT_MASTER_KEY`): copia custodita fuori
+  dal server.
+- **Backup esterno automatico rimandato** a quando ci saranno clienti. Il
+  backend è su una VPS Aruba: Contabo Auto Backup, indicato come esempio in
+  `docs/CHIAVE-DOCUMENTI.md`, non si applica. Restano le copie notturne del
+  database sullo stesso server (`scripts/backup-db.js`), che non proteggono da
+  un guasto del server.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
