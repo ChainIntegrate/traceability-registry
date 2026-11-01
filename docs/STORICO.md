@@ -1814,6 +1814,11 @@ vale per i registri creati dalla nuova Factory).
 - Dimensioni: Registry 18.725 byte, Factory 23.416 byte (limite 24.576).
 - Test: `scripts/test-contract-rules.js` (compila con `solc` 0.8.28 da npm, gira
   sulla rete hardhat interna) + prova end-to-end in Chromium.
+- **Deploy testnet**: nuova Factory
+  [`0xDBDa7678675Ee99A21D578480a8e5B838a5273dF`](https://explorer.execution.testnet.lukso.network/address/0xDBDa7678675Ee99A21D578480a8e5B838a5273dF),
+  indirizzo aggiornato in admin e pagine utente. Il backend riconosce solo i
+  registri della Factory configurata: i registri di prova della Factory
+  precedente (`0x5979…fee9`) restano on-chain ma non sono più letti.
 - Corretto anche il testo di riserva di `hiw.hashOnlyP` in how-it-works.html,
   che conteneva un pezzo di frase vecchia (a pagina caricata lo sostituiva il
   dizionario, quindi non era visibile).
