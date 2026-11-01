@@ -352,7 +352,7 @@ const I18N = {
     "documents.uploaded": "Documento caricato.", "documents.uploadError": "Errore upload documento: {msg}",
     "documents.needBoth": "Etichetta e file obbligatori.", "documents.hideError": "Errore nascondi documento: {msg}",
     "documents.selectLabel": "Documento (libreria, opzionale — richiede tier Gold)",
-    "documents.hashAttachError": "Registrazione avvenuta, ma la registrazione dell'hash documento è fallita (verifica il tier Gold): {msg}",
+    "documents.hashAttachError": "Registrazione avvenuta, ma la registrazione dell'impronta del documento non è riuscita. {msg} Potrai registrarla dalla scheda del lotto.",
     "log.documentHashBatchSet": "Hash documento registrato su {n} lotti ({hash}). Riferimento: {tx}",
     "delegates.title": "Deleghe", "delegates.requirement": "Richiede tier Silver o superiore sulla Membership Corporate.",
     "delegates.tierNote": "Tier registryAdmin: {tier} ({status})", "delegates.enabled": "deleghe abilitate",
@@ -486,7 +486,7 @@ const I18N = {
     "documents.uploaded": "Document uploaded.", "documents.uploadError": "Document upload error: {msg}",
     "documents.needBoth": "Label and file are required.", "documents.hideError": "Hide document error: {msg}",
     "documents.selectLabel": "Document (library, optional — requires Gold tier)",
-    "documents.hashAttachError": "Registration succeeded, but registering the document hash failed (check the Gold tier): {msg}",
+    "documents.hashAttachError": "Registration succeeded, but registering the document fingerprint failed. {msg} You can register it from the lot's card.",
     "log.documentHashBatchSet": "Document hash registered on {n} lots ({hash}). Reference: {tx}",
     "delegates.title": "Delegates", "delegates.requirement": "Requires Silver tier or higher on the Membership Corporate.",
     "delegates.tierNote": "registryAdmin tier: {tier} ({status})", "delegates.enabled": "delegation enabled",
@@ -1322,7 +1322,7 @@ async function processRawMaterialJson(json, previewEl) {
           const hashReceipt = await hashTx.wait();
           log(t("log.documentHashBatchSet", { n: args.tokenIds.length, hash: selectedDocumentHash, tx: hashReceipt.transactionHash }));
         } catch (hashErr) {
-          log(t("documents.hashAttachError", { msg: hashErr.message }));
+          log(t("documents.hashAttachError", { msg: TraceabilityErrors.friendlyMessage(hashErr, currentLang, { tier: activeRegistryTier }) }));
         }
       }
     } catch (err) {
@@ -1517,7 +1517,7 @@ async function processProductionBatchJson(json, previewEl) {
           const hashReceipt = await hashTx.wait();
           log(t("log.documentHashSet", { hash: selectedDocumentHash, tx: hashReceipt.transactionHash }));
         } catch (hashErr) {
-          log(t("documents.hashAttachError", { msg: hashErr.message }));
+          log(t("documents.hashAttachError", { msg: TraceabilityErrors.friendlyMessage(hashErr, currentLang, { tier: activeRegistryTier }) }));
         }
       }
     } catch (err) {
