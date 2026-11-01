@@ -1855,6 +1855,42 @@ mainnet (chiave RPC dedicata). Tolto da `scripts/deploy.js` il rimando a
 `test-erc1271-live.js`, script che non esiste più (la verifica ERC-1271 con una
 UP reale è stata fatta dal vivo durante le prove su testnet).
 
+## 63. Testi senza gergo e collegamento con UP Wallet
+
+**Testi.** Revisione di tutto ciò che vede l'azienda: "registry" → registro,
+"hash" → impronta, "tier" → membership con il nome (Bronze, Silver, Gold),
+"metadata" → dati della collezione, "on-chain" → sulla blockchain; nei log
+niente più tokenId e hash lunghi. Il messaggio da firmare (SIWE) spiega che non
+è un pagamento e non scrive nulla, con l'operazione in italiano e inglese;
+resta identico tra pagina e backend (`scripts/test-siwe-message.js`).
+Non toccati `admin.html` (uso interno) e la guida, che spiega apposta i
+concetti.
+
+**UP Wallet.** Secondo pulsante "Connetti con UP Wallet" nelle pagine
+utente: collega la UP tramite WalletConnect all'estensione UP Wallet (o
+all'app Android) di ChainIntegrate, che firma con la chiave del dispositivo
+(controller della UP senza permessi di amministrazione) passando dal Key
+Manager. Per il registro non cambia nulla: l'account è la UP, l'accesso SIWE si
+verifica con ERC-1271 sulla UP.
+- `frontend/traceability-walletconnect.js`: finestra di collegamento (link da
+  copiare in "Collega una dApp" di UP Wallet, o QR per l'app), provider
+  EIP-1193 per ethers. Firme e transazioni a UP Wallet, letture all'RPC
+  pubblico di LUKSO mainnet. Sessione riusata alla ricarica, chiusa davvero
+  con "Disconnetti".
+- `frontend/vendor/walletconnect/`: gli stessi file di Cross_Chain (SignClient
+  2.25.0, qrcode-generator 1.4.4), con Subresource Integrity e telemetria
+  disattivata.
+- CSP: `connect-src` aggiunge il relay WalletConnect e l'RPC di LUKSO; provato
+  in Chromium col bundle vero (unico dominio contattato: il relay, nessuna
+  violazione).
+- Il pulsante compare solo con `CONFIG.WALLETCONNECT_PROJECT_ID` impostato
+  nelle pagine (project ID di Reown, con il dominio nell'elenco dei domini
+  ammessi).
+- Prove: instradamento e flusso della pagina con un UP Wallet simulato
+  (abbinamento, copia del link, QR, connessione, rifiuto → "hai annullato",
+  sessione riusata e chiusa). L'abbinamento reale va provato dal vivo: il relay
+  non è raggiungibile dall'ambiente di sviluppo.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

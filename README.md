@@ -78,6 +78,7 @@ flowchart LR
 **Gestione**
 - **Deleghe**: altri collaboratori operano con la propria identità, senza mai condividere credenziali.
 - **Annullamento, mai cancellazione**: una registrazione errata viene marcata come annullata con la motivazione. Resta visibile per trasparenza e non può più essere collegata a nuovi batch.
+- **Due modi di collegarsi**: l'estensione Universal Profile di LUKSO oppure **UP Wallet** di ChainIntegrate (estensione del browser o app Android), tramite WalletConnect; in entrambi i casi l'account è la Universal Profile dell'azienda.
 - Interfaccia in **italiano e inglese**, messaggi d'errore comprensibili anche senza competenze blockchain.
 
 ## Piani
