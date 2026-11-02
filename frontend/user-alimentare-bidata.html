@@ -17,6 +17,7 @@
 <script src="./traceability-decode.js"></script>
 <script src="./traceability-explorer-ui.js"></script>
 <script src="./traceability-walletconnect.js"></script>
+<script src="./traceability-lot-matching.js"></script>
 <link rel="stylesheet" href="./traceability-explorer-ui.css">
 <style>
   :root { --powder-line: #e2e2e2; --ink-soft: #6b7280; --blueprint: #3454d1; }
@@ -55,6 +56,14 @@
   .material-row, .lot-row { display: flex; gap: 6px; margin-bottom: 6px; }
   .material-row input, .lot-row input { flex: 1; }
   #log { white-space: pre-wrap; background: #111; color: #0f0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; max-height: 110px; overflow-y: auto; }
+  .lot-match-list { display: grid; gap: 10px; margin: 10px 0 14px; }
+  .lot-match { border: 1px solid #ddd; border-radius: 10px; padding: 10px 12px; }
+  .lot-match-head { margin-bottom: 6px; }
+  .lot-match p { margin: 4px 0; }
+  .lot-choice { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; margin: 4px 0; cursor: pointer; }
+  .lot-choice input { margin-top: 3px; }
+  .lot-suggestion { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin: 4px 0; font-size: 0.9rem; }
+  .lot-suggestion button { margin: 0; padding: 5px 10px; }
 </style>
 <link rel="stylesheet" href="./traceability-theme.css">
 </head>
@@ -248,6 +257,13 @@
 // -----------------------------------------------------------------------
 const I18N = {
   it: {
+    "batch.boughtOn": "acquistato il {date}",
+    "batch.manyDeliveries": "Questo lotto è arrivato in {n} consegne: scegli quelle usate nel batch.",
+    "batch.nameMismatch": "Il nome dell'ingrediente non corrisponde a nessuna consegna con questo codice: controlla e scegli tu.",
+    "batch.notFoundSuggest": "Nessun lotto registrato con questo codice. Forse c'è un errore di scrittura:",
+    "batch.useThisLot": "Correggi in {lotto}",
+    "batch.chooseDeliveries": "Scegli almeno una consegna per {ingrediente} (lotto {lotto}).",
+    "batch.lotCorrected": "Codice del lotto corretto nel batch: {from} → {to}.",
     "welcome.title": "Benvenuto nel tuo pannello",
     "welcome.text": "Collega la Universal Profile della tua azienda per gestire il registro: registrare lotti e batch, collegare documenti, aggiungere delegati.",
     "welcome.upTitle": "Estensione Universal Profile",
@@ -402,6 +418,13 @@ const I18N = {
     "log.collectionUpdated": "Dati della collezione aggiornati. Riferimento dell'operazione: {tx}", "log.collectionError": "Errore nei dati della collezione: {msg}",
   },
   en: {
+    "batch.boughtOn": "bought on {date}",
+    "batch.manyDeliveries": "This lot arrived in {n} deliveries: choose the ones used in the batch.",
+    "batch.nameMismatch": "The ingredient name does not match any delivery with this code: check and choose yourself.",
+    "batch.notFoundSuggest": "No lot recorded with this code. There may be a typo:",
+    "batch.useThisLot": "Change to {lotto}",
+    "batch.chooseDeliveries": "Choose at least one delivery for {ingrediente} (lot {lotto}).",
+    "batch.lotCorrected": "Lot code corrected in the batch: {from} → {to}.",
     "welcome.title": "Welcome to your panel",
     "welcome.text": "Connect your company's Universal Profile to manage the registry: record lots and batches, link documents, add delegates.",
     "welcome.upTitle": "Universal Profile extension",
@@ -1559,8 +1582,7 @@ async function processProductionBatchJson(json, previewEl) {
   }
   html += dateHtml;
 
-  html += "<p>" + t("batch.matching") + "</p>";
-  previewEl.innerHTML = html;
+  previewEl.innerHTML = html + "<p>" + t("batch.matching") + "</p>";
 
   const { entries } = await TraceabilityDecode.fetchRegistryEntries(CONFIG.BACKEND_BASE_URL, activeRegistryAddress);
   const lotEntries = entries.filter((en) => en.entryType === 0 && en.status === 0);
@@ -1569,25 +1591,46 @@ async function processProductionBatchJson(json, previewEl) {
   for (const en of lotEntries) {
     try {
       const { json: lotJson } = await TraceabilityDecode.decodeMetadataValue(en.metadataValue);
-      const lottoAttr = (lotJson.LSP4Metadata.attributes || []).find((a) => a.key === "Lotto");
-      decodedLots.push({ tokenId: en.tokenId, lotto: lottoAttr ? lottoAttr.value : null });
+      const attrs = lotJson.LSP4Metadata.attributes || [];
+      const val = (k) => { const a = attrs.find((x) => x.key === k); return a ? String(a.value) : ""; };
+      decodedLots.push({
+        tokenId: en.tokenId, lotto: val("Lotto") || null, nome: val("Nome"),
+        fornitore: val("Fornitore"), dataAcquisto: val("Data Acquisto"), quantita: val("Quantità"),
+      });
     } catch (err) {
       log(t("log.lotDecodeError", { msg: TraceabilityErrors.friendlyMessage(err, currentLang, { tier: activeRegistryTier }) }));
     }
   }
 
-  const matched = [];
-  const unmatched = [];
-  extracted.lotReferences.forEach((ref) => {
-    const found = decodedLots.find((dl) => dl.lotto === ref.lotto);
-    if (found) matched.push({ ref, tokenId: found.tokenId });
-    else unmatched.push(ref);
-  });
+  // Ogni riga "Lotto <ingrediente>" del batch: tutti gli acquisti con quel
+  // codice (lo stesso lotto può arrivare in più consegne, e il batch va
+  // collegato a tutte quelle usate), oppure suggerimenti per probabili refusi.
+  // Un suggerimento non collega nulla: corregge il codice nel batch e ripete
+  // l'anteprima (vedi traceability-lot-matching.js).
+  const lotMatches = extracted.lotReferences.map((ref) => ({ ref, m: TraceabilityLotMatching.matchLotReference(ref, decodedLots) }));
+  const lotLabel = (l) => [l.nome, l.fornitore, l.dataAcquisto ? t("batch.boughtOn", { date: l.dataAcquisto }) : "", l.quantita].filter(Boolean).join(" · ");
 
-  let matchHtml = "<h3>" + t("batch.matchingTitle") + "</h3><table><tr><th>" + t("batch.colIngrediente") + "</th><th>" + t("batch.colLotto") + "</th><th>" + t("batch.colEsito") + "</th></tr>";
-  matched.forEach((m) => { matchHtml += "<tr><td>" + esc(m.ref.ingredienteNome) + "</td><td>" + esc(m.ref.lotto) + "</td><td class='ok'>" + t("batch.found") + "</td></tr>"; });
-  unmatched.forEach((u) => { matchHtml += "<tr><td>" + esc(u.ingredienteNome) + "</td><td>" + esc(u.lotto) + "</td><td class='warn'>" + t("batch.notFound") + "</td></tr>"; });
-  matchHtml += "</table>";
+  let matchHtml = "<h3>" + t("batch.matchingTitle") + "</h3><div class='lot-match-list'>";
+  lotMatches.forEach(({ ref, m }, i) => {
+    matchHtml += "<div class='lot-match'><div class='lot-match-head'><strong>" + esc(ref.ingredienteNome) + "</strong> — " + t("batch.colLotto") + " <code>" + esc(ref.lotto) + "</code></div>";
+    if (m.exact.length > 0) {
+      if (m.exact.length > 1) matchHtml += "<p class='muted'>" + t("batch.manyDeliveries", { n: m.exact.length }) + "</p>";
+      if (m.nameMismatch) matchHtml += "<p class='warn'>" + t("batch.nameMismatch") + "</p>";
+      m.exact.forEach((l) => {
+        matchHtml += "<label class='lot-choice'><input type='checkbox' class='lot-pick' data-ref='" + i + "' value='" + esc(l.tokenId) + "'" + (l.preselected ? " checked" : "") + "> " + esc(lotLabel(l)) + "</label>";
+      });
+    } else if (m.suggestions.length > 0) {
+      matchHtml += "<p class='warn'>" + t("batch.notFoundSuggest") + "</p>";
+      m.suggestions.forEach((s) => {
+        matchHtml += "<div class='lot-suggestion'><span><code>" + esc(s.lotto) + "</code> " + esc(lotLabel(s)) + "</span> " +
+          "<button type='button' class='secondary lot-fix' data-ref='" + i + "' data-lotto='" + esc(s.lotto) + "'>" + t("batch.useThisLot", { lotto: esc(s.lotto) }) + "</button></div>";
+      });
+    } else {
+      matchHtml += "<p class='warn'>" + t("batch.notFound") + "</p>";
+    }
+    matchHtml += "</div>";
+  });
+  matchHtml += "</div>";
   matchHtml += "<div class='row'><label>" + t("batch.photoLabel") + "</label><select id='batchPhotoSelect'></select></div>";
   matchHtml += "<div class='row'><label>" + t("documents.selectLabel") + "</label><select id='batchDocumentSelect'></select></div>";
   matchHtml += "<button class='primary' id='confirmMintBatchBtn'>" + t("batch.confirmMint") + "</button>";
@@ -1597,6 +1640,22 @@ async function processProductionBatchJson(json, previewEl) {
   document.getElementById("backToEditBatchBtn").addEventListener("click", () => {
     previewEl.innerHTML = "";
     switchToSubtab("batch-manual");
+  });
+
+  // Suggerimento accettato: si corregge il codice del lotto nel batch (anche
+  // nel modulo, se la riga è lì) e si ripete l'anteprima.
+  previewEl.querySelectorAll(".lot-fix").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const ref = lotMatches[Number(btn.dataset.ref)].ref;
+      const attr = json.attributes.find((a) => a.trait_type === ref.trait_type && String(a.value) === ref.lotto);
+      if (attr) attr.value = btn.dataset.lotto;
+      Array.from(document.querySelectorAll("#batchLotRows .lot-row")).forEach((row) => {
+        const lottoInput = row.querySelector(".batch-lotto");
+        if (row.querySelector(".batch-ingrediente").value.trim() === ref.ingredienteNome && lottoInput.value.trim() === ref.lotto) lottoInput.value = btn.dataset.lotto;
+      });
+      log(t("batch.lotCorrected", { from: ref.lotto, to: btn.dataset.lotto }));
+      processProductionBatchJson(json, previewEl);
+    });
   });
 
   const photos = await TraceabilityPhotoLibrary.listPhotos({ backendBaseUrl: CONFIG.BACKEND_BASE_URL, registryAddress: activeRegistryAddress, signer });
@@ -1614,6 +1673,10 @@ async function processProductionBatchJson(json, previewEl) {
     // controllo prima del conio: il tier potrebbe essere stato letto dopo
     // il riempimento della select
     if (docSel.value && documentNeedsGold()) { alert(t("documents.needsGoldBeforeMint")); return; }
+    // Ogni riga con acquisti trovati deve averne almeno uno scelto: la scelta
+    // finisce sulla blockchain e non si cambia dopo.
+    const missingChoice = lotMatches.find(({ m }, i) => m.exact.length > 0 && !previewEl.querySelector(".lot-pick[data-ref='" + i + "']:checked"));
+    if (missingChoice) { alert(t("batch.chooseDeliveries", { ingrediente: missingChoice.ref.ingredienteNome, lotto: missingChoice.ref.lotto })); return; }
     try {
       let chosenDateStr = extracted.dateCandidates[0].value;
       if (extracted.requiresDateSelection) {
@@ -1621,7 +1684,7 @@ async function processProductionBatchJson(json, previewEl) {
         chosenDateStr = extracted.dateCandidates[parseInt(checked.value, 10)].value;
       }
       const indexDate = TraceabilityTokenId.parseItalianDateToUnixSeconds(chosenDateStr);
-      const usedLotTokenIds = matched.map((m) => m.tokenId);
+      const usedLotTokenIds = [...new Set(Array.from(previewEl.querySelectorAll(".lot-pick:checked")).map((c) => c.value))];
       const photoVal = sel.value;
       const resolvePhoto = () => (photoVal ? toLibraryEntry(JSON.parse(photoVal)) : null);
 

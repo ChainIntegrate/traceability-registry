@@ -289,3 +289,6 @@ body.tt-guide .warn-box { border-radius: 14px; }
 .tt-welcome .tt-way { background: #f7f9fd; border: 1px solid var(--tt-line); border-radius: 14px; padding: 14px 16px; font-size: 0.9rem; color: var(--tt-ink-soft); }
 .tt-welcome .tt-way strong { display: block; color: var(--tt-ink); margin-bottom: 4px; }
 @media (max-width: 600px) { .tt-welcome .tt-ways { grid-template-columns: 1fr; } }
+
+/* pulsanti affiancati (es. "Conferma e registra" + "Torna a modifica") */
+button.primary + button.secondary, button.secondary + button.primary { margin-left: 8px; }

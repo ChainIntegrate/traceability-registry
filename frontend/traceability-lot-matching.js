@@ -1,0 +1,95 @@
+/**
+ * Collegamento tra le righe "Lotto <ingrediente>" di un batch di produzione e
+ * i lotti di materia prima già registrati. Funzioni pure, senza pagina:
+ * provate da scripts/test-lot-matching.js.
+ *
+ * - Corrispondenza ESATTA sul codice del lotto: tutti gli acquisti con quel
+ *   codice sono candidati (lo stesso lotto può arrivare in più consegne, e il
+ *   batch va collegato a tutte quelle usate). Sono preselezionati quelli in cui
+ *   anche il nome dell'ingrediente corrisponde.
+ * - Nessuna corrispondenza esatta: SUGGERIMENTI per probabili refusi (trattini,
+ *   spazi, maiuscole, zeri iniziali, un carattere in più/in meno/diverso). Un
+ *   suggerimento non collega niente da solo: l'utente può solo correggere il
+ *   codice scritto nel batch e ripetere l'anteprima.
+ */
+(function (global) {
+  "use strict";
+
+  /** Codice "di confronto": maiuscole, solo lettere e cifre, senza zeri
+   * iniziali nei gruppi di cifre ("L-0023/a" → "L23A"). */
+  function normalizeLotCode(code) {
+    return String(code || "")
+      .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+      .toUpperCase()
+      .replace(/\d+/g, (digits) => digits.replace(/^0+(?=\d)/, ""))
+      .replace(/[^A-Z0-9]/g, "");
+  }
+
+  /** Distanza di modifica (Levenshtein), interrotta oltre `max`. */
+  function editDistance(a, b, max) {
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i];
+      let rowMin = i;
+      for (let j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        rowMin = Math.min(rowMin, cur[j]);
+      }
+      if (rowMin > max) return max + 1;
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+
+  /** Parole significative di un nome di ingrediente (minuscole, senza accenti). */
+  function nameWords(name) {
+    return String(name || "")
+      .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length >= 3);
+  }
+
+  /** Il nome nel batch ("Malto") e quello del lotto ("Malto Pilsner") si
+   * riferiscono allo stesso ingrediente? Basta una parola in comune. */
+  function ingredientMatches(batchName, lotName) {
+    const a = nameWords(batchName), b = new Set(nameWords(lotName));
+    return a.length > 0 && a.some((w) => b.has(w));
+  }
+
+  /**
+   * @param {{ingredienteNome: string, lotto: string}} ref riga del batch
+   * @param {Array<{tokenId, lotto, nome, fornitore, dataAcquisto, quantita}>} lots lotti attivi registrati
+   * @returns {{ exact: Array<lot & {preselected: boolean}>, nameMismatch: boolean, suggestions: Array<lot & {reason}> }}
+   */
+  function matchLotReference(ref, lots) {
+    const exact = lots
+      .filter((l) => l.lotto === ref.lotto)
+      .map((l) => Object.assign({}, l, { preselected: ingredientMatches(ref.ingredienteNome, l.nome) }));
+    const nameMismatch = exact.length > 0 && !exact.some((l) => l.preselected);
+    if (exact.length > 0) return { exact, nameMismatch, suggestions: [] };
+
+    const target = normalizeLotCode(ref.lotto);
+    const seen = new Set();
+    const suggestions = [];
+    lots.forEach((l) => {
+      const n = normalizeLotCode(l.lotto);
+      if (!n || !target) return;
+      let score = null, reason = null;
+      if (n === target) { score = 0; reason = "format"; }
+      else if (Math.min(n.length, target.length) >= 4 && editDistance(n, target, 1) <= 1) { score = 1; reason = "typo"; }
+      if (score === null) return;
+      if (ingredientMatches(ref.ingredienteNome, l.nome)) score -= 0.5;
+      // un suggerimento per codice: le consegne dello stesso lotto si
+      // collegano tutte insieme dopo la correzione
+      if (seen.has(l.lotto)) return;
+      seen.add(l.lotto);
+      suggestions.push(Object.assign({}, l, { reason, score }));
+    });
+    suggestions.sort((x, y) => x.score - y.score);
+    return { exact: [], nameMismatch: false, suggestions: suggestions.slice(0, 3) };
+  }
+
+  global.TraceabilityLotMatching = { normalizeLotCode, editDistance, ingredientMatches, matchLotReference };
+})(typeof window !== "undefined" ? window : globalThis);
