@@ -102,15 +102,50 @@
     try { return global.ethers.utils.toUtf8String("0x" + urlHex); } catch (e) { return null; }
   }
 
+  // Gateway IPFS di LUKSO, lo stesso che usa Universal Everything: il nostro
+  // gateway serve solo i file pinnati da noi, mentre i JSON dei profili
+  // stanno sui nodi di LUKSO. Usato solo come ripiego, e il file ricevuto si
+  // accetta solo se corrisponde all'impronta registrata nel profilo.
+  const PROFILE_FALLBACK_GATEWAY = "https://api.universalprofile.cloud/ipfs/";
+  const KECCAK256_UTF8 = "6f357c6a";
+
+  /** Impronta del file indicata nel valore (VerifiableURI o JSONURL), se il
+   * metodo è keccak256(utf8), l'unico usato dai profili LUKSO. */
+  function hashFromVerifiableUri(hex) {
+    const v = String(hex || "").toLowerCase().replace(/^0x/, "");
+    if (v.startsWith("0000") && v.length >= 16) {
+      if (v.slice(4, 12) !== KECCAK256_UTF8) return null;
+      const hashLen = parseInt(v.slice(12, 16), 16);
+      return hashLen === 32 ? "0x" + v.slice(16, 16 + 64) : null;
+    }
+    if (v.length > 72 && v.slice(0, 8) === KECCAK256_UTF8) return "0x" + v.slice(8, 72);
+    return null;
+  }
+
   /** Dove leggere il JSON del profilo: ipfs://CID, oppure un gateway https
-   * qualunque che contiene /ipfs/CID (letto comunque dal nostro gateway: la
-   * CSP ammette solo quello). data:application/json;base64 letto direttamente. */
+   * qualunque che contiene /ipfs/CID (riletto dai gateway ammessi dalla CSP).
+   * data:application/json;base64 letto direttamente. */
   function profileJsonSource(url) {
     if (!url) return null;
     if (/^data:application\/json;base64,/i.test(url)) return { inline: url.slice(url.indexOf(",") + 1) };
     const m = url.match(/\/ipfs\/([A-Za-z0-9]{46,100}(?:\/[A-Za-z0-9._~-]+)*)/);
     const gatewayUrl = ipfsUrlToGatewayUrl(m ? m[1] : url);
-    return gatewayUrl ? { gatewayUrl } : null;
+    if (!gatewayUrl) return null;
+    const ref = gatewayUrl.slice(gatewayUrl.indexOf("/ipfs/") + 6);
+    return { urls: [gatewayUrl, PROFILE_FALLBACK_GATEWAY + ref] };
+  }
+
+  async function fetchBytes(url) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      return res.ok ? new Uint8Array(await res.arrayBuffer()) : null;
+    } catch (e) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   async function readProfileName(provider, address) {
@@ -120,20 +155,21 @@
     if (!value || value === "0x") return null;
     const source = profileJsonSource(urlFromVerifiableUri(value));
     if (!source) return null;
-    let json;
+    const expectedHash = hashFromVerifiableUri(value);
+    let bytes = null;
     if (source.inline) {
-      json = JSON.parse(atob(source.inline));
+      bytes = global.ethers.utils.base64.decode(source.inline);
     } else {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 8000);
-      try {
-        const res = await fetch(source.gatewayUrl, { signal: ctrl.signal });
-        if (!res.ok) return null;
-        json = await res.json();
-      } finally {
-        clearTimeout(timer);
+      for (const url of source.urls) {
+        bytes = await fetchBytes(url);
+        if (bytes) break;
       }
     }
+    if (!bytes) return null;
+    // Il file deve essere esattamente quello registrato nel profilo: un
+    // gateway (nostro o di terzi) non può sostituirlo.
+    if (expectedHash && global.ethers.utils.keccak256(bytes) !== expectedHash) return null;
+    const json = JSON.parse(global.ethers.utils.toUtf8String(bytes));
     return cleanProfileName(json && json.LSP3Profile && json.LSP3Profile.name);
   }
 
@@ -182,6 +218,7 @@
     profileLabel: profileLabel,
     urlFromVerifiableUri: urlFromVerifiableUri,
     profileJsonSource: profileJsonSource,
+    hashFromVerifiableUri: hashFromVerifiableUri,
     IPFS_GATEWAY_BASE: IPFS_GATEWAY_BASE,
   };
 })(typeof window !== "undefined" ? window : globalThis);
