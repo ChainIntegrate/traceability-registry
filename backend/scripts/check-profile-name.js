@@ -79,6 +79,24 @@ async function main() {
     } catch (e) {
       console.log("   gateway NON raggiungibile o lento:", e.name === "AbortError" ? "timeout dopo 15 s" : e.message);
     }
+    if (!json) {
+      const fb = "https://api.universalprofile.cloud/ipfs/" + ref;
+      console.log("   ripiego della pagina (gateway LUKSO):", fb);
+      try {
+        const res = await timed(fb);
+        console.log("   risposta: HTTP", res.status, "| CORS:", res.headers.get("access-control-allow-origin") || "(nessuna intestazione: il browser la bloccherebbe)");
+        if (res.ok) {
+          const bytes = Buffer.from(await res.arrayBuffer());
+          const v = value.toLowerCase().replace(/^0x/, "");
+          const expected = v.startsWith("0000") ? "0x" + v.slice(16, 80) : "0x" + v.slice(8, 72);
+          const ok = ethers.utils.keccak256(bytes) === expected;
+          console.log("   impronta del file:", ok ? "coincide con quella del profilo" : "NON coincide: la pagina lo scarterebbe");
+          if (ok) json = JSON.parse(bytes.toString("utf8"));
+        }
+      } catch (e) {
+        console.log("   ripiego non raggiungibile:", e.name === "AbortError" ? "timeout dopo 15 s" : e.message);
+      }
+    }
     if (!json && process.env.IPFS_API_URL) {
       try {
         const res = await timed(process.env.IPFS_API_URL.replace(/\/$/, "") + "/api/v0/cat?arg=" + encodeURIComponent(ref), { method: "POST" });
