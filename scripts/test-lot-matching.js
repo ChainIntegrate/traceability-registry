@@ -78,5 +78,27 @@ check("nomi con accenti e parole corte", () => {
   assert.ok(!M.ingredientMatches("Di", "Di Malto"));
 });
 
+check("acquisto registrato dopo la produzione: proposto e preselezionato, ma segnalato", () => {
+  const prod = M.parseDayMonthYear("15/04/2026");
+  const r = M.matchLotReference({ ingredienteNome: "Malto", lotto: "2341" }, LOTS, prod);
+  assert.deepStrictEqual(r.exact.map((l) => [l.tokenId, l.preselected, l.afterProduction]),
+    [["0x01", true, false], ["0x02", true, true], ["0x03", false, false]]);
+});
+
+check("stesso giorno della produzione: non successivo; date illeggibili: nessun avviso", () => {
+  const prod = M.parseDayMonthYear("12/03/2026");
+  assert.strictEqual(M.purchasedAfterProduction(M.parseDayMonthYear("12/03/2026"), prod), false);
+  assert.strictEqual(M.purchasedAfterProduction(M.parseDayMonthYear("12-03-2026") + 86400, prod), true);
+  assert.strictEqual(M.purchasedAfterProduction(M.parseDayMonthYear("marzo 2026"), prod), false);
+  const r = M.matchLotReference({ ingredienteNome: "Malto", lotto: "2341" }, LOTS);
+  assert.ok(r.exact.every((l) => l.afterProduction === false), "senza data di produzione nessun avviso");
+});
+
+check("data di produzione dagli attributi del batch (trait_type o key)", () => {
+  assert.strictEqual(M.batchProductionDate([{ trait_type: "Data Produzione", value: "15/04/2026" }]), M.parseDayMonthYear("15/04/2026"));
+  assert.strictEqual(M.batchProductionDate([{ key: "Data Produzione", value: "15/04/2026" }]), M.parseDayMonthYear("15/04/2026"));
+  assert.strictEqual(M.batchProductionDate([{ key: "Data Imbottigliamento", value: "15/04/2026" }]), null);
+});
+
 console.log(failures === 0 ? "\nTutti i test superati." : "\n" + failures + " test falliti.");
 process.exit(failures === 0 ? 0 : 1);

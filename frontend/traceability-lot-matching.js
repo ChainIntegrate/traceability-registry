@@ -58,15 +58,44 @@
     return a.length > 0 && a.some((w) => b.has(w));
   }
 
+  /** "GG/MM/AAAA" (o con trattini) → secondi UTC a mezzanotte; null se non
+   * leggibile. Stessa convenzione di parseItalianDateToUnixSeconds. */
+  function parseDayMonthYear(str) {
+    const m = String(str || "").trim().match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    if (!m) return null;
+    const ms = Date.UTC(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+    return Number.isNaN(ms) ? null : Math.floor(ms / 1000);
+  }
+
+  /** Data di produzione di un batch dai suoi attributi ("Data Produzione"),
+   * altrimenti null: chi chiama usa allora la data di riferimento del batch. */
+  function batchProductionDate(attributes) {
+    const a = (attributes || []).find((x) => (x.key || x.trait_type) === "Data Produzione");
+    return a ? parseDayMonthYear(a.value) : null;
+  }
+
+  /**
+   * Acquisto registrato DOPO la produzione del batch: la consegna davvero
+   * usata non era tracciata (tracciamento iniziato dopo). Il collegamento
+   * resta corretto a livello di lotto del fornitore, ma va dichiarato.
+   * Stesso giorno = non successivo.
+   */
+  function purchasedAfterProduction(purchaseSeconds, productionSeconds) {
+    return purchaseSeconds != null && productionSeconds != null && purchaseSeconds > productionSeconds;
+  }
+
   /**
    * @param {{ingredienteNome: string, lotto: string}} ref riga del batch
    * @param {Array<{tokenId, lotto, nome, fornitore, dataAcquisto, quantita}>} lots lotti attivi registrati
-   * @returns {{ exact: Array<lot & {preselected: boolean}>, nameMismatch: boolean, suggestions: Array<lot & {reason}> }}
+   * @param {number|null} [productionSeconds] data di produzione del batch: segna
+   *   gli acquisti successivi (afterProduction), che restano proposti
+   * @returns {{ exact: Array<lot & {preselected, afterProduction}>, nameMismatch: boolean, suggestions: Array<lot & {reason, afterProduction}> }}
    */
-  function matchLotReference(ref, lots) {
+  function matchLotReference(ref, lots, productionSeconds) {
+    const after = (l) => purchasedAfterProduction(parseDayMonthYear(l.dataAcquisto), productionSeconds == null ? null : productionSeconds);
     const exact = lots
       .filter((l) => l.lotto === ref.lotto)
-      .map((l) => Object.assign({}, l, { preselected: ingredientMatches(ref.ingredienteNome, l.nome) }));
+      .map((l) => Object.assign({}, l, { preselected: ingredientMatches(ref.ingredienteNome, l.nome), afterProduction: after(l) }));
     const nameMismatch = exact.length > 0 && !exact.some((l) => l.preselected);
     if (exact.length > 0) return { exact, nameMismatch, suggestions: [] };
 
@@ -85,11 +114,14 @@
       // collegano tutte insieme dopo la correzione
       if (seen.has(l.lotto)) return;
       seen.add(l.lotto);
-      suggestions.push(Object.assign({}, l, { reason, score }));
+      suggestions.push(Object.assign({}, l, { reason, score, afterProduction: after(l) }));
     });
     suggestions.sort((x, y) => x.score - y.score);
     return { exact: [], nameMismatch: false, suggestions: suggestions.slice(0, 3) };
   }
 
-  global.TraceabilityLotMatching = { normalizeLotCode, editDistance, ingredientMatches, matchLotReference };
+  global.TraceabilityLotMatching = {
+    normalizeLotCode, editDistance, ingredientMatches, matchLotReference,
+    parseDayMonthYear, batchProductionDate, purchasedAfterProduction,
+  };
 })(typeof window !== "undefined" ? window : globalThis);
