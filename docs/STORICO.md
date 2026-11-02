@@ -1917,6 +1917,35 @@ verifica con ERC-1271 sulla UP.
   connessione con l'estensione LUKSO e con UP Wallet (simulati), e2e della
   correzione dell'impronta.
 
+## 65. Batch collegato a tutte le consegne di un lotto; suggerimenti per i refusi
+
+**Problema.** Ogni acquisto è un lotto a sé (l'identificativo include la data
+di acquisto), ma nell'anteprima del batch la pagina collegava la riga "Lotto
+<ingrediente>" solo al **primo** lotto con quel codice, confrontando il solo
+codice: più consegne dello stesso lotto → collegata una sola; codice uguale su
+ingredienti diversi → rischio di collegare quello sbagliato.
+
+**Correzione** (`frontend/traceability-lot-matching.js`, nelle tre pagine
+utente; nessuna modifica al contratto, che accetta già più lotti per batch):
+- per ogni riga, **tutti** gli acquisti con quel codice, con nome, fornitore,
+  data di acquisto e quantità, da spuntare; già spuntati quelli in cui anche il
+  nome dell'ingrediente corrisponde (una parola in comune, senza accenti), con
+  un avviso se nessuno corrisponde. Decisione: si collegano tutte le consegne
+  usate (in caso di richiamo è più prudente);
+- la conferma è bloccata se una riga con acquisti trovati non ne ha nessuno
+  scelto;
+- **refusi**: se il codice non esiste, fino a 3 suggerimenti di codici quasi
+  uguali (stesso codice a parte trattini, spazi, maiuscole e zeri iniziali, o
+  un carattere in più, in meno o diverso, per codici da 4 caratteri in su). Un
+  suggerimento non collega nulla: "Correggi in …" cambia il codice nel batch
+  (anche nel modulo) e ripete l'anteprima;
+- corretto anche il testo "Ricerca dei lotti collegati in corso…" che restava
+  visibile a ricerca finita.
+
+Test: `scripts/test-lot-matching.js` (9 casi) e prova in Chromium del flusso
+(tre consegne, suggerimento e correzione, conferma bloccata, lotti inviati al
+contratto). Guida aggiornata.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
