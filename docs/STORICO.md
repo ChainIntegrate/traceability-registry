@@ -1852,8 +1852,9 @@ Factory deployata su LUKSO mainnet il 01/11/2026:
 via RPC pubblico `rpc.mainnet.lukso.network`). Indirizzo aggiornato in admin e
 nelle pagine utente; il backend passa a `FACTORY_ADDRESS` e `LUKSO_RPC_URL`
 mainnet (chiave RPC dedicata). Tolto da `scripts/deploy.js` il rimando a
-`test-erc1271-live.js`, script che non esiste più (la verifica ERC-1271 con una
-UP reale è stata fatta dal vivo durante le prove su testnet).
+`test-erc1271-live.js` (lo script esiste, in `backend/scripts/`: il rimando
+è stato tolto perché la verifica ERC-1271 con una UP reale è già stata fatta
+dal vivo durante le prove su testnet, vedi §30).
 
 ## 63. Testi senza gergo e collegamento con UP Wallet
 

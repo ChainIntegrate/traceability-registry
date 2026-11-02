@@ -85,25 +85,56 @@
     return clean || null;
   }
 
+  /** URL contenuto in un valore VerifiableURI (0x0000 + metodo + lunghezza
+   * hash + hash + URL) o nel vecchio formato JSONURL (metodo + hash + URL),
+   * ancora usato da profili creati prima di LSP2 v0.12. */
+  function urlFromVerifiableUri(hex) {
+    const v = String(hex || "").toLowerCase().replace(/^0x/, "");
+    let urlHex;
+    if (v.startsWith("0000") && v.length >= 16) {
+      const hashLen = parseInt(v.slice(12, 16), 16);
+      urlHex = v.slice(16 + hashLen * 2);
+    } else if (v.length > 72) {
+      urlHex = v.slice(72);
+    } else {
+      return null;
+    }
+    try { return global.ethers.utils.toUtf8String("0x" + urlHex); } catch (e) { return null; }
+  }
+
+  /** Dove leggere il JSON del profilo: ipfs://CID, oppure un gateway https
+   * qualunque che contiene /ipfs/CID (letto comunque dal nostro gateway: la
+   * CSP ammette solo quello). data:application/json;base64 letto direttamente. */
+  function profileJsonSource(url) {
+    if (!url) return null;
+    if (/^data:application\/json;base64,/i.test(url)) return { inline: url.slice(url.indexOf(",") + 1) };
+    const m = url.match(/\/ipfs\/([A-Za-z0-9]{46,100}(?:\/[A-Za-z0-9._~-]+)*)/);
+    const gatewayUrl = ipfsUrlToGatewayUrl(m ? m[1] : url);
+    return gatewayUrl ? { gatewayUrl } : null;
+  }
+
   async function readProfileName(provider, address) {
     if ((await provider.getCode(address)) === "0x") return null; // non è un contratto: niente profilo
     const up = new global.ethers.Contract(address, ["function getData(bytes32 dataKey) view returns (bytes)"], provider);
     const value = await up.getData(LSP3_PROFILE_SCHEMA[0].key);
     if (!value || value === "0x") return null;
-    const { ERC725 } = await import("/shared/erc725.js/0.28.2/erc725.min.js");
-    const decoded = ERC725.decodeData([{ keyName: "LSP3Profile", value: value }], LSP3_PROFILE_SCHEMA);
-    const gatewayUrl = ipfsUrlToGatewayUrl(decoded[0].value && decoded[0].value.url);
-    if (!gatewayUrl) return null;
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
-    try {
-      const res = await fetch(gatewayUrl, { signal: ctrl.signal });
-      if (!res.ok) return null;
-      const json = await res.json();
-      return cleanProfileName(json && json.LSP3Profile && json.LSP3Profile.name);
-    } finally {
-      clearTimeout(timer);
+    const source = profileJsonSource(urlFromVerifiableUri(value));
+    if (!source) return null;
+    let json;
+    if (source.inline) {
+      json = JSON.parse(atob(source.inline));
+    } else {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const res = await fetch(source.gatewayUrl, { signal: ctrl.signal });
+        if (!res.ok) return null;
+        json = await res.json();
+      } finally {
+        clearTimeout(timer);
+      }
     }
+    return cleanProfileName(json && json.LSP3Profile && json.LSP3Profile.name);
   }
 
   /** @returns {Promise<string|null>} nome del profilo, o null */
@@ -149,6 +180,8 @@
     ipfsToHttp: ipfsToHttp,
     fetchProfileName: fetchProfileName,
     profileLabel: profileLabel,
+    urlFromVerifiableUri: urlFromVerifiableUri,
+    profileJsonSource: profileJsonSource,
     IPFS_GATEWAY_BASE: IPFS_GATEWAY_BASE,
   };
 })(typeof window !== "undefined" ? window : globalThis);
