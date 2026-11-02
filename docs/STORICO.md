@@ -1966,6 +1966,20 @@ fornitore e la tracciabilità a livello di lotto funziona), ma il fatto viene
 Test: 3 casi in `scripts/test-lot-matching.js` (12 in tutto), anteprima e
 esploratore in Chromium. Guida aggiornata.
 
+## 67. Esploratore: filtro Materie prime / Batch, scheda rapida, "Usato nei batch"
+
+- **Filtro per tipo** (Tutti · Materie prime · Batch) con il numero di schede,
+  coerente con gli altri filtri (ricerca per lotto, attributi).
+- **Scheda rapida**: un collegamento a una scheda nascosta dai filtri (es. il
+  lotto usato da un batch, con il filtro "Batch" attivo) apre una finestra in
+  sola lettura con i dati della scheda e i suoi collegamenti, navigabili; "Mostra
+  nella griglia" toglie i filtri e porta alla scheda. Con la scheda visibile,
+  il collegamento scorre alla scheda come prima.
+- **Collegamento inverso**: la scheda di un lotto mostra "Usato nei batch" (i
+  batch che lo hanno usato), cliccabili allo stesso modo.
+- Vale per l'esploratore pubblico e per "Esplora registro" del pannello
+  (`traceability-explorer-ui.js`). Prova in Chromium del flusso completo.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

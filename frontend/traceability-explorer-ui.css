@@ -73,3 +73,18 @@
 .te-dochash-correct-row { border-top: 1px dashed #eee; padding-top: 8px; }
 .te-dochash-reason { font-size: 0.72rem; flex: 1 1 160px; min-width: 0; padding: 4px 6px; }
 .te-lot-after { font-size: 0.72rem; color: #8a5a00; background: #fff3d9; border-radius: 6px; padding: 2px 7px; margin: -1px 0 5px 12px; display: inline-block; }
+
+/* Filtro per tipo (Tutti / Materie prime / Batch) */
+.te-type-filter { display: inline-flex; flex-wrap: wrap; gap: 4px; background: #eef3fc; border-radius: 999px; padding: 4px; margin-bottom: 10px; }
+.te-type-pill { border: none; background: transparent; border-radius: 999px; padding: 6px 14px; font-size: 0.82rem; font-weight: 600; color: #5d6b82; cursor: pointer; }
+.te-type-pill.active { background: #fff; color: #1e6bff; box-shadow: 0 1px 4px rgba(16, 32, 64, 0.12); }
+.te-type-count { font-weight: 500; opacity: 0.75; }
+.te-used-in { margin-top: 10px; }
+
+/* Scheda rapida */
+.te-quick-back { position: fixed; inset: 0; background: rgba(11, 29, 58, 0.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 900; }
+.te-quick { position: relative; background: #fff; border-radius: 18px; max-width: 420px; width: 100%; max-height: 90vh; overflow: auto; box-shadow: 0 18px 50px rgba(11, 29, 58, 0.35); }
+.te-quick img { width: 100%; max-height: 240px; object-fit: cover; display: block; }
+.te-quick .te-attr-row { display: flex; }
+.te-quick-close { position: absolute; top: 8px; right: 10px; width: 34px; height: 34px; border-radius: 50%; border: none; background: rgba(255, 255, 255, 0.9); font-size: 1.3rem; cursor: pointer; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2); }
+.te-quick-show { margin-top: 12px; background: #fff; color: #1e6bff; border: 1px solid #1e6bff; border-radius: 9px; padding: 7px 14px; font-weight: 600; cursor: pointer; }

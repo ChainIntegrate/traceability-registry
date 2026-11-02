@@ -168,6 +168,10 @@
     let currentCardDataById = {};
     let activeFilters = {};
     let lotSearchText = "";
+    // Tipo di scheda mostrato: "all", "lot" (materie prime) o "batch".
+    let typeFilter = "all";
+    // Lotto → batch che lo hanno usato (collegamento inverso).
+    let usedInByLot = {};
     let lastLoadParams = null;
     // Funzioni disponibili nel registro caricato, dette dal backend in base
     // alla versione del contratto (i registri vecchi non hanno la correzione).
@@ -188,13 +192,23 @@
       const facets = collectFacets(cardDataById);
       const allowedKeys = allowedFacetKeys.filter((k) => facets[k]);
       const lotValues = collectLotValues(cardDataById);
-      if (allowedKeys.length === 0 && lotValues.size === 0) { filtersEl.style.display = "none"; return; }
+      const types = new Set(Object.values(cardDataById).map((cd) => cd.entry && cd.entry.entryType));
+      if (allowedKeys.length === 0 && lotValues.size === 0 && types.size < 2) { filtersEl.style.display = "none"; return; }
 
       // Ricerca testuale trasversale per numero di lotto — resta anche il
       // campo libero (utile se il lotto lo si conosce già), in aggiunta
       // alla pillola "Lotto" sotto (utile se invece non lo si conosce e si
       // vuole scegliere da un elenco).
       let html = "<div class='te-lot-search'><input type='text' class='te-lot-search-input' placeholder='" + t("filters.lotSearchPlaceholder") + "' value='" + escapeHtml(lotSearchText) + "'></div>";
+
+      // Materie prime / Batch: filtro di tipo, con il numero di schede
+      // visibili con gli altri filtri (aggiornato da applyCardFilters).
+      html += "<div class='te-type-filter' role='group'>";
+      [["all", "filters.typeAll"], ["lot", "filters.typeLot"], ["batch", "filters.typeBatch"]].forEach(([type, key]) => {
+        html += "<button type='button' class='te-type-pill" + (typeFilter === type ? " active" : "") + "' data-type='" + type + "'>" +
+          t(key) + " <span class='te-type-count'></span></button>";
+      });
+      html += "</div>";
 
       html += "<div class='te-filters-row'>";
 
@@ -267,6 +281,14 @@
         dropdown.addEventListener("click", (e) => e.stopPropagation()); // click dentro il menu non lo chiude
       });
 
+      filtersEl.querySelectorAll(".te-type-pill").forEach((pill) => {
+        pill.addEventListener("click", () => {
+          typeFilter = pill.dataset.type;
+          filtersEl.querySelectorAll(".te-type-pill").forEach((p) => p.classList.toggle("active", p === pill));
+          applyCardFilters();
+        });
+      });
+
       filtersEl.querySelectorAll(".te-pill:not(.te-lot-pill)").forEach((pill) => {
         pill.addEventListener("click", () => togglePill(pill));
       });
@@ -274,6 +296,8 @@
         e.stopPropagation();
         lotSearchText = "";
         searchInput.value = "";
+        typeFilter = "all";
+        filtersEl.querySelectorAll(".te-type-pill").forEach((p) => p.classList.toggle("active", p.dataset.type === "all"));
         clearFilters();
       });
     }
@@ -320,16 +344,35 @@
       });
     }
 
+    function typeMatches(cardData, type) {
+      if (type === "all") return true;
+      const entryType = cardData.entry ? cardData.entry.entryType : null;
+      return type === "batch" ? entryType === 1 : entryType === 0;
+    }
+
     function applyCardFilters() {
       let visibleCount = 0;
+      const counts = { all: 0, lot: 0, batch: 0 };
       Object.keys(currentCardDataById).forEach((tokenId) => {
         const cardEl = gridEl.querySelector("[data-token-id='" + tokenId + "']");
         if (!cardEl) return;
         const cardData = currentCardDataById[tokenId];
-        const matches = cardMatchesFilters(cardData, activeFilters) && cardHasMatchingLot(cardData, lotSearchText);
+        const otherFilters = cardMatchesFilters(cardData, activeFilters) && cardHasMatchingLot(cardData, lotSearchText);
+        if (otherFilters) {
+          counts.all++;
+          if (typeMatches(cardData, "lot")) counts.lot++;
+          if (typeMatches(cardData, "batch")) counts.batch++;
+        }
+        const matches = otherFilters && typeMatches(cardData, typeFilter);
         cardEl.style.display = matches ? "" : "none";
         if (matches) visibleCount++;
       });
+      if (filtersEl) {
+        filtersEl.querySelectorAll(".te-type-pill").forEach((p) => {
+          const c = p.querySelector(".te-type-count");
+          if (c) c.textContent = "(" + counts[p.dataset.type] + ")";
+        });
+      }
       if (statusEl) statusEl.textContent = visibleCount === 0 ? t("status.noMatch") : "";
     }
 
@@ -346,6 +389,83 @@
           "</div>";
       });
       return html + "</div>";
+    }
+
+    /** Porta alla scheda di un lotto o batch collegato: se è visibile nella
+     * griglia ci si scorre e la si apre; se i filtri la nascondono, si apre
+     * la scheda rapida, senza cambiare i filtri. */
+    function goToCard(tokenId) {
+      const el = gridEl.querySelector("[data-token-id='" + tokenId + "']");
+      if (el && el.style.display !== "none") {
+        const quick = document.querySelector(".te-quick-back");
+        if (quick) quick.remove();
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("te-expanded");
+        return;
+      }
+      openQuickView(tokenId);
+    }
+
+    /** Scheda rapida (sola lettura): dati principali della scheda e i suoi
+     * collegamenti, navigabili dentro la finestra stessa. Tutti i dati sono
+     * testo dei metadata: sempre con escape. */
+    function openQuickView(tokenId) {
+      const cardData = currentCardDataById[tokenId];
+      if (!cardData) return;
+      const entry = cardData.entry || {};
+      let back = document.querySelector(".te-quick-back");
+      if (!back) {
+        back = document.createElement("div");
+        back.className = "te-quick-back";
+        back.addEventListener("click", (e) => { if (e.target === back) back.remove(); });
+        document.body.appendChild(back);
+      }
+      const isBatch = entry.entryType === 1;
+      let html = "<div class='te-quick' role='dialog' aria-modal='true'>";
+      html += "<button type='button' class='te-quick-close' aria-label='" + escapeHtml(t("quick.close")) + "'>×</button>";
+      if (cardData.imageUrl) html += "<img src='" + escapeHtml(cardData.imageUrl) + "' alt=''>";
+      html += "<div class='te-card-body'>";
+      html += "<span class='te-badge " + (isBatch ? "te-badge-batch" : "te-badge-lot") + "'>" + (isBatch ? t("badge.batch") : t("badge.lot")) + "</span>";
+      if (entry.status === 1) html += "<span class='te-badge te-badge-invalid'>" + t("badge.invalidated") + "</span>";
+      html += "<h3>" + escapeHtml(cardData.name) + "</h3>";
+      if (cardData.description) html += "<p class='te-desc'>" + escapeHtml(cardData.description) + "</p>";
+      (cardData.attributes || []).forEach((a) => {
+        html += "<div class='te-attr-row'><span>" + escapeHtml(String(a.key)) + "</span><span>" + escapeHtml(String(a.value)) + "</span></div>";
+      });
+      if (hasDocumentHash(entry)) {
+        html += "<div class='te-dochash-info'><span class='te-dochash-badge'>" + t("card.documentHashBadge") + "</span> " +
+          "<code class='te-dochash-value'>" + escapeHtml(shortHash(entry.documentHash)) + "</code></div>";
+      }
+      const links = isBatch ? (entry.usedLots || []) : (usedInByLot[tokenId] || []);
+      if (links.length > 0) {
+        html += "<div class='te-used-lots'><strong>" + t(isBatch ? "card.usedLots" : "card.usedInBatches") + "</strong>";
+        links.forEach((id) => {
+          const d = currentCardDataById[id];
+          html += "<a href='#' data-quick-to='" + escapeHtml(id) + "'>→ " + escapeHtml(d ? d.name : id) + "</a>";
+        });
+        html += "</div>";
+      }
+      html += "<button type='button' class='te-quick-show'>" + t("quick.showInGrid") + "</button>";
+      html += "</div></div>";
+      back.innerHTML = html;
+      back.querySelector(".te-quick-close").addEventListener("click", () => back.remove());
+      back.querySelectorAll("a[data-quick-to]").forEach((a) => {
+        a.addEventListener("click", (e) => { e.preventDefault(); goToCard(a.dataset.quickTo); });
+      });
+      back.querySelector(".te-quick-show").addEventListener("click", () => {
+        // Mostra nella griglia: si tolgono i filtri e si va alla scheda.
+        back.remove();
+        typeFilter = "all";
+        lotSearchText = "";
+        if (filtersEl) {
+          filtersEl.querySelectorAll(".te-type-pill").forEach((p) => p.classList.toggle("active", p.dataset.type === "all"));
+          const input = filtersEl.querySelector(".te-lot-search-input");
+          if (input) input.value = "";
+          filtersEl.querySelectorAll(".te-lot-pill.active").forEach((p) => p.classList.remove("active"));
+        }
+        clearFilters();
+        goToCard(tokenId);
+      });
     }
 
     function renderGrid(entries, cardDataById) {
@@ -392,6 +512,15 @@
             const after = lotData && lotData.entry && lotData.entry.indexDate > productionSeconds;
             html += "<a href='#' data-scroll-to='" + escapeHtml(lotTokenId) + "'>→ " + escapeHtml(label) + "</a>";
             if (after) html += "<div class='te-lot-after'>⚠ " + t("card.lotAfterProduction") + "</div>";
+          });
+          html += "</div>";
+        }
+        // Collegamento inverso: i batch che hanno usato questo lotto.
+        if (entry.entryType === 0 && (usedInByLot[entry.tokenId] || []).length > 0) {
+          html += "<div class='te-used-lots te-used-in'><strong>" + t("card.usedInBatches") + "</strong>";
+          usedInByLot[entry.tokenId].forEach((batchTokenId) => {
+            const batchData = cardDataById[batchTokenId];
+            html += "<a href='#' data-scroll-to='" + escapeHtml(batchTokenId) + "'>→ " + escapeHtml(batchData ? batchData.name : batchTokenId) + "</a>";
           });
           html += "</div>";
         }
@@ -483,8 +612,7 @@
         a.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          const el = gridEl.querySelector("[data-token-id='" + a.dataset.scrollTo + "']");
-          if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("te-expanded"); }
+          goToCard(a.dataset.scrollTo);
         });
       });
 
@@ -667,8 +795,15 @@
       currentCardDataById = cardDataById;
       activeFilters = {};
       lotSearchText = "";
+      typeFilter = "all";
+      usedInByLot = {};
+      data.entries.forEach((en) => {
+        if (en.entryType !== 1) return;
+        (en.usedLots || []).forEach((lotId) => { (usedInByLot[lotId] = usedInByLot[lotId] || []).push(en.tokenId); });
+      });
       renderFilters(cardDataById);
       renderGrid(data.entries, cardDataById);
+      applyCardFilters();
     }
 
     return { load: load };
