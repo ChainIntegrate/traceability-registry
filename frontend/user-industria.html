@@ -64,6 +64,7 @@
   .lot-choice input { margin-top: 3px; }
   .lot-suggestion { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin: 4px 0; font-size: 0.9rem; }
   .lot-suggestion button { margin: 0; padding: 5px 10px; }
+  .lot-after { display: inline-block; color: #8a5a00; background: #fff3d9; border-radius: 6px; padding: 1px 7px; font-size: 0.8rem; margin-left: 4px; }
 </style>
 <link rel="stylesheet" href="./traceability-theme.css">
 </head>
@@ -268,6 +269,8 @@ TraceabilityValidators.CONFIG.RECOGNIZED_DATE_TRAIT_TYPES_BATCH = ["Data Produzi
 // -----------------------------------------------------------------------
 const I18N = {
   it: {
+    "batch.afterProduction": "acquisto registrato dopo la produzione del batch: la consegna usata non era tracciata",
+    "card.lotAfterProduction": "acquisto registrato dopo la produzione: la consegna usata non era tracciata",
     "batch.boughtOn": "acquistato il {date}",
     "batch.manyDeliveries": "Questo lotto è arrivato in {n} consegne: scegli quelle usate nel batch.",
     "batch.nameMismatch": "Il nome dell'ingrediente non corrisponde a nessuna consegna con questo codice: controlla e scegli tu.",
@@ -428,6 +431,8 @@ const I18N = {
     "log.collectionUpdated": "Dati della collezione aggiornati. Riferimento dell'operazione: {tx}", "log.collectionError": "Errore nei dati della collezione: {msg}",
   },
   en: {
+    "batch.afterProduction": "purchase recorded after the batch was produced: the delivery actually used was not tracked",
+    "card.lotAfterProduction": "purchase recorded after production: the delivery actually used was not tracked",
     "batch.boughtOn": "bought on {date}",
     "batch.manyDeliveries": "This lot arrived in {n} deliveries: choose the ones used in the batch.",
     "batch.nameMismatch": "The ingredient name does not match any delivery with this code: check and choose yourself.",
@@ -1612,7 +1617,12 @@ async function processProductionBatchJson(json, previewEl) {
   // collegato a tutte quelle usate), oppure suggerimenti per probabili refusi.
   // Un suggerimento non collega nulla: corregge il codice nel batch e ripete
   // l'anteprima (vedi traceability-lot-matching.js).
-  const lotMatches = extracted.lotReferences.map((ref) => ({ ref, m: TraceabilityLotMatching.matchLotReference(ref, decodedLots) }));
+  // Data di produzione del batch (o la sua prima data): gli acquisti
+  // registrati dopo restano proposti, ma segnalati (consegna usata non tracciata).
+  const productionSeconds = TraceabilityLotMatching.batchProductionDate(json.attributes) ||
+    TraceabilityLotMatching.parseDayMonthYear(extracted.dateCandidates[0] && extracted.dateCandidates[0].value);
+  const lotMatches = extracted.lotReferences.map((ref) => ({ ref, m: TraceabilityLotMatching.matchLotReference(ref, decodedLots, productionSeconds) }));
+  const afterNote = (l) => (l.afterProduction ? " <span class='lot-after'>⚠ " + t("batch.afterProduction") + "</span>" : "");
   const lotLabel = (l) => [l.nome, l.fornitore, l.dataAcquisto ? t("batch.boughtOn", { date: l.dataAcquisto }) : "", l.quantita].filter(Boolean).join(" · ");
 
   let matchHtml = "<h3>" + t("batch.matchingTitle") + "</h3><div class='lot-match-list'>";
@@ -1622,12 +1632,12 @@ async function processProductionBatchJson(json, previewEl) {
       if (m.exact.length > 1) matchHtml += "<p class='muted'>" + t("batch.manyDeliveries", { n: m.exact.length }) + "</p>";
       if (m.nameMismatch) matchHtml += "<p class='warn'>" + t("batch.nameMismatch") + "</p>";
       m.exact.forEach((l) => {
-        matchHtml += "<label class='lot-choice'><input type='checkbox' class='lot-pick' data-ref='" + i + "' value='" + esc(l.tokenId) + "'" + (l.preselected ? " checked" : "") + "> " + esc(lotLabel(l)) + "</label>";
+        matchHtml += "<label class='lot-choice'><input type='checkbox' class='lot-pick' data-ref='" + i + "' value='" + esc(l.tokenId) + "'" + (l.preselected ? " checked" : "") + "> <span>" + esc(lotLabel(l)) + afterNote(l) + "</span></label>";
       });
     } else if (m.suggestions.length > 0) {
       matchHtml += "<p class='warn'>" + t("batch.notFoundSuggest") + "</p>";
       m.suggestions.forEach((s) => {
-        matchHtml += "<div class='lot-suggestion'><span><code>" + esc(s.lotto) + "</code> " + esc(lotLabel(s)) + "</span> " +
+        matchHtml += "<div class='lot-suggestion'><span><code>" + esc(s.lotto) + "</code> " + esc(lotLabel(s)) + afterNote(s) + "</span> " +
           "<button type='button' class='secondary lot-fix' data-ref='" + i + "' data-lotto='" + esc(s.lotto) + "'>" + t("batch.useThisLot", { lotto: esc(s.lotto) }) + "</button></div>";
       });
     } else {

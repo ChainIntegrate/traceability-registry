@@ -72,3 +72,4 @@
 .te-dochash-correction { margin-top: 2px; }
 .te-dochash-correct-row { border-top: 1px dashed #eee; padding-top: 8px; }
 .te-dochash-reason { font-size: 0.72rem; flex: 1 1 160px; min-width: 0; padding: 4px 6px; }
+.te-lot-after { font-size: 0.72rem; color: #8a5a00; background: #fff3d9; border-radius: 6px; padding: 2px 7px; margin: -1px 0 5px 12px; display: inline-block; }

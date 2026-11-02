@@ -1946,6 +1946,26 @@ Test: `scripts/test-lot-matching.js` (9 casi) e prova in Chromium del flusso
 (tre consegne, suggerimento e correzione, conferma bloccata, lotti inviati al
 contratto). Guida aggiornata.
 
+## 66. Acquisti registrati dopo la produzione del batch
+
+Con la tracciatura iniziata da poco, capita che l'unica consegna registrata di
+un lotto sia **successiva** alla produzione del batch: la merce usata veniva da
+una consegna precedente, mai registrata. Decisione: la consegna successiva
+resta **proposta e preselezionata** (il collegamento vale per il lotto del
+fornitore e la tracciabilità a livello di lotto funziona), ma il fatto viene
+**dichiarato**, non nascosto:
+- anteprima del batch: avviso "acquisto registrato dopo la produzione del
+  batch: la consegna usata non era tracciata" accanto alla consegna;
+- esploratore (pubblico e privato): stesso avviso sotto il lotto collegato.
+  Confronto tra data di acquisto del lotto e **data di produzione** del batch
+  (non quella di imbottigliamento); senza data di produzione, la data di
+  riferimento del batch. Stesso giorno = non successivo;
+- nei "Lotti utilizzati" del batch, accanto al nome del lotto, la data di
+  acquisto, per distinguere più consegne dello stesso lotto.
+
+Test: 3 casi in `scripts/test-lot-matching.js` (12 in tutto), anteprima e
+esploratore in Chromium. Guida aggiornata.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

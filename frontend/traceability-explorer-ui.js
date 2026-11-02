@@ -378,10 +378,20 @@
         });
         if (entry.entryType === 1 && entry.usedLots && entry.usedLots.length > 0) {
           html += "<div class='te-used-lots'><strong>" + t("card.usedLots") + "</strong>";
+          // Lotto acquistato (registrato) DOPO la produzione del batch: il
+          // collegamento vale a livello di lotto del fornitore, ma la consegna
+          // davvero usata non era tracciata. Lo si dichiara, non lo si nasconde.
+          const LM = global.TraceabilityLotMatching;
+          const productionSeconds = (LM && LM.batchProductionDate(cardData.attributes)) || entry.indexDate;
           entry.usedLots.forEach((lotTokenId) => {
             const lotData = cardDataById[lotTokenId];
-            const label = lotData ? lotData.name : lotTokenId;
+            // Data di acquisto accanto al nome: più consegne dello stesso lotto
+            // hanno lo stesso nome e vanno distinte.
+            const bought = lotData && (lotData.attributes || []).find((a) => a.key === "Data Acquisto");
+            const label = lotData ? lotData.name + (bought && bought.value ? " · " + bought.value : "") : lotTokenId;
+            const after = lotData && lotData.entry && lotData.entry.indexDate > productionSeconds;
             html += "<a href='#' data-scroll-to='" + escapeHtml(lotTokenId) + "'>→ " + escapeHtml(label) + "</a>";
+            if (after) html += "<div class='te-lot-after'>⚠ " + t("card.lotAfterProduction") + "</div>";
           });
           html += "</div>";
         }
