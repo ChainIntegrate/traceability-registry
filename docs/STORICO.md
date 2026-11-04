@@ -2006,6 +2006,29 @@ l'elenco dei file del registro per un'ora (viaggia in HTTPS, nel corpo della
 richiesta). Test: messaggio identico tra pagina e backend, validità lato
 backend, conteggio delle firme in Chromium (1 all'apertura, 1 dopo l'ora).
 
+## 70. Suggerimenti per i refusi: fino a due caratteri
+
+Caso reale: lotto registrato `8025427025452` (EAN-13 valido), scritto nel batch
+`8025427058452` (cifra di controllo sbagliata): due cifre diverse, nessun
+suggerimento con la regola di §65 (una sola differenza). Decisione: fino a
+**due** caratteri di differenza, sempre (i codici di lotto veri sono di solito
+molto diversi e resta solo un suggerimento); invariato il minimo di 4
+caratteri per i suggerimenti per somiglianza. Una differenza viene prima di
+due. Test: 3 casi nuovi in `scripts/test-lot-matching.js` (15 in tutto).
+
+## 71. Suggerimento per i codici di lotto parziali
+
+Caso: tra le materie prime `220425 271E`, nel batch solo `220425` (o
+viceversa). Prima nessun suggerimento (differenza di 4 caratteri). Ora, se uno
+dei due codici è una **parte intera** dell'altro (uno o più blocchi
+consecutivi separati da spazio/trattino/barra, oppure inizio o fine del
+codice; mai un pezzo a metà di un blocco) e la parte in comune ha almeno 5
+caratteri, il lotto è suggerito con la nota "codice parziale: controlla che
+sia lo stesso lotto". Vale in entrambi i versi, viene dopo i refusi, e se più
+lotti condividono la stessa parte sono proposti tutti (fino a 5
+suggerimenti). Resta un suggerimento: "Correggi in …" cambia il codice nel
+batch. Test: 4 casi nuovi (19 in tutto) e flusso in Chromium.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

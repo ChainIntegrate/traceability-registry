@@ -8,7 +8,8 @@
  *   batch va collegato a tutte quelle usate). Sono preselezionati quelli in cui
  *   anche il nome dell'ingrediente corrisponde.
  * - Nessuna corrispondenza esatta: SUGGERIMENTI per probabili refusi (trattini,
- *   spazi, maiuscole, zeri iniziali, un carattere in più/in meno/diverso). Un
+ *   spazi, maiuscole, zeri iniziali, fino a due caratteri in più/in meno/diversi;
+ *   codice scritto solo in parte, es. "220425" per "220425 271E"). Un
  *   suggerimento non collega niente da solo: l'utente può solo correggere il
  *   codice scritto nel batch e ripetere l'anteprima.
  */
@@ -23,6 +24,44 @@
       .toUpperCase()
       .replace(/\d+/g, (digits) => digits.replace(/^0+(?=\d)/, ""))
       .replace(/[^A-Z0-9]/g, "");
+  }
+
+  // Refusi suggeriti: fino a 2 caratteri di differenza, solo per codici di
+  // almeno 4 caratteri (su "A1"/"B2" sarebbe un tiro a indovinare).
+  const MAX_TYPO_DISTANCE = 2;
+  const MIN_LENGTH_FOR_TYPOS = 4;
+
+  // Codice parziale: la parte in comune deve avere almeno 5 caratteri, per non
+  // agganciare blocchi corti (es. "271E") a mezzo registro.
+  const MIN_PARTIAL_LENGTH = 5;
+  const MAX_SUGGESTIONS = 5;
+
+  /** Blocchi di un codice separati da spazi, trattini, barre… (normalizzati). */
+  function lotSegments(code) {
+    return String(code || "").split(/[^A-Za-z0-9]+/).map(normalizeLotCode).filter(Boolean);
+  }
+
+  /**
+   * Uno dei due codici è una parte INTERA dell'altro? ("220425" e "220425 271E")
+   * Parte intera = uno o più blocchi consecutivi del codice più lungo, oppure
+   * il suo inizio o la sua fine; mai un pezzo a metà di un blocco.
+   */
+  function isPartialCode(codeA, codeB) {
+    const a = normalizeLotCode(codeA), b = normalizeLotCode(codeB);
+    if (!a || !b || a === b) return false;
+    const [shortN, longCode, longN] = a.length < b.length ? [a, codeB, b] : [b, codeA, a];
+    if (shortN.length < MIN_PARTIAL_LENGTH) return false;
+    if (longN.startsWith(shortN) || longN.endsWith(shortN)) return true;
+    const segs = lotSegments(longCode);
+    for (let i = 0; i < segs.length; i++) {
+      let joined = "";
+      for (let j = i; j < segs.length; j++) {
+        joined += segs[j];
+        if (joined === shortN) return true;
+        if (joined.length >= shortN.length) break;
+      }
+    }
+    return false;
   }
 
   /** Distanza di modifica (Levenshtein), interrotta oltre `max`. */
@@ -107,7 +146,14 @@
       if (!n || !target) return;
       let score = null, reason = null;
       if (n === target) { score = 0; reason = "format"; }
-      else if (Math.min(n.length, target.length) >= 4 && editDistance(n, target, 1) <= 1) { score = 1; reason = "typo"; }
+      else if (Math.min(n.length, target.length) >= MIN_LENGTH_FOR_TYPOS) {
+        // Fino a due caratteri di differenza: i codici di lotto veri sono di
+        // solito molto diversi tra loro, e resta comunque un suggerimento.
+        const distance = editDistance(n, target, MAX_TYPO_DISTANCE);
+        if (distance <= MAX_TYPO_DISTANCE) { score = distance; reason = "typo"; }
+      }
+      // Codice scritto solo in parte (o con una parte in più): dopo i refusi.
+      if (score === null && isPartialCode(ref.lotto, l.lotto)) { score = 3; reason = "partial"; }
       if (score === null) return;
       if (ingredientMatches(ref.ingredienteNome, l.nome)) score -= 0.5;
       // un suggerimento per codice: le consegne dello stesso lotto si
@@ -117,11 +163,11 @@
       suggestions.push(Object.assign({}, l, { reason, score, afterProduction: after(l) }));
     });
     suggestions.sort((x, y) => x.score - y.score);
-    return { exact: [], nameMismatch: false, suggestions: suggestions.slice(0, 3) };
+    return { exact: [], nameMismatch: false, suggestions: suggestions.slice(0, MAX_SUGGESTIONS) };
   }
 
   global.TraceabilityLotMatching = {
-    normalizeLotCode, editDistance, ingredientMatches, matchLotReference,
+    normalizeLotCode, editDistance, ingredientMatches, matchLotReference, isPartialCode,
     parseDayMonthYear, batchProductionDate, purchasedAfterProduction,
   };
 })(typeof window !== "undefined" ? window : globalThis);

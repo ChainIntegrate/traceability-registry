@@ -100,5 +100,51 @@ check("data di produzione dagli attributi del batch (trait_type o key)", () => {
   assert.strictEqual(M.batchProductionDate([{ key: "Data Imbottigliamento", value: "15/04/2026" }]), null);
 });
 
+check("due cifre di differenza su un codice lungo (caso reale EAN-13) → suggerimento", () => {
+  const lots = LOTS.concat([lot("0x07", "8025427025452", "Fiocchi di segale", "Molino")]);
+  const r = M.matchLotReference({ ingredienteNome: "Fiocchi di segale", lotto: "8025427058452" }, lots);
+  assert.strictEqual(r.suggestions[0].lotto, "8025427025452");
+});
+
+check("una differenza viene prima di due", () => {
+  const lots = [lot("0x10", "AB-1234", "Malto"), lot("0x11", "AB-1299", "Malto")];
+  const r = M.matchLotReference({ ingredienteNome: "Malto", lotto: "AB-1239" }, lots);
+  assert.deepStrictEqual(r.suggestions.map((x) => x.lotto), ["AB-1234", "AB-1299"]);
+});
+
+check("tre differenze → niente", () => {
+  const r = M.matchLotReference({ ingredienteNome: "Malto", lotto: "1987" }, [lot("0x12", "1234", "Malto")]);
+  assert.strictEqual(M.editDistance("1987", "1234", 5), 3);
+  assert.strictEqual(r.suggestions.length, 0);
+  const r2 = M.matchLotReference({ ingredienteNome: "Malto", lotto: "8025427058999" }, [lot("0x13", "8025427025452", "Malto")]);
+  assert.strictEqual(r2.suggestions.length, 0, "EAN con 4 cifre diverse: niente");
+});
+
+check("codice parziale, in entrambi i versi → suggerimento \"partial\"", () => {
+  const r1 = M.matchLotReference({ ingredienteNome: "Malto", lotto: "220425" }, [lot("0x20", "220425 271E", "Malto")]);
+  assert.deepStrictEqual(r1.suggestions.map((x) => [x.lotto, x.reason]), [["220425 271E", "partial"]]);
+  const r2 = M.matchLotReference({ ingredienteNome: "Malto", lotto: "220425 271E" }, [lot("0x21", "220425", "Malto")]);
+  assert.deepStrictEqual(r2.suggestions.map((x) => [x.lotto, x.reason]), [["220425", "partial"]]);
+});
+
+check("codice parziale: più lotti con lo stesso inizio, tutti proposti", () => {
+  const r = M.matchLotReference({ ingredienteNome: "Malto", lotto: "220425" },
+    [lot("0x22", "220425 271E", "Malto"), lot("0x23", "220425-300A", "Malto"), lot("0x24", "220426 271E", "Malto")]);
+  assert.deepStrictEqual(r.suggestions.map((x) => x.lotto).sort(), ["220425 271E", "220425-300A", "220426 271E"].sort().filter((c) => c !== "220426 271E"));
+});
+
+check("codice parziale: blocco centrale sì, pezzo a metà blocco no, parte corta no", () => {
+  assert.ok(M.isPartialCode("LT-220425-01", "220425"), "blocco centrale");
+  assert.ok(!M.isPartialCode("220425 271E", "0425"), "pezzo a metà blocco (e corto)");
+  assert.ok(!M.isPartialCode("A2204251B", "20425"), "a metà di un blocco unico");
+  assert.ok(!M.isPartialCode("220425 271E", "271E"), "parte sotto i 5 caratteri");
+  assert.ok(M.isPartialCode("220425271E", "220425"), "inizio senza separatori");
+});
+
+check("i refusi vengono prima dei codici parziali", () => {
+  const r = M.matchLotReference({ ingredienteNome: "Malto", lotto: "220425" }, [lot("0x25", "220425 271E", "Malto"), lot("0x26", "220426", "Malto")]);
+  assert.deepStrictEqual(r.suggestions.map((x) => x.reason), ["typo", "partial"]);
+});
+
 console.log(failures === 0 ? "\nTutti i test superati." : "\n" + failures + " test falliti.");
 process.exit(failures === 0 ? 0 : 1);
