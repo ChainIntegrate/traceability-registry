@@ -47,6 +47,7 @@ const OPERATION_LABELS = {
   "Hide photo": "Nascondi foto / Hide photo",
   "Pin metadata": "Salvataggio dati / Save data",
   "Pin metadata batch": "Salvataggio dati / Save data",
+  "Read library": "Consultazione delle librerie, valida 1 ora / Library access, valid 1 hour",
 };
 
 /**
@@ -58,8 +59,9 @@ const OPERATION_LABELS = {
  * @param {string} p.registryAddress
  * @param {string} p.details - blocco tecnico dell'operazione (buildXSignedMessage)
  * @param {number} p.timestamp - secondi Unix, lo stesso già verificato per freschezza
+ * @param {number} [p.expiresAt] - secondi Unix: aggiunge "Expiration Time"
  */
-function buildSiweMessage({ domain, uri, address, chainId, registryAddress, details, timestamp }) {
+function buildSiweMessage({ domain, uri, address, chainId, registryAddress, details, timestamp, expiresAt }) {
   const rawOperation = details.split("\n")[0].replace("ChainIntegrate TraceabilityRegistry - ", "");
   const operation = OPERATION_LABELS[rawOperation] || rawOperation;
   const nonce = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(details)).slice(2);
@@ -75,6 +77,9 @@ function buildSiweMessage({ domain, uri, address, chainId, registryAddress, deta
     "Chain ID: " + chainId + "\n" +
     "Nonce: " + nonce + "\n" +
     "Issued At: " + issuedAt + "\n" +
+    // Solo per le firme valide più a lungo (consultazione delle librerie):
+    // la UP extension mostra la scadenza.
+    (expiresAt ? "Expiration Time: " + new Date(expiresAt * 1000).toISOString() + "\n" : "") +
     "Resources:\n" +
     "- " + uri + "/how-it-works.html\n" +
     "- " + uri + "/explorer.html?registry=" + ethers.utils.getAddress(registryAddress)

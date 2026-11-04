@@ -42,5 +42,23 @@ for (const op of OPS) {
     console.log("FAIL " + op + ": " + err.message);
   }
 }
+// Firma di consultazione delle librerie: blocco identico e scadenza nel messaggio
+try {
+  assert.strictEqual(front.buildLibraryReadSignedMessage(base.registryAddress, base.timestamp),
+    require(path.join(ROOT, "backend", "authGuard.js")).buildLibraryReadSignedMessage(base.registryAddress, base.timestamp));
+  const details = front.buildLibraryReadSignedMessage(base.registryAddress, base.timestamp);
+  const expiresAt = base.timestamp + 3600;
+  const a = front.buildSiweMessage({ ...base, details, expiresAt });
+  const b = back.buildSiweMessage({ ...base, details, expiresAt });
+  assert.strictEqual(a, b);
+  assert.ok(a.includes("\nExpiration Time: " + new Date(expiresAt * 1000).toISOString() + "\nResources:"), "scadenza mancante o fuori posto");
+  assert.ok(a.includes("valida 1 ora"));
+  assert.ok(!/[^A-Za-z0-9\-._~:\/?#\[\]@!$&'()*+,;= ]/.test(a.split("\n")[3]), "statement non ASCII");
+  console.log("ok   consultazione librerie: stesso messaggio, scadenza tra Issued At e Resources");
+} catch (err) {
+  failures++;
+  console.log("FAIL consultazione librerie: " + err.message);
+}
+
 console.log(failures === 0 ? "\nTutti i test superati." : "\n" + failures + " test falliti.");
 process.exit(failures === 0 ? 0 : 1);

@@ -226,6 +226,20 @@ async function main() {
   // -------------------------------------------------------------------------
   const authGuardPath = require.resolve(path.join(BACKEND, "authGuard.js"));
   require(authGuardPath);
+
+  await check("validità delle firme: 5 minuti, 1 ora per la consultazione delle librerie", async () => {
+    const { verifySignedRequest } = require.cache[authGuardPath].exports;
+    // Factory finta che non riconosce il registro: se la risposta è "non
+    // riconosciuto" il controllo di età è stato superato.
+    const factory = { isRegistry: async () => false };
+    const now = Math.floor(Date.now() / 1000);
+    const at = (timestamp, maxAgeSeconds) => verifySignedRequest({ provider: null, factoryContract: factory,
+      registryAddress: "0x" + "7".repeat(40), signerAddress: "0x" + "2".repeat(40), message: "x", signature: "0x", timestamp, maxAgeSeconds });
+    assert.strictEqual((await at(now - 600)).status, 401, "firma normale di 10 minuti fa: scaduta");
+    assert.strictEqual((await at(now - 3000, 3600)).status, 403, "consultazione di 50 minuti fa: ancora valida");
+    assert.strictEqual((await at(now - 3700, 3600)).status, 401, "consultazione di oltre 1 ora fa: scaduta");
+    assert.strictEqual((await at(now + 600, 3600)).status, 401, "timestamp 10 minuti nel futuro: rifiutato anche con 1 ora");
+  });
   require.cache[authGuardPath].exports.verifySignedRequest = async () => ({ ok: true });
   process.env.DOCUMENT_MASTER_KEY = "";
   const origWarn2 = console.warn; console.warn = () => {};
