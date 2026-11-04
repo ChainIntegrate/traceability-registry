@@ -1980,6 +1980,16 @@ esploratore in Chromium. Guida aggiornata.
 - Vale per l'esploratore pubblico e per "Esplora registro" del pannello
   (`traceability-explorer-ui.js`). Prova in Chromium del flusso completo.
 
+## 68. Firma: tornano i link nella UP extension
+
+Con la revisione dei testi (§63) il messaggio da firmare conteneva "non è un
+pagamento": la "è" non è ammessa da EIP-4361 nello statement, quindi la UP
+extension non riconosceva più il messaggio SIWE e lo mostrava come testo
+grezzo, senza i due link cliccabili (guida ed esploratore del registro).
+Statement di nuovo solo ASCII ("non si tratta di un pagamento"), identico tra
+pagina e backend; `scripts/test-siwe-message.js` ora controlla i caratteri
+ammessi e la presenza dei link (sul testo precedente fallisce).
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

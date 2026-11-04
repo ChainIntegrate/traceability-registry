@@ -30,6 +30,12 @@ for (const op of OPS) {
     // regole SIWE (EIP-4361): lo statement è una riga sola
     const statementLine = a.split("\n")[3];
     assert.ok(!/[\r\n]/.test(statementLine) && statementLine.length > 0);
+    // EIP-4361: statement = *( reserved / unreserved / " " ), solo ASCII.
+    // Un carattere fuori standard (es. "è") fa mostrare alla UP extension il
+    // messaggio come testo grezzo, senza link cliccabili.
+    const bad = statementLine.match(/[^A-Za-z0-9\-._~:\/?#\[\]@!$&'()*+,;= ]/g);
+    assert.ok(!bad, "caratteri non ammessi nello statement SIWE: " + JSON.stringify(bad));
+    assert.ok(a.includes("\nResources:\n- "), "mancano i link (Resources)");
     console.log("ok   " + op + " → " + statementLine.slice(statementLine.indexOf("[Operazione")));
   } catch (err) {
     failures++;

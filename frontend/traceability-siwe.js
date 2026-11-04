@@ -25,8 +25,11 @@
     return ethers;
   }
 
+  // SOLO caratteri ASCII ammessi da EIP-4361 (niente lettere accentate): con
+  // un carattere fuori standard la UP extension non riconosce il messaggio
+  // SIWE e lo mostra come testo grezzo, senza i link cliccabili.
   const SIWE_STATEMENT =
-    "[IT] Firma di conferma dalla tua Universal Profile: non è un pagamento, non costa nulla " +
+    "[IT] Firma di conferma dalla tua Universal Profile: non si tratta di un pagamento, non costa nulla " +
     "e non scrive niente sulla blockchain. Serve solo a dimostrare che sei davvero tu a chiedere questa operazione. " +
     "[EN] Confirmation signature from your Universal Profile: it is not a payment, costs nothing " +
     "and writes nothing on the blockchain. It only proves it's really you asking for this.";
