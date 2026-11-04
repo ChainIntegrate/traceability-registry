@@ -56,6 +56,8 @@
   .material-row, .lot-row { display: flex; gap: 6px; margin-bottom: 6px; }
   .material-row input, .lot-row input { flex: 1; }
   #log { white-space: pre-wrap; background: #111; color: #0f0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; max-height: 110px; overflow-y: auto; }
+  .batch-code { font-weight: 600; margin: 14px 0 6px; }
+  .date-choice label:not(:first-child) { display: flex; gap: 8px; align-items: center; font-weight: 500; margin: 4px 0; cursor: pointer; }
   .lot-match-list { display: grid; gap: 10px; margin: 10px 0 14px; }
   .lot-match { border: 1px solid #ddd; border-radius: 10px; padding: 10px 12px; }
   .lot-match-head { margin-bottom: 6px; }
@@ -173,6 +175,7 @@
         <button type="button" class="secondary" id="rmAddRowBtn" data-i18n="rm.addRow">+ Aggiungi materiale</button>
         <br>
         <button class="primary" id="rmBuildJsonBtn" data-i18n="common.generatePreview">Genera anteprima</button>
+        <button type="button" class="secondary" id="rmClearBtn" data-i18n="common.clear">Pulisci</button>
       </div>
       <div id="rawMaterialPreview"></div>
     </div>
@@ -198,6 +201,7 @@
         <button type="button" class="secondary" id="batchAddLotBtn" data-i18n="batch.addLot">+ Aggiungi lotto ingrediente</button>
         <br>
         <button class="primary" id="batchBuildJsonBtn" data-i18n="common.generatePreview">Genera anteprima</button>
+        <button type="button" class="secondary" id="batchClearBtn" data-i18n="common.clear">Pulisci</button>
       </div>
       <div id="batchPreview"></div>
     </div>
@@ -266,6 +270,8 @@ TraceabilityValidators.CONFIG.RECOGNIZED_DATE_TRAIT_TYPES_BATCH = ["Data Produzi
 // -----------------------------------------------------------------------
 const I18N = {
   it: {
+    "common.clear": "Pulisci",
+    "common.clearConfirm": "Svuotare il modulo? I dati inseriti e l'anteprima andranno persi.",
     "batch.partialCode": "codice parziale: controlla che sia lo stesso lotto",
     "filters.typeAll": "Tutti",
     "filters.typeLot": "Materie prime",
@@ -435,6 +441,8 @@ const I18N = {
     "log.collectionUpdated": "Dati della collezione aggiornati. Riferimento dell'operazione: {tx}", "log.collectionError": "Errore nei dati della collezione: {msg}",
   },
   en: {
+    "common.clear": "Clear",
+    "common.clearConfirm": "Clear the form? The data entered and the preview will be lost.",
     "batch.partialCode": "partial code: check that it is the same lot",
     "filters.typeAll": "All",
     "filters.typeLot": "Raw materials",
@@ -1519,6 +1527,23 @@ function addBatchLotRow() {
 document.getElementById("batchAddLotBtn").addEventListener("click", () => addBatchLotRow());
 addBatchLotRow(); // una riga di partenza
 
+/** "Pulisci": svuota l'inserimento manuale (campi, righe, anteprima, file
+ * caricato) e riparte da una riga vuota, dopo conferma. */
+function clearInsertion({ manualId, rowsId, addRow, previewId, fileId }) {
+  if (!window.confirm(t("common.clearConfirm"))) return;
+  document.querySelectorAll("#" + manualId + " input[type=text]").forEach((i) => { i.value = ""; });
+  document.getElementById(rowsId).innerHTML = "";
+  addRow();
+  document.getElementById(previewId).innerHTML = "";
+  document.getElementById(fileId).value = "";
+}
+document.getElementById("rmClearBtn").addEventListener("click", () => clearInsertion({
+  manualId: "rm-manual", rowsId: "rmMaterialRows", addRow: addRawMaterialRow, previewId: "rawMaterialPreview", fileId: "rawMaterialJsonInput",
+}));
+document.getElementById("batchClearBtn").addEventListener("click", () => clearInsertion({
+  manualId: "batch-manual", rowsId: "batchLotRows", addRow: addBatchLotRow, previewId: "batchPreview", fileId: "batchJsonInput",
+}));
+
 function populateBatchForm(json, extracted) {
   document.getElementById("batchNomeInput").value = json.name || "";
   document.getElementById("batchDescInput").value = json.description || "";
@@ -1583,6 +1608,11 @@ document.getElementById("batchJsonInput").addEventListener("change", async (e) =
   }
 });
 
+// Data di ordinamento scelta nell'anteprima, per batch (oggetto JSON): resta
+// quando l'anteprima si ricarica. WeakMap: nessun campo aggiunto al JSON, che
+// finisce nei metadata.
+const batchDateChoice = new WeakMap();
+
 async function processProductionBatchJson(json, previewEl) {
   const validation = TraceabilityValidators.validateProductionBatchJson(json);
   if (!validation.valid) {
@@ -1591,17 +1621,19 @@ async function processProductionBatchJson(json, previewEl) {
   }
   const extracted = TraceabilityValidators.extractProductionBatchData(json);
 
-  let html = "<p>" + t("batch.summary", { codice: esc(extracted.codice) }) + "</p>";
+  const html = "";
 
+  // Data di ordinamento: in fondo, vicino alla conferma, e conservata se
+  // l'anteprima si ricarica (es. dopo "Correggi in …").
+  const chosenDateIndex = Math.min(batchDateChoice.get(json) || 0, extracted.dateCandidates.length - 1);
   let dateHtml = "";
   if (extracted.requiresDateSelection) {
-    dateHtml = "<div class='row'><label>" + t("batch.chooseDate") + "</label>";
+    dateHtml = "<div class='row date-choice'><label>" + t("batch.chooseDate") + "</label>";
     extracted.dateCandidates.forEach((d, i) => {
-      dateHtml += "<label><input type='radio' name='dateChoice' value='" + i + "'" + (i === 0 ? " checked" : "") + "> " + esc(d.trait_type) + ": " + esc(d.value) + "</label><br>";
+      dateHtml += "<label><input type='radio' name='dateChoice' value='" + i + "'" + (i === chosenDateIndex ? " checked" : "") + "> " + esc(d.trait_type) + ": " + esc(d.value) + "</label>";
     });
     dateHtml += "</div>";
   }
-  html += dateHtml;
 
   previewEl.innerHTML = html + "<p>" + t("batch.matching") + "</p>";
 
@@ -1658,8 +1690,11 @@ async function processProductionBatchJson(json, previewEl) {
     matchHtml += "</div>";
   });
   matchHtml += "</div>";
+  // Codice (ricetta) accanto alla foto: la foto della libreria si sceglie in base al codice.
+  matchHtml += "<p class='batch-code'>" + t("batch.summary", { codice: esc(extracted.codice) }) + "</p>";
   matchHtml += "<div class='row'><label>" + t("batch.photoLabel") + "</label><select id='batchPhotoSelect'></select></div>";
   matchHtml += "<div class='row'><label>" + t("documents.selectLabel") + "</label><select id='batchDocumentSelect'></select></div>";
+  matchHtml += dateHtml;
   matchHtml += "<button class='primary' id='confirmMintBatchBtn'>" + t("batch.confirmMint") + "</button>";
   matchHtml += "<button type='button' class='secondary' id='backToEditBatchBtn'>" + t("common.backToEdit") + "</button>";
   previewEl.innerHTML = html + matchHtml;
@@ -1667,6 +1702,9 @@ async function processProductionBatchJson(json, previewEl) {
   document.getElementById("backToEditBatchBtn").addEventListener("click", () => {
     previewEl.innerHTML = "";
     switchToSubtab("batch-manual");
+  });
+  previewEl.querySelectorAll("input[name=dateChoice]").forEach((r) => {
+    r.addEventListener("change", () => { if (r.checked) batchDateChoice.set(json, Number(r.value)); });
   });
 
   // Suggerimento accettato: si corregge il codice del lotto nel batch (anche

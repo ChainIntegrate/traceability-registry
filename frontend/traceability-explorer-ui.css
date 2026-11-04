@@ -88,3 +88,11 @@
 .te-quick .te-attr-row { display: flex; }
 .te-quick-close { position: absolute; top: 8px; right: 10px; width: 34px; height: 34px; border-radius: 50%; border: none; background: rgba(255, 255, 255, 0.9); font-size: 1.3rem; cursor: pointer; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2); }
 .te-quick-show { margin-top: 12px; background: #fff; color: #1e6bff; border: 1px solid #1e6bff; border-radius: 9px; padding: 7px 14px; font-weight: 600; cursor: pointer; }
+
+/* Riga "Lotto …" del batch collegata ai lotti registrati */
+.te-attr-row.te-attr-linked { align-items: flex-start; gap: 10px; }
+.te-attr-links { display: flex; flex-direction: column; align-items: flex-end; text-align: right; gap: 2px; }
+.te-attr-links .te-lot-link { color: #1e6bff; text-decoration: none; font-weight: 600; }
+.te-attr-links .te-lot-link:hover { text-decoration: underline; }
+.te-attr-links .te-lot-after { margin: 0 0 3px; }
+.te-used-lots .te-lot-link { font-size: 0.78rem; color: #5b3fd6; text-decoration: none; display: block; margin-bottom: 3px; }

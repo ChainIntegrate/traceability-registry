@@ -2029,6 +2029,29 @@ lotti condividono la stessa parte sono proposti tutti (fino a 5
 suggerimenti). Resta un suggerimento: "Correggi in …" cambia il codice nel
 batch. Test: 4 casi nuovi (19 in tutto) e flusso in Chromium.
 
+## 72. Anteprima del batch riordinata, "Pulisci", righe dei lotti cliccabili
+
+Richieste dall'uso reale:
+1. **Data di ordinamento in fondo** all'anteprima del batch, vicino a
+   "Conferma e registra" (prima stava in cima e, con l'anteprima che si
+   ricarica, poteva sfuggire).
+2. **Data scelta conservata** quando l'anteprima si ricarica (es. dopo
+   "Correggi in …"): prima tornava alla prima data senza avvisare. Tenuta in
+   una `WeakMap` per batch, senza aggiungere campi al JSON dei metadata.
+3. **Codice (ricetta) in fondo**, accanto alla scelta della foto, che si fa
+   proprio per codice.
+4. **"Pulisci"** nell'inserimento manuale di materie prime e batch: svuota
+   campi, righe, anteprima e file caricato, dopo conferma.
+5. **Esploratore**: nella scheda del batch la riga "Lotto <ingrediente>:
+   codice" diventa essa stessa il collegamento ai lotti registrati con quel
+   codice (una voce per consegna, con data di acquisto e avviso se successiva
+   alla produzione). Sparisce la lista ripetuta "Lotti utilizzati", che resta
+   solo per i lotti collegati che non corrispondono a nessuna riga. Abbinamento
+   per codice; se più righe hanno lo stesso codice, quella con l'ingrediente
+   corrispondente.
+
+Prove in Chromium di tutti e cinque i punti.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

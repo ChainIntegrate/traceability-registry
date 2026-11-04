@@ -468,6 +468,30 @@
       });
     }
 
+    /** Abbina i lotti collegati a un batch (usedLots, on-chain) alle sue righe
+     * "Lotto <ingrediente>: codice" (testo dei metadata): stesso codice; se più
+     * righe hanno lo stesso codice, quella con l'ingrediente corrispondente.
+     * @returns {{byRow: Object<number, string[]>, others: string[]}} */
+    function linkLotsToRows(entry, cardData, cardDataById) {
+      const LM = global.TraceabilityLotMatching;
+      const rows = [];
+      (cardData.attributes || []).forEach((a, i) => {
+        const key = String(a.key);
+        if (key.indexOf("Lotto ") === 0) rows.push({ i, ingrediente: key.slice(6), lotto: String(a.value) });
+      });
+      const byRow = {}, others = [];
+      (entry.usedLots || []).forEach((lotId) => {
+        const lotData = cardDataById[lotId];
+        const attr = (k) => { const x = lotData && (lotData.attributes || []).find((a) => a.key === k); return x ? String(x.value) : ""; };
+        const code = attr("Lotto");
+        const sameCode = code ? rows.filter((r) => r.lotto === code) : [];
+        const row = sameCode.find((r) => LM && LM.ingredientMatches(r.ingrediente, attr("Nome"))) || sameCode[0];
+        if (row) (byRow[row.i] = byRow[row.i] || []).push(lotId);
+        else others.push(lotId);
+      });
+      return { byRow, others };
+    }
+
     function renderGrid(entries, cardDataById) {
       gridEl.innerHTML = "";
       entries.forEach((entry) => {
@@ -493,26 +517,39 @@
         if (cardData.description) html += "<p class='te-desc'>" + escapeHtml(cardData.description) + "</p>";
 
         html += "<div class='te-attrs'>";
-        cardData.attributes.forEach((a) => {
-          html += "<div class='te-attr-row'><span>" + escapeHtml(String(a.key)) + "</span><span>" + escapeHtml(String(a.value)) + "</span></div>";
-        });
-        if (entry.entryType === 1 && entry.usedLots && entry.usedLots.length > 0) {
-          html += "<div class='te-used-lots'><strong>" + t("card.usedLots") + "</strong>";
+        // Batch: la riga "Lotto <ingrediente>: codice" diventa essa stessa il
+        // collegamento ai lotti registrati con quel codice (una voce per
+        // consegna, con la data di acquisto). Niente lista ripetuta sotto:
+        // resta solo per i lotti collegati che non corrispondono a nessuna riga.
+        const lotLinks = entry.entryType === 1 ? linkLotsToRows(entry, cardData, cardDataById) : { byRow: {}, others: [] };
+        const LM = global.TraceabilityLotMatching;
+        const productionSeconds = entry.entryType === 1 ? ((LM && LM.batchProductionDate(cardData.attributes)) || entry.indexDate) : null;
+        const lotLink = (lotTokenId, withName) => {
+          const lotData = cardDataById[lotTokenId];
+          const bought = lotData && (lotData.attributes || []).find((a) => a.key === "Data Acquisto");
+          const code = lotData && (lotData.attributes || []).find((a) => a.key === "Lotto");
+          const text = withName
+            ? (lotData ? lotData.name : lotTokenId) + (bought && bought.value ? " · " + bought.value : "")
+            : (code ? String(code.value) : (lotData ? lotData.name : lotTokenId)) + (bought && bought.value ? " · " + bought.value : "");
           // Lotto acquistato (registrato) DOPO la produzione del batch: il
           // collegamento vale a livello di lotto del fornitore, ma la consegna
           // davvero usata non era tracciata. Lo si dichiara, non lo si nasconde.
-          const LM = global.TraceabilityLotMatching;
-          const productionSeconds = (LM && LM.batchProductionDate(cardData.attributes)) || entry.indexDate;
-          entry.usedLots.forEach((lotTokenId) => {
-            const lotData = cardDataById[lotTokenId];
-            // Data di acquisto accanto al nome: più consegne dello stesso lotto
-            // hanno lo stesso nome e vanno distinte.
-            const bought = lotData && (lotData.attributes || []).find((a) => a.key === "Data Acquisto");
-            const label = lotData ? lotData.name + (bought && bought.value ? " · " + bought.value : "") : lotTokenId;
-            const after = lotData && lotData.entry && lotData.entry.indexDate > productionSeconds;
-            html += "<a href='#' data-scroll-to='" + escapeHtml(lotTokenId) + "'>→ " + escapeHtml(label) + "</a>";
-            if (after) html += "<div class='te-lot-after'>⚠ " + t("card.lotAfterProduction") + "</div>";
-          });
+          const after = lotData && lotData.entry && productionSeconds && lotData.entry.indexDate > productionSeconds;
+          return "<a href='#' class='te-lot-link' data-scroll-to='" + escapeHtml(lotTokenId) + "'>" + escapeHtml(text) + " →</a>" +
+            (after ? "<div class='te-lot-after'>⚠ " + t("card.lotAfterProduction") + "</div>" : "");
+        };
+        cardData.attributes.forEach((a, i) => {
+          const links = lotLinks.byRow[i];
+          if (links && links.length > 0) {
+            html += "<div class='te-attr-row te-attr-linked'><span>" + escapeHtml(String(a.key)) + "</span><span class='te-attr-links'>" +
+              links.map((id) => lotLink(id, false)).join("") + "</span></div>";
+          } else {
+            html += "<div class='te-attr-row'><span>" + escapeHtml(String(a.key)) + "</span><span>" + escapeHtml(String(a.value)) + "</span></div>";
+          }
+        });
+        if (lotLinks.others.length > 0) {
+          html += "<div class='te-used-lots'><strong>" + t("card.usedLots") + "</strong>";
+          lotLinks.others.forEach((id) => { html += lotLink(id, true); });
           html += "</div>";
         }
         // Collegamento inverso: i batch che hanno usato questo lotto.
