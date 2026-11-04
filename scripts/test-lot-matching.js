@@ -100,5 +100,25 @@ check("data di produzione dagli attributi del batch (trait_type o key)", () => {
   assert.strictEqual(M.batchProductionDate([{ key: "Data Imbottigliamento", value: "15/04/2026" }]), null);
 });
 
+check("due cifre di differenza su un codice lungo (caso reale EAN-13) → suggerimento", () => {
+  const lots = LOTS.concat([lot("0x07", "8025427025452", "Fiocchi di segale", "Molino")]);
+  const r = M.matchLotReference({ ingredienteNome: "Fiocchi di segale", lotto: "8025427058452" }, lots);
+  assert.strictEqual(r.suggestions[0].lotto, "8025427025452");
+});
+
+check("una differenza viene prima di due", () => {
+  const lots = [lot("0x10", "AB-1234", "Malto"), lot("0x11", "AB-1299", "Malto")];
+  const r = M.matchLotReference({ ingredienteNome: "Malto", lotto: "AB-1239" }, lots);
+  assert.deepStrictEqual(r.suggestions.map((x) => x.lotto), ["AB-1234", "AB-1299"]);
+});
+
+check("tre differenze → niente", () => {
+  const r = M.matchLotReference({ ingredienteNome: "Malto", lotto: "1987" }, [lot("0x12", "1234", "Malto")]);
+  assert.strictEqual(M.editDistance("1987", "1234", 5), 3);
+  assert.strictEqual(r.suggestions.length, 0);
+  const r2 = M.matchLotReference({ ingredienteNome: "Malto", lotto: "8025427058999" }, [lot("0x13", "8025427025452", "Malto")]);
+  assert.strictEqual(r2.suggestions.length, 0, "EAN con 4 cifre diverse: niente");
+});
+
 console.log(failures === 0 ? "\nTutti i test superati." : "\n" + failures + " test falliti.");
 process.exit(failures === 0 ? 0 : 1);

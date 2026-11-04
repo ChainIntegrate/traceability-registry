@@ -8,7 +8,7 @@
  *   batch va collegato a tutte quelle usate). Sono preselezionati quelli in cui
  *   anche il nome dell'ingrediente corrisponde.
  * - Nessuna corrispondenza esatta: SUGGERIMENTI per probabili refusi (trattini,
- *   spazi, maiuscole, zeri iniziali, un carattere in più/in meno/diverso). Un
+ *   spazi, maiuscole, zeri iniziali, fino a due caratteri in più/in meno/diversi). Un
  *   suggerimento non collega niente da solo: l'utente può solo correggere il
  *   codice scritto nel batch e ripetere l'anteprima.
  */
@@ -24,6 +24,11 @@
       .replace(/\d+/g, (digits) => digits.replace(/^0+(?=\d)/, ""))
       .replace(/[^A-Z0-9]/g, "");
   }
+
+  // Refusi suggeriti: fino a 2 caratteri di differenza, solo per codici di
+  // almeno 4 caratteri (su "A1"/"B2" sarebbe un tiro a indovinare).
+  const MAX_TYPO_DISTANCE = 2;
+  const MIN_LENGTH_FOR_TYPOS = 4;
 
   /** Distanza di modifica (Levenshtein), interrotta oltre `max`. */
   function editDistance(a, b, max) {
@@ -107,7 +112,12 @@
       if (!n || !target) return;
       let score = null, reason = null;
       if (n === target) { score = 0; reason = "format"; }
-      else if (Math.min(n.length, target.length) >= 4 && editDistance(n, target, 1) <= 1) { score = 1; reason = "typo"; }
+      else if (Math.min(n.length, target.length) >= MIN_LENGTH_FOR_TYPOS) {
+        // Fino a due caratteri di differenza: i codici di lotto veri sono di
+        // solito molto diversi tra loro, e resta comunque un suggerimento.
+        const distance = editDistance(n, target, MAX_TYPO_DISTANCE);
+        if (distance <= MAX_TYPO_DISTANCE) { score = distance; reason = "typo"; }
+      }
       if (score === null) return;
       if (ingredientMatches(ref.ingredienteNome, l.nome)) score -= 0.5;
       // un suggerimento per codice: le consegne dello stesso lotto si
