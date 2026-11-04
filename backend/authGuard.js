@@ -4,6 +4,21 @@ const { buildSiweMessage } = require("./siweMessage");
 const { TRACEABILITY_REGISTRY_MINIMAL_ABI, MEMBERSHIP_CORPORATE_MINIMAL_ABI } = require("./registryAbi");
 
 const MAX_SIGNATURE_AGE_SECONDS = parseInt(process.env.MAX_SIGNATURE_AGE_SECONDS || "300", 10);
+// Firma di sola consultazione delle librerie (elenco foto e documenti): una
+// sola, valida più a lungo, per non chiederla di continuo durante l'uso. Non
+// permette di scaricare, caricare o modificare nulla: quelle operazioni hanno
+// la loro firma, valida MAX_SIGNATURE_AGE_SECONDS.
+const LIBRARY_READ_MAX_AGE_SECONDS = parseInt(process.env.LIBRARY_READ_MAX_AGE_SECONDS || "3600", 10);
+
+/** Blocco firmato per la consultazione delle librerie: deve restare identico a
+ * frontend/traceability-siwe.js (buildLibraryReadSignedMessage). */
+function buildLibraryReadSignedMessage(registryAddress, timestamp) {
+  return (
+    "ChainIntegrate TraceabilityRegistry - Read library\n" +
+    "Registry: " + registryAddress + "\n" +
+    "Timestamp: " + timestamp
+  );
+}
 
 /**
  * Verifica che registryAddress sia stato davvero deployato dalla nostra
@@ -53,12 +68,16 @@ async function verifyRegistryIsKnown(factoryContract, registryAddress) {
  *          L'errore ritornato è sempre un messaggio generico e sicuro da
  *          mostrare al client — il dettaglio va loggato a parte dal chiamante.
  */
-async function verifySignedRequest({ provider, factoryContract, registryAddress, signerAddress, message, signature, timestamp, requireActiveTier = false }) {
+async function verifySignedRequest({ provider, factoryContract, registryAddress, signerAddress, message, signature, timestamp, requireActiveTier = false, maxAgeSeconds }) {
+  // maxAgeSeconds (opzionale): validità più lunga per una firma (consultazione
+  // delle librerie); il messaggio firmato ne riporta la scadenza.
+  const maxAge = maxAgeSeconds || MAX_SIGNATURE_AGE_SECONDS;
   const nowSeconds = Math.floor(Date.now() / 1000);
   if (typeof timestamp !== "number" || !Number.isFinite(timestamp)) {
     return { ok: false, status: 400, error: "timestamp mancante o non numerico." };
   }
-  if (Math.abs(nowSeconds - timestamp) > MAX_SIGNATURE_AGE_SECONDS) {
+  // Passato: fino a maxAge. Futuro: solo la tolleranza normale sugli orologi.
+  if (nowSeconds - timestamp > maxAge || timestamp - nowSeconds > MAX_SIGNATURE_AGE_SECONDS) {
     return { ok: false, status: 401, error: "Firma scaduta o timestamp non plausibile." };
   }
 
@@ -83,6 +102,7 @@ async function verifySignedRequest({ provider, factoryContract, registryAddress,
     siweMessage = buildSiweMessage({
       domain: uiOrigin.host, uri: uiOrigin.origin, address: signerAddress, chainId,
       registryAddress, details: message, timestamp,
+      expiresAt: maxAgeSeconds ? timestamp + maxAgeSeconds : undefined,
     });
   } catch (err) {
     console.error("verifySignedRequest: impossibile costruire il messaggio SIWE:", err.message);
@@ -131,4 +151,4 @@ async function verifySignedRequest({ provider, factoryContract, registryAddress,
   return { ok: true };
 }
 
-module.exports = { verifySignedRequest, verifyRegistryIsKnown, MAX_SIGNATURE_AGE_SECONDS };
+module.exports = { verifySignedRequest, verifyRegistryIsKnown, MAX_SIGNATURE_AGE_SECONDS, LIBRARY_READ_MAX_AGE_SECONDS, buildLibraryReadSignedMessage };

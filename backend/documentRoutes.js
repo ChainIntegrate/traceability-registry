@@ -3,7 +3,7 @@ const multer = require("multer");
 const { ethers } = require("ethers");
 const { pinFileToIpfs, catFromIpfs } = require("./ipfsClient");
 const { loadMasterKey, encryptDocument, decryptDocument, HEADER_LENGTH } = require("./documentCrypto");
-const { verifySignedRequest } = require("./authGuard");
+const { verifySignedRequest, buildLibraryReadSignedMessage, LIBRARY_READ_MAX_AGE_SECONDS } = require("./authGuard");
 const { insertDocument, listDocumentsByRegistry, hideDocument, getDocumentById , normalizeRegistryAddress } = require("./db");
 
 const MAX_UPLOAD_BYTES = 16 * 1024 * 1024; // 16MB — certificati/DDT scansionati possono pesare più di una foto
@@ -46,14 +46,6 @@ function buildDocumentUploadSignedMessage(registryAddress, label, contentHash, t
     "Registry: " + registryAddress + "\n" +
     "Label: " + label + "\n" +
     "Content hash: " + contentHash + "\n" +
-    "Timestamp: " + timestamp
-  );
-}
-
-function buildDocumentListSignedMessage(registryAddress, timestamp) {
-  return (
-    "ChainIntegrate TraceabilityRegistry - List documents\n" +
-    "Registry: " + registryAddress + "\n" +
     "Timestamp: " + timestamp
   );
 }
@@ -193,9 +185,11 @@ function buildDocumentRouter(provider, factoryContract) {
         return res.status(400).json({ error: "signature mancante." });
       }
 
-      const message = buildDocumentListSignedMessage(registryAddress, timestamp);
+      // Una sola firma di consultazione (foto e documenti), valida 1 ora.
+      const message = buildLibraryReadSignedMessage(registryAddress, timestamp);
       const verification = await verifySignedRequest({
         provider, factoryContract, registryAddress, signerAddress, message, signature, timestamp,
+        maxAgeSeconds: LIBRARY_READ_MAX_AGE_SECONDS,
       });
       if (!verification.ok) {
         return res.status(verification.status).json({ error: verification.error });
@@ -325,7 +319,6 @@ function buildDocumentRouter(provider, factoryContract) {
 module.exports = {
   buildDocumentRouter,
   buildDocumentUploadSignedMessage,
-  buildDocumentListSignedMessage,
   buildDocumentHideSignedMessage,
   buildDocumentDownloadSignedMessage,
 };

@@ -31,14 +31,6 @@
     );
   }
 
-  function buildDocumentListSignedMessage(registryAddress, timestamp) {
-    return (
-      "ChainIntegrate TraceabilityRegistry - List documents\n" +
-      "Registry: " + registryAddress + "\n" +
-      "Timestamp: " + timestamp
-    );
-  }
-
   function buildDocumentHideSignedMessage(registryAddress, documentId, timestamp) {
     return (
       "ChainIntegrate TraceabilityRegistry - Hide document\n" +
@@ -98,32 +90,15 @@
     return data.document; // { id, cid, keccak256_hash, label, mime_type, original_name, ... }
   }
 
-  // Stessa cache di firma già usata per la libreria foto — evita di
-  // richiedere una firma ad ogni singola lista/refresh.
-  const LIST_SIGNATURE_MAX_AGE_SECONDS = 300;
-  const LIST_SIGNATURE_REUSE_MARGIN_SECONDS = 30;
-  const listSignatureCache = {};
-
+  /** Lista la libreria documenti del registro — richiede la firma di
+   * consultazione (condivisa con la libreria foto, valida 1 ora). */
   async function listDocuments({ backendBaseUrl, registryAddress, signer }) {
     if (!backendBaseUrl) throw new Error("listDocuments: backendBaseUrl mancante.");
     if (!registryAddress) throw new Error("listDocuments: registryAddress mancante.");
     if (!signer) throw new Error("listDocuments: signer mancante (UP non connessa?).");
 
-    const signerAddress = await signer.getAddress();
-    const cacheKey = registryAddress.toLowerCase() + ":" + signerAddress.toLowerCase();
-    const now = Math.floor(Date.now() / 1000);
-    const cached = listSignatureCache[cacheKey];
-
-    let timestamp, signature;
-    if (cached && now - cached.timestamp < LIST_SIGNATURE_MAX_AGE_SECONDS - LIST_SIGNATURE_REUSE_MARGIN_SECONDS) {
-      timestamp = cached.timestamp;
-      signature = cached.signature;
-    } else {
-      timestamp = now;
-      const message = buildDocumentListSignedMessage(registryAddress, timestamp);
-      signature = await global.TraceabilitySiwe.signDetails(signer, registryAddress, message, timestamp); // apre la UP extension SOLO se serve davvero
-      listSignatureCache[cacheKey] = { timestamp, signature };
-    }
+    // Una sola firma di consultazione per foto e documenti, valida 1 ora.
+    const { signerAddress, timestamp, signature } = await global.TraceabilitySiwe.getLibraryReadSignature(signer, registryAddress);
 
     // Firma nel corpo di una POST, non nella query string: un URL finisce nei
     // log di accesso del server (audit §56 punto 9).
@@ -134,7 +109,7 @@
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      delete listSignatureCache[cacheKey];
+      global.TraceabilitySiwe.invalidateLibraryReadSignature(signerAddress, registryAddress);
       throw new Error("listDocuments: backend ha risposto " + res.status + " — " + (data.error || "errore sconosciuto"));
     }
     return data.documents || [];
@@ -195,7 +170,6 @@
 
   global.TraceabilityDocumentLibrary = {
     buildDocumentUploadSignedMessage: buildDocumentUploadSignedMessage,
-    buildDocumentListSignedMessage: buildDocumentListSignedMessage,
     buildDocumentHideSignedMessage: buildDocumentHideSignedMessage,
     buildDocumentDownloadSignedMessage: buildDocumentDownloadSignedMessage,
     downloadDocument: downloadDocument,

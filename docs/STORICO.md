@@ -1980,6 +1980,32 @@ esploratore in Chromium. Guida aggiornata.
 - Vale per l'esploratore pubblico e per "Esplora registro" del pannello
   (`traceability-explorer-ui.js`). Prova in Chromium del flusso completo.
 
+## 68. Firma: tornano i link nella UP extension
+
+Con la revisione dei testi (§63) il messaggio da firmare conteneva "non è un
+pagamento": la "è" non è ammessa da EIP-4361 nello statement, quindi la UP
+extension non riconosceva più il messaggio SIWE e lo mostrava come testo
+grezzo, senza i due link cliccabili (guida ed esploratore del registro).
+Statement di nuovo solo ASCII ("non si tratta di un pagamento"), identico tra
+pagina e backend; `scripts/test-siwe-message.js` ora controlla i caratteri
+ammessi e la presenza dei link (sul testo precedente fallisce).
+
+## 69. Una firma di consultazione valida 1 ora
+
+Durante l'uso la pagina chiedeva spesso di nuovo la firma: le liste di foto e
+documenti avevano due firme separate valide 5 minuti (riusate per 4 e mezzo).
+Decisione: **una sola firma di consultazione** ("Read library") per entrambe le
+librerie, **valida 1 ora** (`LIBRARY_READ_MAX_AGE_SECONDS`, default 3600),
+riusata finché mancano 5 minuti alla scadenza; richieste contemporanee
+condividono la stessa firma. Il messaggio riporta "Expiration Time", che la UP
+extension mostra. Caricamenti, salvataggi, download e "nascondi" restano con la
+loro firma di 5 minuti. Il backend accetta il timestamp fino a 1 ora nel
+passato solo per la consultazione, e nel futuro sempre al massimo 5 minuti.
+Rischio accettato: una firma intercettata permetterebbe solo di vedere
+l'elenco dei file del registro per un'ora (viaggia in HTTPS, nel corpo della
+richiesta). Test: messaggio identico tra pagina e backend, validità lato
+backend, conteggio delle firme in Chromium (1 all'apertura, 1 dopo l'ora).
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

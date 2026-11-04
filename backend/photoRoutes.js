@@ -3,7 +3,7 @@ const multer = require("multer");
 const { imageSize, disableTypes, types: IMAGE_SIZE_TYPES } = require("image-size");
 const { ethers } = require("ethers");
 const { pinFileToIpfs } = require("./ipfsClient");
-const { verifySignedRequest } = require("./authGuard");
+const { verifySignedRequest, buildLibraryReadSignedMessage, LIBRARY_READ_MAX_AGE_SECONDS } = require("./authGuard");
 const { insertPhoto, listPhotosByRegistry, hidePhoto, getPhotoById , normalizeRegistryAddress } = require("./db");
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // 8MB, generoso per foto prodotto/ricetta
@@ -49,14 +49,6 @@ function buildPhotoUploadSignedMessage(registryAddress, label, contentHash, time
     "Registry: " + registryAddress + "\n" +
     "Label: " + label + "\n" +
     "Content hash: " + contentHash + "\n" +
-    "Timestamp: " + timestamp
-  );
-}
-
-function buildPhotoListSignedMessage(registryAddress, timestamp) {
-  return (
-    "ChainIntegrate TraceabilityRegistry - List photos\n" +
-    "Registry: " + registryAddress + "\n" +
     "Timestamp: " + timestamp
   );
 }
@@ -174,9 +166,11 @@ function buildPhotoRouter(provider, factoryContract) {
         return res.status(400).json({ error: "signature mancante." });
       }
 
-      const message = buildPhotoListSignedMessage(registryAddress, timestamp);
+      // Una sola firma di consultazione (foto e documenti), valida 1 ora.
+      const message = buildLibraryReadSignedMessage(registryAddress, timestamp);
       const verification = await verifySignedRequest({
         provider, factoryContract, registryAddress, signerAddress, message, signature, timestamp,
+        maxAgeSeconds: LIBRARY_READ_MAX_AGE_SECONDS,
       });
       if (!verification.ok) {
         return res.status(verification.status).json({ error: verification.error });
@@ -240,6 +234,5 @@ function buildPhotoRouter(provider, factoryContract) {
 module.exports = {
   buildPhotoRouter,
   buildPhotoUploadSignedMessage,
-  buildPhotoListSignedMessage,
   buildPhotoHideSignedMessage,
 };
