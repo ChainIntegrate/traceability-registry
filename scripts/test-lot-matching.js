@@ -120,5 +120,31 @@ check("tre differenze → niente", () => {
   assert.strictEqual(r2.suggestions.length, 0, "EAN con 4 cifre diverse: niente");
 });
 
+check("codice parziale, in entrambi i versi → suggerimento \"partial\"", () => {
+  const r1 = M.matchLotReference({ ingredienteNome: "Malto", lotto: "220425" }, [lot("0x20", "220425 271E", "Malto")]);
+  assert.deepStrictEqual(r1.suggestions.map((x) => [x.lotto, x.reason]), [["220425 271E", "partial"]]);
+  const r2 = M.matchLotReference({ ingredienteNome: "Malto", lotto: "220425 271E" }, [lot("0x21", "220425", "Malto")]);
+  assert.deepStrictEqual(r2.suggestions.map((x) => [x.lotto, x.reason]), [["220425", "partial"]]);
+});
+
+check("codice parziale: più lotti con lo stesso inizio, tutti proposti", () => {
+  const r = M.matchLotReference({ ingredienteNome: "Malto", lotto: "220425" },
+    [lot("0x22", "220425 271E", "Malto"), lot("0x23", "220425-300A", "Malto"), lot("0x24", "220426 271E", "Malto")]);
+  assert.deepStrictEqual(r.suggestions.map((x) => x.lotto).sort(), ["220425 271E", "220425-300A", "220426 271E"].sort().filter((c) => c !== "220426 271E"));
+});
+
+check("codice parziale: blocco centrale sì, pezzo a metà blocco no, parte corta no", () => {
+  assert.ok(M.isPartialCode("LT-220425-01", "220425"), "blocco centrale");
+  assert.ok(!M.isPartialCode("220425 271E", "0425"), "pezzo a metà blocco (e corto)");
+  assert.ok(!M.isPartialCode("A2204251B", "20425"), "a metà di un blocco unico");
+  assert.ok(!M.isPartialCode("220425 271E", "271E"), "parte sotto i 5 caratteri");
+  assert.ok(M.isPartialCode("220425271E", "220425"), "inizio senza separatori");
+});
+
+check("i refusi vengono prima dei codici parziali", () => {
+  const r = M.matchLotReference({ ingredienteNome: "Malto", lotto: "220425" }, [lot("0x25", "220425 271E", "Malto"), lot("0x26", "220426", "Malto")]);
+  assert.deepStrictEqual(r.suggestions.map((x) => x.reason), ["typo", "partial"]);
+});
+
 console.log(failures === 0 ? "\nTutti i test superati." : "\n" + failures + " test falliti.");
 process.exit(failures === 0 ? 0 : 1);

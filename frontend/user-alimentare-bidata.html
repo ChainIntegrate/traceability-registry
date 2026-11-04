@@ -258,6 +258,7 @@
 // -----------------------------------------------------------------------
 const I18N = {
   it: {
+    "batch.partialCode": "codice parziale: controlla che sia lo stesso lotto",
     "filters.typeAll": "Tutti",
     "filters.typeLot": "Materie prime",
     "filters.typeBatch": "Batch",
@@ -427,6 +428,7 @@ const I18N = {
     "log.collectionUpdated": "Dati della collezione aggiornati. Riferimento dell'operazione: {tx}", "log.collectionError": "Errore nei dati della collezione: {msg}",
   },
   en: {
+    "batch.partialCode": "partial code: check that it is the same lot",
     "filters.typeAll": "All",
     "filters.typeLot": "Raw materials",
     "filters.typeBatch": "Batches",
@@ -1644,7 +1646,8 @@ async function processProductionBatchJson(json, previewEl) {
     } else if (m.suggestions.length > 0) {
       matchHtml += "<p class='warn'>" + t("batch.notFoundSuggest") + "</p>";
       m.suggestions.forEach((s) => {
-        matchHtml += "<div class='lot-suggestion'><span><code>" + esc(s.lotto) + "</code> " + esc(lotLabel(s)) + afterNote(s) + "</span> " +
+        matchHtml += "<div class='lot-suggestion'><span><code>" + esc(s.lotto) + "</code> " + esc(lotLabel(s)) + afterNote(s) +
+          (s.reason === "partial" ? " <span class='lot-after'>" + t("batch.partialCode") + "</span>" : "") + "</span> " +
           "<button type='button' class='secondary lot-fix' data-ref='" + i + "' data-lotto='" + esc(s.lotto) + "'>" + t("batch.useThisLot", { lotto: esc(s.lotto) }) + "</button></div>";
       });
     } else {
