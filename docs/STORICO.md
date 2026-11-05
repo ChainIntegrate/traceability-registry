@@ -2052,6 +2052,21 @@ Richieste dall'uso reale:
 
 Prove in Chromium di tutti e cinque i punti.
 
+## 73. Foto dimenticata: ripiego nell'esploratore e conferma prima di registrare
+
+Un batch registrato senza foto non si può correggere: i metadata sono scritti
+una volta sola e `setDataForTokenId` è bloccato (Universal Everything prova a
+usarlo e la transazione viene rifiutata, come previsto).
+- **Ripiego**: nell'esploratore (pubblico, incorporato su altri siti, e nel
+  pannello) un batch senza foto mostra quella del batch più recente con lo
+  stesso Codice (stessa ricetta), cioè la foto della libreria già pubblicata
+  negli altri batch. Calcolato nel browser, nessuna modifica a backend o
+  contratto; scelta: nessuna scritta di spiegazione.
+- **Prevenzione**: registrando lotti o un batch senza foto, la pagina chiede
+  conferma ("una registrazione non si può più modificare dopo").
+Prove in Chromium: esploratore incorporato in un riquadro su un'altra origine
+con la CSP del sito (nessuna violazione), conferma annullata e accettata.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /

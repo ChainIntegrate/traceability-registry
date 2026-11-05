@@ -262,6 +262,7 @@
 // -----------------------------------------------------------------------
 const I18N = {
   it: {
+    "common.noPhotoConfirm": "Non hai scelto nessuna foto. Una registrazione non si può più modificare dopo: vuoi registrare comunque senza foto?",
     "common.clear": "Pulisci",
     "common.clearConfirm": "Svuotare il modulo? I dati inseriti e l'anteprima andranno persi.",
     "batch.partialCode": "codice parziale: controlla che sia lo stesso lotto",
@@ -434,6 +435,7 @@ const I18N = {
     "log.collectionUpdated": "Dati della collezione aggiornati. Riferimento dell'operazione: {tx}", "log.collectionError": "Errore nei dati della collezione: {msg}",
   },
   en: {
+    "common.noPhotoConfirm": "You have not chosen a photo. A record cannot be changed afterwards: register anyway without a photo?",
     "common.clear": "Clear",
     "common.clearConfirm": "Clear the form? The data entered and the preview will be lost.",
     "batch.partialCode": "partial code: check that it is the same lot",
@@ -1468,6 +1470,8 @@ async function processRawMaterialJson(json, previewEl) {
     // controllo prima del conio: il tier potrebbe essere stato letto dopo
     // il riempimento della select
     if (docSel.value && documentNeedsGold()) { alert(t("documents.needsGoldBeforeMint")); return; }
+    // Foto dimenticata: la registrazione non si potrà più modificare.
+    if (!sel.value && !window.confirm(t("common.noPhotoConfirm"))) return;
     try {
       const photoVal = sel.value;
       const resolvePhoto = () => (photoVal ? toLibraryEntry(JSON.parse(photoVal)) : null);
@@ -1740,6 +1744,8 @@ async function processProductionBatchJson(json, previewEl) {
     // finisce sulla blockchain e non si cambia dopo.
     const missingChoice = lotMatches.find(({ m }, i) => m.exact.length > 0 && !previewEl.querySelector(".lot-pick[data-ref='" + i + "']:checked"));
     if (missingChoice) { alert(t("batch.chooseDeliveries", { ingrediente: missingChoice.ref.ingredienteNome, lotto: missingChoice.ref.lotto })); return; }
+    // Foto dimenticata: la registrazione non si potrà più modificare.
+    if (!sel.value && !window.confirm(t("common.noPhotoConfirm"))) return;
     try {
       let chosenDateStr = extracted.dateCandidates[0].value;
       if (extracted.requiresDateSelection) {
