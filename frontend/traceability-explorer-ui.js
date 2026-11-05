@@ -72,7 +72,32 @@
         }
       })
     );
+    fillMissingBatchPhotos(entries, cardDataById);
     return cardDataById;
+  }
+
+  /** Batch registrato senza foto: si mostra la foto di un altro batch dello
+   * stesso Codice (stessa ricetta) che ce l'ha, la più recente. È una foto
+   * della libreria del produttore già pubblicata negli altri batch; i dati
+   * on-chain del batch restano quelli che sono. */
+  function fillMissingBatchPhotos(entries, cardDataById) {
+    const codeOf = (cd) => {
+      const a = (cd.attributes || []).find((x) => x.key === "Codice");
+      return a && String(a.value).trim() ? String(a.value).trim() : null;
+    };
+    const photoByCode = {};
+    entries.forEach((entry) => { // entries: dalla più recente
+      const cd = cardDataById[entry.tokenId];
+      if (!cd || entry.entryType !== 1 || !cd.imageUrl) return;
+      const code = codeOf(cd);
+      if (code && !photoByCode[code]) photoByCode[code] = cd.imageUrl;
+    });
+    entries.forEach((entry) => {
+      const cd = cardDataById[entry.tokenId];
+      if (!cd || entry.entryType !== 1 || cd.imageUrl) return;
+      const code = codeOf(cd);
+      if (code && photoByCode[code]) cd.imageUrl = photoByCode[code];
+    });
   }
 
   /** Intestazione con i metadata della COLLEZIONE (il registro stesso, non i singoli token). */
