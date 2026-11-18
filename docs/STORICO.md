@@ -2067,6 +2067,17 @@ usarlo e la transazione viene rifiutata, come previsto).
 Prove in Chromium: esploratore incorporato in un riquadro su un'altra origine
 con la CSP del sito (nessuna violazione), conferma annullata e accettata.
 
+## 74. Pagine del sito di Birra20Venti dal registro; esploratore filtrato da URL
+
+Le pagine "Batch" e "Materie prime" del sito di Birra20Venti leggevano i vecchi
+token ERC721; ora leggono il registro (che contiene anche quei dati), con la
+loro grafica nero/oro invariata: `examples/birra20venti/`. Schede native (non
+iframe), collegamenti incrociati tra le due pagine (#batch-… / #lot-…), avviso
+per gli acquisti successivi alla produzione, foto di ripiego per codice, escape
+di tutti i dati. Esploratore: nuovi parametri `type=batch|lot` (apre filtrato)
+e `token=0x…` (apre la scheda, o la scheda rapida se il filtro la nasconde),
+usati dai titoli delle card del sito. Prove in Chromium con dati simulati.
+
 ## 39. Punti aperti / TODO
 
 - [x] Confermare import esatti e versione `@lukso/lsp8-contracts` /
