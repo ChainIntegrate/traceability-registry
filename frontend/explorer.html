@@ -159,12 +159,22 @@ const gallery = TraceabilityExplorerUI.createGalleryInstance({
   t: t,
 });
 
-function loadRegistry(registryAddress) {
+// Parametri dell'URL per i link da siti esterni:
+//   ?registry=0x…   registro da mostrare
+//   &type=batch|lot apre già filtrato (Batch o Materie prime)
+//   &token=0x…      apre subito quella scheda
+const urlParams = new URLSearchParams(window.location.search);
+const initialOptions = {
+  type: ["batch", "lot"].includes(urlParams.get("type")) ? urlParams.get("type") : undefined,
+  token: /^0x[0-9a-fA-F]{64}$/.test(urlParams.get("token") || "") ? urlParams.get("token") : undefined,
+};
+
+function loadRegistry(registryAddress, options) {
   if (!isAddress(registryAddress)) {
     document.getElementById("status").innerHTML = "<p class='te-err'>" + t("status.invalidRegistry") + "</p>";
     return;
   }
-  gallery.load(CONFIG.BACKEND_BASE_URL, registryAddress);
+  gallery.load(CONFIG.BACKEND_BASE_URL, registryAddress, options || {});
 }
 
 document.getElementById("lookupBtn").addEventListener("click", () => {
@@ -172,7 +182,7 @@ document.getElementById("lookupBtn").addEventListener("click", () => {
   const url = new URL(window.location.href);
   url.searchParams.set("registry", addr);
   window.history.replaceState({}, "", url);
-  loadRegistry(addr);
+  loadRegistry(addr, {});
 });
 
 // Se ?registry=0x... è già nell'URL, carica subito — utile per embed
@@ -181,11 +191,11 @@ document.getElementById("lookupBtn").addEventListener("click", () => {
 // nostro sito resterebbero dentro il riquadro, quindi si nascondono.
 if (window.top !== window) document.querySelectorAll(".site-links").forEach((el) => { el.style.display = "none"; });
 applyLanguage();
-const initialRegistry = new URLSearchParams(window.location.search).get("registry") || "";
+const initialRegistry = urlParams.get("registry") || "";
 if (initialRegistry) {
   document.getElementById("registryInput").value = initialRegistry;
   document.getElementById("lookupForm").style.display = "none";
-  loadRegistry(initialRegistry);
+  loadRegistry(initialRegistry, initialOptions);
 }
 </script>
 

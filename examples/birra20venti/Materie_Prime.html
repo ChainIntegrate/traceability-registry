@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Materie Prime - Birra20Venti</title>
+  <link rel="icon" type="image/x-icon" href="2020_logo_def-02.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #d4af37;
+      --black: #0b0b0b;
+      --muted: #b8b8b8;
+    }
+
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      padding: 20px;
+      background-color: var(--black);
+      color: #fff;
+      text-align: center;
+    }
+
+    .logo { max-width: 200px; height: auto; margin-bottom: 20px; }
+
+    h1 { font-weight: 700; margin-bottom: 20px; color: var(--gold); }
+
+    .intro {
+      max-width: 800px; margin: 20px auto 40px auto; text-align: left; line-height: 1.6;
+      background: #1a1a1a; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    }
+    .intro a { color: var(--gold); text-decoration: none; font-weight: bold; }
+    .intro a:hover { text-decoration: underline; }
+
+    .nft-card {
+      border: 1px solid var(--gold); border-radius: 10px; padding: 15px; margin: 20px auto; max-width: 600px;
+      background-color: #111; box-shadow: 0 2px 8px rgba(0,0,0,0.7); text-align: center;
+    }
+    .nft-card img {
+      width: 100%; max-width: 400px; height: auto; border-radius: 8px; margin: 10px auto; display: block;
+    }
+
+    h3 { margin-top: 15px; color: var(--gold); line-height: 1.2; }
+
+    /* Link del titolo ben evidente + iconcina ↗ */
+    a.token-link {
+      color: var(--gold);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      font-weight: 700;
+    }
+    a.token-link::after {
+      content: "↗";
+      font-size: .95em;
+      opacity: .85;
+    }
+    a.token-link:hover { text-decoration: underline; }
+
+    /* Micro-didascalia sotto al titolo (solo mobile la mostro) */
+    .tap-hint {
+      display: none;
+      font-size: .82rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    h4 { margin-top: 15px; color: #fff; }
+
+    table {
+      border-collapse: collapse; width: 100%; font-size: 0.95rem; margin-top: 10px; background: #1c1c1c; color: #fff;
+    }
+    th, td { border: 1px solid #333; padding: 8px 10px; text-align: center; word-wrap: break-word; }
+    th { background-color: #222; color: var(--gold); font-weight: bold; }
+    td:first-child { text-align: left; }
+
+    /* Riga oro SOLO tra prodotti */
+    .materie-prime tr.separator td { padding: 0; border: none; }
+    .materie-prime tr.separator td .sep { height: 1px; width: 100%; background: var(--gold); }
+
+    .cta-wrap { margin-top: 40px; }
+    .cta {
+      display: inline-block; padding: 12px 24px; background-color: #000; color: var(--gold);
+      border: 2px solid var(--gold); border-radius: 8px; text-decoration: none; font-weight: bold;
+      font-size: 1.1rem; transition: all 0.3s; margin: 5px;
+    }
+    .cta:hover { background-color: var(--gold); color: #000; }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      a.token-link { text-decoration: underline; }
+      .tap-hint { display: block; }
+
+      table.materie-prime, table.materie-prime thead, table.materie-prime tbody, table.materie-prime th, table.materie-prime td, table.materie-prime tr { display: block; }
+      table.materie-prime { border: none; }
+      table.materie-prime td::before {
+        content: attr(data-label); font-weight: bold; display: block; margin-bottom: 5px; color: var(--gold);
+      }
+      table.materie-prime th { display: none; }
+      table.materie-prime td { text-align: left; border: none; border-bottom: 1px solid #333; padding: 8px 0; }
+      /* La separator resta oro anche in mobile perché è un div interno */
+    }
+    
+    /* Anti scroll laterale (safe) */
+html, body { max-width: 100%; overflow-x: hidden; }
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Footer */
+.site-footer{
+  width:100%;
+  max-width:980px;
+  margin: 40px auto 0;
+  border-top:1px solid rgba(212,175,55,.35);
+  padding:18px 20px 22px;
+  text-align:center;
+  color:#e0d9c5;
+}
+
+.site-footer a{
+  color: var(--gold) !important;
+  text-decoration: none;
+}
+.site-footer a:visited{
+  color: var(--gold) !important;
+}
+
+.site-footer .socials{
+  margin:10px 0 2px;
+  display:flex;
+  gap:12px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+
+.site-footer .socials a{
+  border:1px solid var(--gold);
+  padding:8px 12px;
+  border-radius:24px;
+  font-weight:700;
+}
+
+.site-footer .socials a:hover{
+  background:#121212;
+}
+
+.site-footer .footer-links{
+  margin-top:16px;
+  margin-bottom:10px;
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:16px;
+  font-size:0.95rem;
+}
+
+.site-footer .footer-links a{
+  text-decoration: underline;
+}
+.site-footer .footer-links a:hover{
+  text-decoration:none;
+}
+
+.site-footer .legal{
+  margin-top:8px;
+  font-size:0.9rem;
+  color: var(--muted);
+}
+
+.site-footer .copy{
+  margin-top:6px;
+  font-size:0.95rem;
+  color:#e0d9c5;
+}
+
+    
+    
+
+    /* Track & Trace: link ai lotti/batch collegati e avvisi */
+    .tt-link { color: var(--gold); text-decoration: none; font-weight: 700; display: block; }
+    .tt-link:hover { text-decoration: underline; }
+    .tt-note { display: block; font-size: .85rem; color: #e6c35c; margin: 2px 0 6px; }
+    .tt-invalid { display: inline-block; margin: 0 0 8px; padding: 4px 10px; border: 1px solid #c0392b; border-radius: 6px; color: #ff8a80; font-size: .9rem; }
+    .tt-muted { color: var(--muted); font-size: .9rem; }
+    .tt-highlight { outline: 2px solid var(--gold); outline-offset: 4px; transition: outline-color .4s; }
+    tr.tt-highlight td { background: #2a2410; }
+  </style>
+</head>
+<body>
+
+  <img src="logo-birra20venti-cropped.png" alt="Logo Birra20Venti" class="logo">
+  <h1>Birra20Venti tiene traccia dei suoi acquisti, un sorso alla volta.</h1>
+
+  <div class="intro">
+    <p>Utilizziamo la blockchain <strong>LUKSO</strong> per garantire <strong>tracciabilità</strong> e <strong>trasparenza</strong> in ogni fase del processo. 
+    Grazie alla sua natura immutabile e pubblica, ogni dato registrato è verificabile, sicuro e non alterabile.</p>
+
+    <p>
+      <strong>Perché abbiamo scelto 
+        <a href="https://lukso.network/" target="_blank" rel="noopener">🔗 LUKSO</a>:
+      </strong><br>
+      È una blockchain moderna, trasparente e sicura, capace di connettere persone, prodotti e storie in un flusso autentico.
+      È la base solida del nostro impegno: tracciare, innovare e costruire un futuro in cui ogni informazione conta davvero.
+    </p>
+
+    <p>
+      <a href="https://explorer.execution.mainnet.lukso.network/address/0x1D62B8d2c63b942095AD3c7FfC7E845195d9e718?tab=tokens_nfts" target="_blank" rel="noopener">
+        🔗 Account Birra20Venti su LUKSO
+      </a>
+    </p>
+    <p>
+      <a href="https://traceability.chainintegrate.it/explorer.html?registry=0xf60ca7d63db8baaaa4e2b2d34ad24d7aa9d40409&amp;type=lot" target="_blank" rel="noopener">
+        🔗 Registro di tracciabilità su Track &amp; Trace
+      </a>
+    </p>
+  </div>
+
+  <div id="nftContainer" style="margin-top:20px;"></div>
+
+  <script>
+    // Rilevamento lingua: it = italiano, tutto il resto = inglese
+    const PAGE_LANG = (function () {
+      if (typeof navigator === "undefined") return "it";
+      const l = (navigator.language || navigator.userLanguage || "it").toLowerCase();
+      if (l.startsWith("it")) return "it";
+      return "en";
+    })();
+
+    // Piccolo dizionario
+    function t(key) {
+      const it = {
+        loading: "Caricamento in corso...",
+        noNft: "Nessuna materia prima registrata ancora.",
+        error: "Errore nel caricare le materie prime.",
+        noName: "Senza Nome",
+        openOnLukso: "Verifica su Track & Trace",
+        tapHint: "Tocca per verificarlo su Track & Trace",
+        purchasedOn: "Acquisto del",
+        rmTitle: "Materie Prime",
+        colName: "Nome",
+        colQty: "Quantità",
+        colExp: "Scadenza",
+        colBatch: "Lotto",
+        colUsed: "Usato nei batch",
+        notUsed: "—",
+        invalidated: "annullato",
+        nftImgPrefix: "Immagine materie prime"
+      };
+      const en = {
+        loading: "Loading...",
+        noNft: "No raw materials recorded yet.",
+        error: "Error loading raw materials.",
+        noName: "No name",
+        openOnLukso: "Verify on Track & Trace",
+        tapHint: "Tap to verify on Track & Trace",
+        purchasedOn: "Purchase of",
+        rmTitle: "Raw Materials",
+        colName: "Name",
+        colQty: "Quantity",
+        colExp: "Best before",
+        colBatch: "Batch",
+        colUsed: "Used in batches",
+        notUsed: "—",
+        invalidated: "cancelled",
+        nftImgPrefix: "Raw materials image"
+      };
+      const dict = PAGE_LANG === "en" ? en : it;
+      return dict[key] || key;
+    }
+
+    // ------------------------------------------------------------------
+    // Dati dal registro di tracciabilità Track & Trace (ChainIntegrate) su
+    // LUKSO: sola lettura, nessun wallet. Contiene anche i dati dei vecchi
+    // token. Ogni testo che arriva dai dati viene inserito con escape.
+    // ------------------------------------------------------------------
+    const REGISTRY = "0xf60ca7d63db8baaaa4e2b2d34ad24d7aa9d40409";
+    const API_URL = "https://traceability.chainintegrate.it/api/traceability/registry/" + REGISTRY + "/entries";
+    const IPFS_GATEWAY = "https://ipfs.chainintegrate.it/ipfs/";
+    const EXPLORER_URL = "https://traceability.chainintegrate.it/explorer.html?registry=" + REGISTRY;
+    // Pagine del sito (stessa cartella): i lotti dei batch portano alle materie
+    // prime e viceversa.
+    const BATCH_PAGE = "Batch.html";
+    const LOTS_PAGE = "Materie_Prime.html";
+
+    function esc(v) {
+      return String(v === undefined || v === null ? "" : v)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    // ipfs://CID (o un gateway qualsiasi con /ipfs/CID) → nostro gateway; null
+    // se non è un riferimento IPFS valido.
+    function ipfsToHttp(url) {
+      const m = String(url || "").match(/^(?:ipfs:\/\/|.*\/ipfs\/)?([A-Za-z0-9]{46,100}(?:\/[A-Za-z0-9._~-]+)*)$/);
+      return m ? IPFS_GATEWAY + m[1] : null;
+    }
+
+    // URL contenuto nel valore VerifiableURI (0x0000 + metodo + lunghezza hash
+    // + hash + URL) o nel vecchio JSONURL (metodo + hash + URL).
+    function urlFromVerifiableUri(hex) {
+      const v = String(hex || "").toLowerCase().replace(/^0x/, "");
+      let urlHex;
+      if (v.startsWith("0000") && v.length >= 16) urlHex = v.slice(16 + parseInt(v.slice(12, 16), 16) * 2);
+      else if (v.length > 72) urlHex = v.slice(72);
+      else return null;
+      const bytes = new Uint8Array(urlHex.match(/../g).map((b) => parseInt(b, 16)));
+      return new TextDecoder().decode(bytes);
+    }
+
+    async function loadMetadata(entry) {
+      const url = ipfsToHttp(urlFromVerifiableUri(entry.metadataValue));
+      if (!url) return null;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json && json.LSP4Metadata ? json.LSP4Metadata : null;
+    }
+
+    function imageOf(meta) {
+      const raw = (meta.icon && meta.icon[0] && meta.icon[0].url) ||
+        (meta.images && meta.images[0] && meta.images[0][0] && meta.images[0][0].url) || null;
+      return raw ? ipfsToHttp(raw) : null;
+    }
+
+    function attr(meta, key) {
+      const a = ((meta && meta.attributes) || []).find((x) => x.key === key);
+      return a ? String(a.value) : "";
+    }
+
+    // "GG/MM/AAAA" o "GG-MM-AAAA" → secondi; null se non leggibile.
+    function parseDate(str) {
+      const m = String(str || "").trim().match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+      return m ? Date.UTC(+m[3], +m[2] - 1, +m[1]) / 1000 : null;
+    }
+
+    // Il nome nel batch ("Pilsen") e quello del lotto ("Malto Pilsen"): basta una parola in comune.
+    function sameIngredient(a, b) {
+      const words = (s) => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
+      const bw = new Set(words(b));
+      return words(a).some((w) => bw.has(w));
+    }
+
+    // Tutte le registrazioni con i loro metadata (in parallelo, a gruppi).
+    async function loadRegistry() {
+      const res = await fetch(API_URL);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      const entries = data.entries || [];
+      const metaById = {};
+      for (let i = 0; i < entries.length; i += 8) {
+        await Promise.all(entries.slice(i, i + 8).map(async (e) => {
+          try { metaById[e.tokenId] = await loadMetadata(e); } catch (err) { metaById[e.tokenId] = null; }
+        }));
+      }
+      return { entries, metaById };
+    }
+
+    // Arrivando con #batch-… o #lot-… (link dall'altra pagina): porta in vista
+    // e mette in evidenza.
+    function focusHash() {
+      const id = decodeURIComponent((location.hash || "").slice(1));
+      const el = id && document.getElementById(id);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("tt-highlight");
+      setTimeout(() => el.classList.remove("tt-highlight"), 3500);
+    }
+    window.addEventListener("hashchange", focusHash);
+
+    async function loadAllNFTs() {
+      const container = document.getElementById("nftContainer");
+      container.textContent = t("loading");
+
+      try {
+        const { entries, metaById } = await loadRegistry();
+
+        // Lotto → batch che lo hanno usato (con il nome del batch)
+        const usedIn = {};
+        entries.filter((e) => e.entryType === 1).forEach((b) => {
+          (b.usedLots || []).forEach((lotId) => { (usedIn[lotId] = usedIn[lotId] || []).push(b); });
+        });
+
+        // Una card per acquisto: stesso fornitore e stessa data di acquisto
+        // (dal più recente, come arrivano dal registro).
+        const purchases = [];
+        const byKey = {};
+        entries.filter((e) => e.entryType === 0 && metaById[e.tokenId]).forEach((e) => {
+          const m = metaById[e.tokenId];
+          const key = attr(m, "Fornitore") + "|" + attr(m, "Data Acquisto");
+          if (!byKey[key]) { byKey[key] = { fornitore: attr(m, "Fornitore"), data: attr(m, "Data Acquisto"), lots: [] }; purchases.push(byKey[key]); }
+          byKey[key].lots.push(e);
+        });
+
+        if (purchases.length === 0) {
+          container.innerHTML = `<p>${t("noNft")}</p>`;
+          return;
+        }
+
+        container.innerHTML = "";
+
+        purchases.forEach((p) => {
+          const first = p.lots[0];
+          const name = p.fornitore || t("noName");
+          const img = p.lots.map((e) => imageOf(metaById[e.tokenId])).find(Boolean);
+          const imgAlt = `${t("nftImgPrefix")} ${name}`;
+
+          const card = document.createElement("div");
+          card.className = "nft-card";
+
+          let html = `
+            <h3>
+              <a href="${esc(EXPLORER_URL + "&type=lot&token=" + first.tokenId)}" target="_blank" rel="noopener"
+                 class="token-link" aria-label="${esc(t("openOnLukso") + ": " + name)}">
+                ${esc(name)}
+              </a>
+              <div class="tap-hint">${t("tapHint")}</div>
+            </h3>
+          `;
+          if (img) html += `<img src="${esc(img)}" alt="${esc(imgAlt)}">`;
+          html += `<p>${t("purchasedOn")} ${esc(p.data)}</p>`;
+
+          let materieTable = `
+            <h4>${t("rmTitle")}</h4>
+            <table class="materie-prime">
+              <thead>
+                <tr>
+                  <th>${t("colName")}</th>
+                  <th>${t("colQty")}</th>
+                  <th>${t("colExp")}</th>
+                  <th>${t("colBatch")}</th>
+                  <th>${t("colUsed")}</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+
+          p.lots.forEach((e, index) => {
+            const m = metaById[e.tokenId];
+            const batches = usedIn[e.tokenId] || [];
+            const used = batches.length
+              ? batches.map((b) => `<a class="tt-link" href="${BATCH_PAGE}#batch-${esc(b.tokenId)}">${esc((metaById[b.tokenId] && metaById[b.tokenId].name) || "Batch")} →</a>`).join("")
+              : t("notUsed");
+            const invalid = e.status === 1 ? ` <span class="tt-muted">(${t("invalidated")})</span>` : "";
+            materieTable += `
+              <tr id="lot-${esc(e.tokenId)}">
+                <td data-label="${t("colName")}">${esc(attr(m, "Nome"))}${invalid}</td>
+                <td data-label="${t("colQty")}">${esc(attr(m, "Quantità"))}</td>
+                <td data-label="${t("colExp")}">${esc(attr(m, "Data Scadenza"))}</td>
+                <td data-label="${t("colBatch")}">${esc(attr(m, "Lotto"))}</td>
+                <td data-label="${t("colUsed")}">${used}</td>
+              </tr>
+            `;
+
+            if (index < p.lots.length - 1) {
+              materieTable += `
+                <tr class="separator">
+                  <td colspan="5"><div class="sep"></div></td>
+                </tr>
+              `;
+            }
+          });
+
+          materieTable += "</tbody></table>";
+          html += materieTable;
+
+          card.innerHTML = html;
+          container.appendChild(card);
+        });
+        focusHash();
+      } catch (err) {
+        console.error("Errore:", err);
+        container.textContent = t("error");
+      }
+    }
+
+    window.onload = loadAllNFTs;
+  </script>
+
+  <div class="cta-wrap">
+    <p style="font-weight: 700; font-size: 1.1rem; margin-bottom: 10px;">
+      Vuoi provare le nostre materie prime? 🍺  
+      Scopri il risultato finale: acquista una birra!
+    </p>
+    <a class="cta" href="shop.html">👉 Vai allo Shop</a>
+    <a class="cta" href="home.html">🏠 Torna alla Home</a>
+  </div>
+
+  <!-- Script di traduzione della pagina statica (titoli, intro, CTA) -->
+  <script>
+    (function () {
+      if (PAGE_LANG !== "en") return;
+
+      // lang su <html> e titolo
+      document.documentElement.lang = "en";
+      document.title = "Raw Materials - Birra20Venti";
+
+      // H1
+      const h1 = document.querySelector("h1");
+      if (h1) {
+        h1.textContent = "Birra20Venti tracks its purchases, one sip at a time.";
+      }
+
+      // Intro
+      const introPs = document.querySelectorAll(".intro p");
+      if (introPs[0]) {
+        introPs[0].innerHTML =
+          'We use the <strong>LUKSO</strong> blockchain to guarantee <strong>traceability</strong> and <strong>transparency</strong> at every stage of the process. ' +
+          'Thanks to its immutable and public nature, every recorded datum is verifiable, secure and tamper-proof.';
+      }
+      if (introPs[1]) {
+        introPs[1].innerHTML =
+          '<strong>Why we chose ' +
+          '<a href="https://lukso.network/" target="_blank" rel="noopener">🔗 LUKSO</a>:' +
+          "</strong><br>" +
+          "It is a modern, transparent and secure blockchain, capable of connecting people, products and stories in an authentic flow. " +
+          "It is the solid foundation of our commitment: to track, to innovate and to build a future where every piece of information truly matters.";
+      }
+      if (introPs[2]) {
+        introPs[2].innerHTML =
+          '<a href="https://explorer.execution.mainnet.lukso.network/address/0x1D62B8d2c63b942095AD3c7FfC7E845195d9e718?tab=tokens_nfts" target="_blank" rel="noopener">' +
+          "  🔗 Birra20Venti account on LUKSO" +
+          "</a>";
+      }
+      if (introPs[3]) {
+        introPs[3].innerHTML =
+          '<a href="https://traceability.chainintegrate.it/explorer.html?registry=0xf60ca7d63db8baaaa4e2b2d34ad24d7aa9d40409&amp;type=lot" target="_blank" rel="noopener">' +
+          "  🔗 Traceability registry on Track &amp; Trace" +
+          "</a>";
+      }
+
+      // CTA finale
+      const ctaWrap = document.querySelector(".cta-wrap");
+      if (ctaWrap) {
+        const p = ctaWrap.querySelector("p");
+        const ctas = ctaWrap.querySelectorAll(".cta");
+        if (p) {
+          p.innerHTML =
+            "Would you like to try our raw materials? 🍺<br>" +
+            "Discover the final result: buy a beer!";
+        }
+        if (ctas[0]) ctas[0].textContent = "👉 Go to the Shop";
+        if (ctas[1]) ctas[1].textContent = "🏠 Back to Home";
+      }
+    })();
+  </script>
+  
+  <footer class="site-footer">
+  <div>Seguici anche qui</div>
+
+  <div class="socials">
+    <a href="https://www.instagram.com/birra20venti" target="_blank" rel="noopener">Instagram</a>
+    <a href="https://www.facebook.com/103656121380476" target="_blank" rel="noopener">Facebook</a>
+    <a href="https://www.whatsapp.com/channel/0029VaCvGi135fM4WU4cwh47" target="_blank" rel="noopener">WhatsApp Channel</a>
+    <a href="https://untappd.com/Birra20Venti/beer" target="_blank" rel="noopener">Untappd</a>
+  </div>
+
+  <div class="footer-links">
+    <a href="/termini.html" target="_blank" rel="noopener">Termini e Condizioni</a>
+    <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
+    <a href="/cookie.html" target="_blank" rel="noopener">Cookie Policy</a>
+  </div>
+
+  <div class="legal">
+    P. IVA 16255731008 · Iscr. REA RM-1644760
+  </div>
+
+  <div class="copy">
+    © <span id="y"></span> Birra20Venti — Evoluzioni, non rivoluzioni!
+  </div>
+</footer>
+
+<script>
+  // anno footer
+  (function(){
+    const y = document.getElementById('y');
+    if (y) y.textContent = new Date().getFullYear();
+  })();
+</script>
+
+
+</body>
+</html>

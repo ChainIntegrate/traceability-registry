@@ -830,8 +830,15 @@
       });
     }
 
-    async function load(backendBaseUrl, registryAddress) {
-      lastLoadParams = { backendBaseUrl, registryAddress };
+    /**
+     * @param {object} [options]
+     * @param {"all"|"lot"|"batch"} [options.type] filtro di tipo iniziale
+     *   (es. explorer.html?type=batch dal sito di un'azienda)
+     * @param {string} [options.token] scheda da aprire subito (tokenId)
+     */
+    async function load(backendBaseUrl, registryAddress, options) {
+      options = options || (lastLoadParams && lastLoadParams.registryAddress === registryAddress ? lastLoadParams.options : {}) || {};
+      lastLoadParams = { backendBaseUrl, registryAddress, options };
       if (statusEl) statusEl.textContent = t("status.loading");
       if (gridEl) gridEl.innerHTML = "";
       if (filtersEl) filtersEl.style.display = "none";
@@ -857,7 +864,7 @@
       currentCardDataById = cardDataById;
       activeFilters = {};
       lotSearchText = "";
-      typeFilter = "all";
+      typeFilter = ["lot", "batch"].includes(options.type) ? options.type : "all";
       usedInByLot = {};
       data.entries.forEach((en) => {
         if (en.entryType !== 1) return;
@@ -866,6 +873,11 @@
       renderFilters(cardDataById);
       renderGrid(data.entries, cardDataById);
       applyCardFilters();
+      // Scheda richiesta dall'URL: aperta e portata in vista (o scheda rapida
+      // se il filtro la nasconde).
+      const token = String(options.token || "").toLowerCase();
+      const tokenId = token && Object.keys(cardDataById).find((id) => id.toLowerCase() === token);
+      if (tokenId) goToCard(tokenId);
     }
 
     return { load: load };
